@@ -297,7 +297,7 @@ def detect_circles(np_image):
 """
 The functions are used to obtain the circles from an image of choice.
 """
-img = np.array(Image.open("real_crop.png").convert('L'))
+img = np.array(Image.open("./Test_Images/real_crop.png").convert('L'))
 area, circ, C, bord, R = detect_circles(img)
 
 """
