@@ -21,6 +21,7 @@ def display(centres, radii):
     '''DON'T FORGET TO CHANGE N'''
     
     N = 200
+    np_3d = [[],[],[]]
     
     fig = pl.figure()
     # chooses a 3D axes projection
@@ -41,7 +42,10 @@ def display(centres, radii):
         y = radii[i] * np.outer(np.sin(u), np.sin(v)) + centres[i][1]
         z = radii[i] * np.outer(np.ones(np.size(u)), np.cos(v)) + centres[i][2]
         image_3d.plot_surface(x, y, z, rstride=4, cstride=4, color='r')
-    
+    	np_3d[0].append(x)
+    	np_3d[1].append(y)
+    	np_3d[2].append(z)
+    	
     image_3d.set_xlim(0,N)
     image_3d.set_ylim(0,N)
     image_3d.set_zlim(0,N)
@@ -49,7 +53,7 @@ def display(centres, radii):
     
     pl.show()
     
-    return
+    return np_3d
 
 
 """
@@ -449,3 +453,55 @@ def detect_spheres(image):
     print 'Radii:', radii_spheres
     
     return cubes, centres_spheres, radii_spheres
+
+"""
+get the spheres into an np array
+"""
+def draw_sphere(centre, radius, value):
+    
+    import numpy as np
+    
+    N = 200
+    
+    np_image = np.zeros((N,N,N))
+    
+    Xc = centre[0]
+    Yc = centre[1]
+    Zc = centre[2]
+    
+    X, Y, Z = np.meshgrid(np.arange(N), np.arange(N), np.arange(N))
+    mask = (((X - Xc)**2 + (Y - Yc)**2 + (Z - Zc)**2) < radius**2)
+    
+    np_image[mask] = value
+    
+    return np_image 
+    
+"""
+generate test spheres
+"""
+centre = [(80,100,130)]
+radius = [60]
+value = 10
+
+display(centre,radius)
+img = draw_sphere(centre[0],radius[0],10)
+import numpy as np
+
+np_img = np.array(img)
+"""
+plot the 3d array
+"""
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(np.array(img[0]), np.array(img[1]), np.array(img[2]), zdir='z', c= 'red')
+plt.savefig("demo.png")
+
+test_img = np.array([np.array(img[0]), np.array(img[1]), np.array(img[2])])
+
+"""
+test the sphere detector function
+"""
+detect_spheres(img)
