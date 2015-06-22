@@ -68,24 +68,19 @@ def select_area_for_detector(np_image):
     PROCESS THE IMAGE BY DENOISING, GETING THE EDGES AND THEN FINALY
     THRESHOLDING IT. THE LABELED IMAGE IS THEN USED IN ANALYSIS
     """
-    image_filtered = denoise_tv_chambolle(np_image, weight=0.008)
+    image_filtered = denoise_tv_chambolle(np_image, weight=0.002)
+    edges = sobel(image_filtered)
+    nbins = 1
+    threshold = threshold_otsu(edges, nbins)
+    edges_bin = edges >= threshold
+    label_image = label(edges_bin)
+    
     pl.subplot(1,3,1)
     pl.imshow(image_filtered)
     
-    edges = sobel(image_filtered)
-    #edges_closed = closing(edges, square(2))
-    
-    nbins = 10
-    threshold = threshold_otsu(edges, nbins)
-
-    # edges_bin = edges_closed >= threshold
-    
-    # edges_bin = dilation(edges_bin, selem=square(3))
-    edges_bin = edges >= threshold
     pl.subplot(1,3,2)
     pl.imshow(edges_bin)
     
-    label_image = label(edges_bin, neighbors=4)
     pl.subplot(1,3,3)
     pl.imshow(label_image)
     pl.show()
@@ -188,6 +183,7 @@ def detect_circles(np_image):
     """
     circles = []  # to get the outlines of the circles
     C = []  # to get the centres of the circles, in relation to the different areas
+    rad = []
         
     for i in range(0, len(areas)):
         """
@@ -234,7 +230,8 @@ def detect_circles(np_image):
             radius = radii[idx]
             cx, cy = circle_perimeter(center_y, center_x, np.int64(radius))
             circles.append((cy, cx))
-    
+    	
+    	rad.append(radii)
     
     """
     PLOT THE IMAGE IN A PROPER FORMAT wITH THICKER LINES
@@ -264,7 +261,7 @@ def detect_circles(np_image):
     an uncertainty in the radius, producing the sine wave shape.
     
     THERE IS NO CLEAR WAY WHETHER TO SUBTRACT OR TO ADD THE HALF RADIUS
-    """
+    
     C_cp = C
     C = []
     
@@ -284,30 +281,6 @@ def detect_circles(np_image):
             C.append((C_cp[i][0], C_cp[i][1] + 0.5))
         else:
             C.append((C_cp[i][0], C_cp[i][1]))
+	"""
+    return areas, circles, C, bord, rad
 
-    return areas, circles, C, bord, radii
-
-
-
-
-
-
-
-
-"""
-The functions are used to obtain the circles from an image of choice.
-"""
-img = np.array(Image.open("./Test_Images/real_crop.png").convert('L'))
-area, circ, C, bord, R = detect_circles(img)
-
-"""
-The extracted circle info is the used to generate an image
-of a single circle in a box, which is used for testing the radii function.
-"""
-empt = np.zeros(area[0].shape)
-empt[circ[0][0], circ[0][1]] = 255
-misc.imsave("segmented_real.png", empt)
-print C[0]
-print R[0]
-pl.imshow(empt, cmap=pl.cm.Greys)
-pl.show()

@@ -225,4 +225,20 @@ def remove_large_sine(image, centre):
     
     return [radius, radius_flat]
 
+"""
+Test how it works with a clean image.
+Use png format - jpg is quite bad
+"""
 
+img = np.array(Image.open("segmented_real.png").convert('L'))
+cent = (184,184)
+
+"""
+The spikes in the radius at a few angles are probably due to the pixelated
+nature of the circle, which means that it misses the edge pixel.
+This is why I should use a filled circle
+"""
+rad, rad_flat = remove_large_sine(img, cent)
+
+print rad
+print rad_flat
