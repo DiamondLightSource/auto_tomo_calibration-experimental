@@ -47,7 +47,7 @@ def display(centres, radii):
 	image_3d.set_ylim(0,N)
 	image_3d.set_zlim(0,N)
 	pl.title('Test image - 3D')
-	plt.savefig("Test_image.png")
+	plt.savefig("./Test_Results/Test_image.png")
 	#pl.show()
 	
 	return 
@@ -437,7 +437,7 @@ def detect_spheres(image):
 	ax.set_ylim(0,200)
 	ax.set_zlim(0,200)
 	pl.title('Sphere detection on test image')
-	plt.savefig("Reconstructed_3D.png")
+	plt.savefig("./Test_Results/Reconstructed_3D.png")
 	pl.show()
 	
 	return centres_spheres, radii_spheres
