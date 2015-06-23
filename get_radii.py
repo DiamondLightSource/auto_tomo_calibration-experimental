@@ -6,14 +6,14 @@ import numpy as np
 Inputs:
     Image containing circle/edge
     (NB: Image must be in a lighter background for it to work!
-    Otherwise chagne MAX to MIN if it is the opposite!)
+    Otherwise change MAX to MIN if it is the opposite!)
     The angle through which the line will be drawn
-    Center of the circle
+    Centre of the circle
 
 Output:
     The value of the radius obtained from the image
     
-This function draws a line from the center and check how that line changes.
+This function draws a line from the centre and check how that line changes.
 At every increment the pixel value along the line is stored.
 Then at the point where pixel values suddenly change we can assume that
 we reached the edge and at that point we will get the value of the radius.
