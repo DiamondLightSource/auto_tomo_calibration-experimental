@@ -65,7 +65,7 @@ def plot_radii(image_area, radius, centre):
     
     # Calculate radii for every angle 
     
-    step = 5
+    step = 20
     start = 0
     theta_bord = np.arange(start,360+step,step)
     phi_bord = np.arange(start,180+step,step)
@@ -168,19 +168,21 @@ def remove_large_sine(image_area, radius, centre):
 
 import numpy as np
 
-img_3d = np.load("img_3d.npy")
+recon = np.load("reconstructed.npy")
 cent_3d = np.load("cent_3d.npy")
 rad_3d = np.load("rad_3d.npy")
 orig = np.load("original_3d.npy")
 sphere_crops = np.load("crops_3d.npy")
 
-img_3d = np.asarray(img_3d)[0]
+#img_3d = np.asarray(img_3d)[0]
 
-crop_one = sphere_crops[0]
-orig_one_sphere = orig[0]
+#crop_one = sphere_crops[0]
+#orig_one_sphere = orig[0]
 #print crop_one
 #print orig.shape
 
+print recon[0].shape
+print orig.shape
 
-plot_radii(orig, rad_3d[0], cent_3d[0])
+plot_radii(recon[0], rad_3d[0], cent_3d[0])
 #plot_radii(img_3d,30,(50,50,50))

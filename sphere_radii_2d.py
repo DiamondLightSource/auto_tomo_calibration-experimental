@@ -102,22 +102,21 @@ def plot_radii(image_area, radius, centre):
 import numpy as np
 import pylab as pl
 
-img_3d = np.load("img_3d.npy")
+recon = np.load("reconstructed.npy")
 cent_3d = np.load("cent_3d.npy")
 rad_3d = np.load("rad_3d.npy")
 orig = np.load("original_3d.npy")
 sphere_crops = np.load("crops_3d.npy")
 
-pl.xlim(0, 50)
+"""pl.xlim(0, 50)
 pl.ylim(0, 50)
-for slice in range(len(sphere_crops[0])):
-    pl.imshow(sphere_crops[0][slice])
+for slice in range(len(recon[0])):
+    pl.imshow(recon[0][slice])
+    pl.pause(0.1)
+"""
+
+for slice in range(50):
+    pl.imshow(recon[0][:,:,slice])
     pl.pause(0.1)
 
-"""
-for slice in range(100):
-    pl.imshow(orig[:,:,slice])
-    pl.pause(0.1)
-    """
-plot_radii(sphere_crops[0], rad_3d[0], cent_3d[0])
-#plot_radii(img_3d,30,(50,50,50))
+plot_radii(recon[0], rad_3d[0], cent_3d[0])

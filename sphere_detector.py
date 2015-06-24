@@ -362,15 +362,35 @@ def detect_spheres(image):
     
     nb_spheres = len(areas)
     
+    """
+    find the largest dimension of all the areas
+    """
+    largest_areas = []
+    # get max area size
+    # for each sphere...
+    for n in range(nb_spheres):
+        
+        areas_3d = areas[n]
+        largest = 0
+        # for each sliced area...
+        for i in range(len(areas_3d)):
+            # get the cropped sphere slice
+            slice_area = max(areas_3d[i].shape)
+            if slice_area > largest:
+                largest = slice_area
+                
+        largest_areas.append((largest,largest))
+    
     C_spheres = [] # to get the centres of the circles in each sphere
     R_spheres = [] # to get radii of circles in each sphere
-    circles_spheres = [] # to store the segmented circles of each sphere
+    reconstructed_spheres = [] # stores the slices of each reconstructed sphere
     
     for n in range(nb_spheres):
         
         circles = []
         C = [] # to get the centres of the circles, in relation to the different areas
         R = [] # to get radii
+        circle_slice = np.zeros(image.shape)
         
         for i in range(0,len(areas[n])):
             
@@ -403,7 +423,7 @@ def detect_spheres(image):
             centers = []
             accums = []
             radii = []
-            
+
             # For each radius, extract one circle
             for radius, h in zip(hough_radii, hough_res):
                 peaks = peak_local_max(h, num_peaks=1)
@@ -430,16 +450,16 @@ def detect_spheres(image):
                 continue
             
             ax.plot(circle_per[0] + bords[n][i][0], circle_per[1] + bords[n][i][2], slices[n][i])
+            circle_slice[ccx + bords[n][i][0], ccy + bords[n][i][2], slices[n][i]] = 255
         
         C_spheres.append(C)
         R_spheres.append(R)
-        circles_spheres.append(circles)    
-    
+        reconstructed_spheres.append(circle_slice)
+        
     # Calculate approximate centres and radii
     
     centres_spheres = []
     radii_spheres = []
-    image_3d = []
     
     for n in range(nb_spheres):
         
@@ -455,46 +475,7 @@ def detect_spheres(image):
         
     print 'Centres:', centres_spheres
     print 'Radii:', radii_spheres
-    
-    
-    crop_3d = []
-    largest_areas = []
-    # get max area size
-    # for each sphere...
-    for n in range(nb_spheres):
-        
-        areas_3d = areas[n]
-        largest = 0
-        # for each sliced area...
-        for slice in range(len(areas_3d)):
-            # get the cropped sphere slice
-            slice_area = max(areas_3d[slice].shape)
-            if slice_area > largest:
-                largest = slice_area
-                
-        largest_areas.append((largest,largest))
 
-    """
-    PRINTING THE SLICE.SHAPE SHOWS THAT THE CIRCLES ARE NOT
-    "SORTED" OUT, 
-    """
-    # for each sphere...
-    for n in range(nb_spheres):
-        crops = []
-        # for each sliced area...
-        for slice in range(len(areas[n])):
-            # get the cropped sphere slice
-            circle_slice = np.zeros(largest_areas[n])
-            # print slice_area.shape
-            # x and y coordinates used for plotting circles
-            x = circles_spheres[n][slice][0] + bords[n][slice][0]
-            y = circles_spheres[n][slice][1] + bords[n][slice][2]
-            
-            circle_slice[x, y] = 255
-            crops.append(circle_slice)
-        
-        crop_3d.append(crops)
-        
         
     ax.set_xlim(0,50)
     ax.set_ylim(0,50)
@@ -503,7 +484,7 @@ def detect_spheres(image):
     plt.savefig("./Test_Results/Reconstructed_3D.png")
     pl.show()
     
-    return centres_spheres, radii_spheres, areas_full, crop_3d
+    return centres_spheres, radii_spheres, reconstructed_spheres
 
 """
 Input:
@@ -553,9 +534,9 @@ img = draw_sphere(centre,radius,5)
 img = np.asarray(img)
 
 # sphere detection fn
-cent_3d, rad_3d, img_3d, crops = detect_spheres(img)
+cent_3d, rad_3d, recon, crops = detect_spheres(img)
 
-np.save("img_3d", img_3d)
+np.save("reconstructed", recon)
 np.save("cent_3d", cent_3d)
 np.save("rad_3d", rad_3d)
 np.save("original_3d", img)
