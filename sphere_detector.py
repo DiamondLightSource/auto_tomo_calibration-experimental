@@ -21,7 +21,7 @@ def display(centres, radii):
     
     '''DON'T FORGET TO CHANGE N'''
     
-    N = 200
+    N = 100
     
     fig = pl.figure()
     # chooses a 3D axes projection
@@ -116,9 +116,9 @@ def select_area_circle(np_image):
             continue
         
         # Skip small regions
-        '''if region['Area'] < 100:
-            continue
-        '''
+        """if region['Area'] < 100:
+            continue"""
+        
         # Extract the coordinates of regions
         """
         IF LIST INDICES MUST BE INTEGERS THEN MARGIN IS TOO BIG
@@ -354,7 +354,6 @@ def detect_spheres(image):
     # Select the areas
     
     areas, slices, bords, areas_full = select_area_sphere(image)
-    
     # Detect circles into each area
     
     fig = pl.figure()
@@ -366,6 +365,7 @@ def detect_spheres(image):
     find the largest dimension of all the areas
     """
     largest_areas = []
+    largest_slice = []
     # get max area size
     # for each sphere...
     for n in range(nb_spheres):
@@ -378,19 +378,26 @@ def detect_spheres(image):
             slice_area = max(areas_3d[i].shape)
             if slice_area > largest:
                 largest = slice_area
-                
-        largest_areas.append((largest,largest))
+        
+        largest_areas.append(largest-1)
     
     C_spheres = [] # to get the centres of the circles in each sphere
     R_spheres = [] # to get radii of circles in each sphere
     reconstructed_spheres = [] # stores the slices of each reconstructed sphere
+    absolute_centers = []
+    
+    print largest_areas
     
     for n in range(nb_spheres):
         
         circles = []
         C = [] # to get the centres of the circles, in relation to the different areas
         R = [] # to get radii
-        circle_slice = np.zeros(image.shape)
+        
+        # largest_area gives the correct radii plots
+        cube_dim = largest_areas[n]
+        circle_slice = np.zeros((cube_dim,cube_dim,cube_dim-10))
+        
         
         for i in range(0,len(areas[n])):
             
@@ -444,17 +451,25 @@ def detect_spheres(image):
                 # YOU CAN HAVE AN ARRAY OF ONE WITH PERIMETER
                 # OR YOU CAN HAVE AN ARRAY OF ZEROS WITH CIRCLE
                 ccy, ccx = circle(center_y, center_x, radius)
-                circles.append((ccx, ccy))
+                circle_full = (ccx, ccy)
 
             if circle_per == 0: # check if a circle has not been detected
                 continue
             
             ax.plot(circle_per[0] + bords[n][i][0], circle_per[1] + bords[n][i][2], slices[n][i])
-            circle_slice[ccx + bords[n][i][0], ccy + bords[n][i][2], slices[n][i]] = 255
-        
+            print "index i:", i, "border X:", bords[n][i][0], "center X", center_x, "center shift", largest_areas[n]/2 - center_x
+            print "index i:", i, "border Y:", bords[n][i][2], "center Y", center_y, "center shift", largest_areas[n]/2 - center_y
+            # largest_areas[n]/2.0 - center_y gets the center position for all of the segmented areas
+            # center+border gives the absolute center in the image
+            circle_slice[circle_full[0] + largest_areas[n]/2 - center_x -1, circle_full[1] + largest_areas[n]/2 - center_y -1 , slices[n][i] -min(slices[n])] = 255
+            #circle_slice[circle_full[0] + bords[n][i][0], circle_full[1] + bords[n][i][2], slices[n][i]-min(slices[n])] = 255
+            
+            
         C_spheres.append(C)
         R_spheres.append(R)
         reconstructed_spheres.append(circle_slice)
+        # Minus the margin
+        absolute_centers.append((largest_areas[n]/2,largest_areas[n]/2,largest_areas[n]/2 - 5))
         
     # Calculate approximate centres and radii
     
@@ -477,14 +492,14 @@ def detect_spheres(image):
     print 'Radii:', radii_spheres
 
         
-    ax.set_xlim(0,50)
-    ax.set_ylim(0,50)
-    ax.set_zlim(0,50)
+    ax.set_xlim(0,100)
+    ax.set_ylim(0,100)
+    ax.set_zlim(0,100)
     pl.title('Sphere detection on test image')
     plt.savefig("./Test_Results/Reconstructed_3D.png")
-    pl.show()
+    #pl.show()
     
-    return centres_spheres, radii_spheres, reconstructed_spheres
+    return centres_spheres, radii_spheres, reconstructed_spheres, absolute_centers
 
 """
 Input:
@@ -498,7 +513,7 @@ def draw_sphere(centre, radius, value):
     
     import numpy as np
     
-    N = 50
+    N = 100
     
     np_image = np.zeros((N, N, N))
     
@@ -524,20 +539,21 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from PIL import Image
 
-centre = [(25,25,25)]#, (50,50,50), (150,150,150)]
-radius = [20]#,20,20]
+centre = [(30,30,30), (71,71,71)]#, (151,151,151)]
+radius = [10,15]#,30,40]
 value = 20
 
 display(centre,radius)
-img = draw_sphere(centre,radius,5)
+img = draw_sphere(centre,radius,value)
 
 img = np.asarray(img)
 
 # sphere detection fn
-cent_3d, rad_3d, recon, crops = detect_spheres(img)
+cent_3d, rad_3d, recon, abs_cent = detect_spheres(img)
 
-np.save("reconstructed", recon)
-np.save("cent_3d", cent_3d)
-np.save("rad_3d", rad_3d)
-np.save("original_3d", img)
-np.save("crops_3d", crops)
+np.save("./Numpy_Files/reconstructed_spheres", recon)
+np.save("./Numpy_Files/cent_3d", cent_3d)
+np.save("./Numpy_Files/rad_3d", rad_3d)
+np.save("./Numpy_Files/original_3d", img)
+np.save("./Numpy_Files/abs_centers", abs_cent)
+

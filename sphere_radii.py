@@ -55,7 +55,7 @@ def get_radius(image_area, theta, phi, centre, rad_min):
     
     return round(radius_sphere, 2)
 
-def plot_radii(image_area, radius, centre):
+def plot_radii(image_area, radius, centre, index):
     
     import numpy as np
     import pylab as pl
@@ -65,7 +65,7 @@ def plot_radii(image_area, radius, centre):
     
     # Calculate radii for every angle 
     
-    step = 20
+    step = 10
     start = 0
     theta_bord = np.arange(start,360+step,step)
     phi_bord = np.arange(start,180+step,step)
@@ -87,6 +87,7 @@ def plot_radii(image_area, radius, centre):
     
     min_value = 20
     max_value = 40
+    #file_name = "./Test_Results/sphere_radii_%s" % index
     
     pl.imshow(radii_sphere.T)
     pl.title(r'Radii of sphere as a function of 2 spherical angles $\theta$ and $\phi$',\
@@ -96,8 +97,9 @@ def plot_radii(image_area, radius, centre):
     #pl.xticks(np.arange(0, len(theta_bord)+1, 10), theta_bord)
     #pl.yticks(np.arange(0, len(phi_bord)+1, 10), phi_bord)
     pl.colorbar(shrink=0.8)
+    pl.savefig("./Test_Results/sphere_radii_%s" %index)
     
-    pl.show()
+    #pl.show()
     
     return
 
@@ -167,22 +169,33 @@ def remove_large_sine(image_area, radius, centre):
 
 
 import numpy as np
+import pylab as pl
 
-recon = np.load("reconstructed.npy")
-cent_3d = np.load("cent_3d.npy")
-rad_3d = np.load("rad_3d.npy")
-orig = np.load("original_3d.npy")
-sphere_crops = np.load("crops_3d.npy")
+recon = np.load("./Numpy_Files/reconstructed_spheres.npy")
+cent_3d = np.load("./Numpy_Files/cent_3d.npy")
+rad_3d = np.load("./Numpy_Files/rad_3d.npy")
+orig = np.load("./Numpy_Files/original_3d.npy")
+abs_cent = np.load("./Numpy_Files/abs_centers.npy")
 
-#img_3d = np.asarray(img_3d)[0]
 
-#crop_one = sphere_crops[0]
-#orig_one_sphere = orig[0]
-#print crop_one
-#print orig.shape
 
-print recon[0].shape
-print orig.shape
+# Plots every slice of the sphere
+"""pl.xlim(0, 50)
+pl.ylim(0, 50)
+for slice in range(len(recon[0])):
+    pl.imshow(recon[0][slice])
+    pl.pause(0.1)
+"""
 
-plot_radii(recon[0], rad_3d[0], cent_3d[0])
-#plot_radii(img_3d,30,(50,50,50))
+"""for slice in range(100):
+    print slice
+    pl.imshow(recon[0][:,:,28])
+    pl.pause(0.1)"""
+    
+# Each image has a center in the middle
+
+# Analyse the segmented spheres from the list
+
+
+for i in range(len(recon)):
+    plot_radii(recon[i], rad_3d[i], abs_cent[i], i)
