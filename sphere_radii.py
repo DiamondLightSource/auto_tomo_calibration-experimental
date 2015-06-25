@@ -11,7 +11,6 @@ def get_radius(image_area, theta, phi, centre, rad_min):
     Yc = centre[1]
     Zc = centre[2]
     
-    #R = min(image_area[0].shape[0] / 2, image_area[0].shape[1] / 2, len(image_area) / 2) - 1 #if slices of images in list
     R = min(image_area.shape[0] / 2, image_area.shape[1] / 2, image_area.shape[2] / 2) - 1
     
     delta_x = R * np.sin(phi) * np.cos(theta)
@@ -29,29 +28,12 @@ def get_radius(image_area, theta, phi, centre, rad_min):
             saved_alpha.append(alpha)
             points.append( image_area[int(Xc + alpha * delta_x), int(Yc + alpha * delta_y), int(Zc + alpha * delta_z)] )
     
-    # Find the radius of the circle
-    
-    # Calculate discrete difference and find the edge via the extremum
     dif = np.diff(points)
-    #pl.plot(np.arange(0,1-step,step)*R, dif)
-    #pl.xlabel('radius')
-    #pl.ylabel('discrete difference')
-    #pl.show()
+
     index_edge = np.argwhere(dif == np.min(dif))[0][0]
     
     # Calculate the radius
     radius_sphere = index_edge*step*R + rad_min
-    
-    # Plot
-    
-    #pl.plot([x*R for x in saved_alpha], points)
-    #pl.xlabel('radius')
-    #pl.ylabel('value of pixel')
-    # Plot annotations
-    #pl.plot([0, radius_sphere], [points[index_edge], points[index_edge]], color='green', linewidth=2, linestyle="--")
-    #pl.plot([radius_sphere, radius_sphere], [-0.001, points[index_edge]], color='green', linewidth=2, linestyle="--")
-    #pl.annotate('radius', xy=(radius_sphere, -0.001), xytext=(+10, +40), textcoords='offset points', fontsize=16, arrowprops=dict(arrowstyle="->"))
-    #pl.show()
     
     return round(radius_sphere, 2)
 
@@ -96,12 +78,14 @@ def plot_radii(image_area, radius, centre, index):
     pl.ylabel(r'$\phi$', fontdict={'fontsize': 14,'verticalalignment': 'bottom','horizontalalignment': 'right'}, rotation=0)
     #pl.xticks(np.arange(0, len(theta_bord)+1, 10), theta_bord)
     #pl.yticks(np.arange(0, len(phi_bord)+1, 10), phi_bord)
+    #pl.xlim(0,360)
+    #pl.ylim(0,180)
     pl.colorbar(shrink=0.8)
     pl.savefig("./Test_Results/sphere_radii_%s" %index)
     
     #pl.show()
     
-    return
+    return radii_sphere
 
 def f(x, A, phi, offset, dilation_coef): # Sine wave to remove from data
     
@@ -112,7 +96,7 @@ def f(x, A, phi, offset, dilation_coef): # Sine wave to remove from data
     
     return value
 
-def remove_large_sine(image_area, radius, centre):
+def remove_large_sine(image_area, radius, centre, index):
     
     import numpy as np
     import pylab as pl
@@ -121,8 +105,8 @@ def remove_large_sine(image_area, radius, centre):
     
     # Get radii
     
-    theta_bord = np.arange(0,360,1)
-    radii_sphere = plot_radii(image_area, radius, centre)
+    theta_bord = np.arange(0,360,10)
+    radii_sphere = plot_radii(image_area, radius, centre, index)
     
     # Fit the curve
     
@@ -161,8 +145,9 @@ def remove_large_sine(image_area, radius, centre):
     pl.xlabel('angle')
     pl.ylabel('radius')
     pl.title('Radii flattened')
-    pl.xlim(0,360)
-    pl.ylim(313,330)
+    #pl.xlim(0,360)
+    #pl.ylim(313,330)
+    pl.savefig("./Test_Results/remove_sine_%s" % index)
     pl.show()
     
     return
@@ -180,22 +165,15 @@ abs_cent = np.load("./Numpy_Files/abs_centers.npy")
 
 
 # Plots every slice of the sphere
-"""pl.xlim(0, 50)
-pl.ylim(0, 50)
-for slice in range(len(recon[0])):
-    pl.imshow(recon[0][slice])
-    pl.pause(0.1)
-"""
-
-"""for slice in range(100):
+# Was used for testing
+"""for slice in range(50):
     print slice
-    pl.imshow(recon[0][:,:,28])
+    pl.imshow(recon[0][:,:,slice])
     pl.pause(0.1)"""
-    
+
 # Each image has a center in the middle
 
 # Analyse the segmented spheres from the list
-
-
 for i in range(len(recon)):
     plot_radii(recon[i], rad_3d[i], abs_cent[i], i)
+    # remove_large_sine(recon[i], rad_3d[i], abs_cent[i], i)
