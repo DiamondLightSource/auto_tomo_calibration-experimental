@@ -65,3 +65,4 @@ def plot_radii(image_area, centre, start, stop):
             radii_sphere[(theta-start)/step, phi/step] = get_radius(image_area, theta_rad, phi_rad, centre, rad_min)
     
     return radii_sphere
+

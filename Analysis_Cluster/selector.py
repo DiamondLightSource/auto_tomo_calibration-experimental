@@ -13,15 +13,31 @@ if __name__ == '__main__' :
     usage = "%prog [options] output_file_template \n" + \
         "  output_file_template = /location/of/output/filename%05i.dat"
     parser = optparse.OptionParser(usage=usage)
-    parser.add_option("-x", "--xpos", dest="x_pos", help="X position of the centre of the sphere of interest", default=500, type='int')
-    parser.add_option("-y", "--ypos", dest="y_pos", help="Y position of the centre of the sphere of interest", default=500, type='int')
-    parser.add_option("-z", "--zpos", dest="z_pos", help="Z position of the centre of the sphere of interest", default=500, type='int')
-    parser.add_option("-r", "--radius", dest="radius", help="Radius of the sphere of interest", default=200, type='int')
+    parser.add_option("-x", "--xpos",
+                         dest="x_pos",
+                         help="X position of the centre of the sphere of interest",
+                         default=500,
+                         type='int')
+    parser.add_option("-y", "--ypos",
+                        dest="y_pos",
+                        help="Y position of the centre of the sphere of interest",
+                        default=500,
+                        type='int')
+    parser.add_option("-z", "--zpos",
+                        dest="z_pos",
+                        help="Z position of the centre of the sphere of interest",
+                        default=500,
+                        type='int')
+    parser.add_option("-r", "--radius",
+                        dest="radius",
+                        help="Radius of the sphere of interest",
+                        default=200,
+                        type='int')
 
     (options, args) = parser.parse_args()
 
     print "x = %i, y = %i, z = %i, r = %i" % (options.x_pos, options.y_pos, options.z_pos, options.radius)
-
+    
     x = options.x_pos
     y = options.y_pos
     z = options.z_pos

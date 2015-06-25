@@ -11,7 +11,10 @@ from mpl_toolkits.mplot3d import Axes3D
 #ax = fig.gca(projection='3d')
 
 # ---------------------------------------- Get data -----------------------------------------
-
+"""
+Loads all of the detected parameters of segmented circles
+in a slice and appends them to a list.
+"""
 data = []
 #CHANGE RANGE ACCORDING TO ANALYSED SLICES
 for i in range(10, 2150, 10):
@@ -26,6 +29,9 @@ centroids_sphere = []
 radii_circles = []
 perimeters = []
 
+"""
+Store the borders, centroids, radii and perimeters
+"""
 for i in range(N):
     bord_circles.append(data[i][0])
     centroids_sphere.append(data[i][1])
@@ -52,7 +58,12 @@ print radii_circles
 # ------------ Sort out spheres for radii_angles (i.e. sort out centres + radii) ------------
 
 # Calculate centres according to the whole image
-
+"""
+An element of centres array is an array of tuples
+where each array stores slice information
+and tuples store the centres of the segmented circles
+of the slice
+"""
 centres = []
 for slice in range(N):
     cxcy = []
@@ -70,11 +81,19 @@ for slice in range(N):
 
 # Find the edges of spheres
 # Initialisation
+
+"""
+The top is at the 0'th position. Top to bottom loop
+
+np.allclose - returns True if arrays are element wise equal within
+a certain tolerance allclose(arr1, arr2, rel_tol, abs_tol)
+"""
 index_top = [] # indexes of tops of spheres
 centres_top = [] # centres of tops of spheres
 index_bot = [] # indexes of bottoms of spheres
 centres_bot = [] # centres of bottoms of spheres
 centres_picked = [] # to store the (x,y) centres of spheres
+
 for centre in centres[0]:
     centres_picked.append(centre)
     index_top.append(0)
@@ -85,7 +104,8 @@ for slice in range(1,N-2):
     for centre in centres[slice]:
         # If the centre is not in the two following slices (to prevent from bugs): bottom of sphere
         for centre_fol in centres[slice+1]:
-            if np.allclose(np.asarray(centre), np.asarray(centre_fol), 0, 10): # if centres equal to within about 10 pixels
+            # if centres equal to within about 10 pixels
+            if np.allclose(np.asarray(centre), np.asarray(centre_fol), 0, 10): 
                 break
         else:
             for centre_foll in centres[slice+2]:
@@ -127,7 +147,11 @@ if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 10):
     centres_xy = np.array(np.median(centres_zipped, axis=1), dtype='int64')
 
 # Calculate z coordinate of centres of spheres
-
+"""
+Data is taken in increments of 10 (slices)
+this is why we multiply
+Also we start taking them from 10 so we add 10
+"""
 if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 10):
     edges = np.asarray(zip(index_top, index_bot))
     centres_z = np.array(np.median(edges, axis=1), dtype='int64')*10 + 10
@@ -145,6 +169,19 @@ slices_spheres = []
 bords_spheres = []
 radii_slices = []
 
+"""
+For each sphere and for every slice of that sphere...
+Take the x and y coordinates of the centres and check with
+the centroids of each slice
+
+If they are "close enough" i.e. within 10 pixels then we assume
+that the data is correct and append those slices to the final lists
+
+Finally append those lists to a list for each sphere. 
+
+This gives spheres with all of the displaced circles
+removed (they must be bigger than 10 pixels as well)
+"""
 for n in range(nb_spheres):
     
     slices = []
@@ -166,9 +203,9 @@ for n in range(nb_spheres):
         bords_spheres.append(bords)
         radii_slices.append(radii)
 
-for n in range(nb_spheres):
+"""for n in range(nb_spheres):
     print 'Len(areas[', n, ']):', len(areas_spheres[n])
-
+"""
 for n in range(nb_spheres):
     print len(slices_spheres[n])
     print slices_spheres[n]
