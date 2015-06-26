@@ -3,9 +3,9 @@ import pylab as pl
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
-#cd /dls/science/groups/das/norine/results
+cd ~/auto_tomo_calibration-experimental/Cluster_Data/results
 
-#pl.close('all')
+pl.close('all')
 
 #fig = pl.figure()
 #ax = fig.gca(projection='3d')
