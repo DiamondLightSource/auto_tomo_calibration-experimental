@@ -1,0 +1,49 @@
+# Task IDs: "start-stop:step"
+
+# You can find below all the necessary commands to run my program.
+# To use the cluster:
+# Run the single file "submit.sh" after having modified the names of the files you want to run in this same file and in "run.sh".
+# The file called "monitor.sh" is used to display the job array running on the cluster.
+
+# Detector -----------------------------------------------------------------
+module load global/cluster
+cd ~/auto_tomo_calibration-experimental/Cluster_Data/logs
+qsub -pe smp 2 -j y -t 1-2159:10 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh ../../dls/science/groups/das/norine/data/recon_%05i.tif ~/auto_tomo_calibration-experimental/Cluster_Data/results/out%05i.dat
+# In run.sh
+module load python/ana
+python ~/auto_tomo_calibration-experimental/Cluster_Data/detector.py $@
+
+# Analyse: get centres and radii -------------------------------------------
+module load python/ana
+cd /dls/science/groups/das/norine/logs # not sure about the relevance of this
+python ~/auto_tomo_calibration-experimental/Analysis_Cluster/analyse.py
+
+# Area selector ------------------------------------------------------------
+module load global/cluster
+cd ~/auto_tomo_calibration-experimental/Cluster_Data/logs
+qsub -pe smp 2 -j y -t 1-7 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh ~/auto_tomo_calibration-experimental/Cluster_Data/spheres/sphere%02i.npy
+# In run.sh
+module load python/ana
+python ~/auto_tomo_calibration-experimental/Analysis_Cluster/selector.py -x 456 -y 456 -z 456 -r 380 $@
+
+# Filter whole spheres (numbers 3 to 6 in this data) -----------------------
+module load global/cluster
+cd ~/auto_tomo_calibration-experimental/Cluster_Data/logs
+qsub -pe smp 2 -j y -t 3-6 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh ~/auto_tomo_calibration-experimental/Cluster_Data/spheres/sphere%02i.npy ~/auto_tomo_calibration-experimental/Cluster_Data/spheres/sphere_f%02i.npy
+# In run.sh
+module load python/ana
+python ~/auto_tomo_calibration-experimental/Analysis_Cluster/filter_sphere.py $@
+
+# Get radii according to angles --------------------------------------------
+module load global/cluster
+cd /dls/science/groups/das/norine/logs
+qsub -pe smp 2 -j y -t 1-360:10 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh ~/auto_tomo_calibration-experimental/Cluster_Data/spheres/sphere_f%02i.npy ~/auto_tomo_calibration-experimental/Cluster_Data/radii/radii%03i.npy
+# In run.sh
+module load python/ana
+python ~/auto_tomo_calibration-experimental/Analysis_Cluster/radii.py -x 456 -y 456 -z 456 $@
+
+# Plot radii ----------------------------------------------------------------
+# Not sure if matplotlib works without Dawn - otherwise run with Dawn
+module load python/ana
+cd /dls/science/groups/das/norine/logs # not sure about the relevance of this
+python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py
