@@ -115,9 +115,12 @@ def detect_circles(np_image):
     
     # Check the areas
     index = []
+    size = max(np_image.shape[0] / 2, np_image.shape[1] / 2)
+
     for i in range(0, len(areas)):
         # Jump too big or too small areas
-        if areas[i].shape[0] >= 1000 or areas[i].shape[1] >= 1000:
+        if areas[i].shape[0] >= size or areas[i].shape[1] >= size\
+        or areas[i].shape[0] <= size/5 or areas[i].shape[1] <= size/5:
             index.append(i)
             continue
     
@@ -176,4 +179,30 @@ def detect_circles(np_image):
             cx, cy = circle_perimeter(center_y, center_x, radius)
             circles.append((cy, cx))
         
+    """
+    If the circle is an odd number of pixels wide, then that will displace the center by one pixel and give
+    an uncertainty in the radius, producing the sine wave shape.
+    
+    THERE IS NO CLEAR WAY WHETHER TO SUBTRACT OR TO ADD THE HALF RADIUS
+    
+    C_cp = C
+    C = []
+    
+    for i in range(len(areas)):
+        try:
+            circle_widthY = bord[i][2] - bord[i][0]
+            circle_widthX = bord[i][3] - bord[i][1]
+
+        except IndexError:
+            return 0
+        
+        if circle_widthX % 2 != 0 and circle_widthY % 2 != 0:
+            C.append((C_cp[i][0] + 0.5, C_cp[i][1] + 0.5))
+        elif circle_widthX % 2 != 0:
+            C.append((C_cp[i][0] + 0.5, C_cp[i][1]))
+        elif circle_widthY % 2 != 0:
+            C.append((C_cp[i][0], C_cp[i][1] + 0.5))
+        else:
+            C.append((C_cp[i][0], C_cp[i][1]))
+    """
     return [bord, C, R, circles]
