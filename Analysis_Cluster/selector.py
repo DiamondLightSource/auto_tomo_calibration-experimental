@@ -53,7 +53,7 @@ if __name__ == '__main__' :
     R = int(1.2*r)
     area = np.zeros((2*R+1, 2*R+1, 2*R+1))
     for i in range(z-R, z+R+1):
-        input_filename = '~/../../dls/science/groups/das/ExampleData/SphereTestData/38644/recon_%05i.tif' % i
+        input_filename = '/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_%05i.tif' % i
         print("Loading image %s" % input_filename)
         area[i-(z-R)] = io.imread(input_filename)[x-R:x+R+1, y-R:y+R+1]
 

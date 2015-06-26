@@ -1,7 +1,7 @@
 import numpy as np
 import pylab as pl
 
-cd ~/auto_tomo_calibration-experimental/Cluster_Data/radii
+cd /dls/tmp/jjl36382/radii
 
 radii = []
 for i in range(0,360,10):
