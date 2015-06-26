@@ -45,7 +45,7 @@ if __name__ == '__main__' :
     task_id = int(os.environ['SGE_TASK_ID']) - 1
     
     # make the filename
-    input_filename = args[0]
+    input_filename = args[0] 
     output_filename = args[1] % task_id
     
     # load the sphere

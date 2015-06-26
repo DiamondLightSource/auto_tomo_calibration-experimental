@@ -49,7 +49,7 @@ def plot_radii(image_area, centre, start, stop):
     
     # Calculate radii for every angle 
     
-    step = 1
+    step = 10
     theta_bord = np.arange(start,stop,step)
     phi_bord = np.arange(0,180+step,step)
     

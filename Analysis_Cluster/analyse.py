@@ -3,7 +3,7 @@ import pylab as pl
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
-cd /dls/tmp/jjl36382/results
+#cd /dls/tmp/jjl36382/results
 
 pl.close('all')
 
@@ -17,8 +17,8 @@ in a slice and appends them to a list.
 """
 data = []
 #CHANGE RANGE ACCORDING TO ANALYSED SLICES
-for i in range(10, 2150, 10):
-    f = open('out%05i.dat' %i, 'r')
+for i in range(1, 2159, 10):
+    f = open('/dls/tmp/jjl36382/results/out%05i.dat' %i, 'r')
     data.append(pickle.load(f))
     f.close()
 
@@ -37,11 +37,11 @@ for i in range(N):
     centroids_sphere.append(data[i][1])
     radii_circles.append(data[i][2])
     perimeters.append(data[i][3])
-
+"""
 print bord_circles
 print centroids_sphere
 print radii_circles
-
+"""
 # Plot
 
 #for slice in range(N):
@@ -74,8 +74,9 @@ for slice in range(N):
     #cxcy = np.asarray(cxcy)
     centres.append(cxcy)
 
-for slice in range(N):
+"""for slice in range(N):
     print slice, centres[slice]
+"""
 
 # Remove wrong areas
 
@@ -206,24 +207,41 @@ for n in range(nb_spheres):
 """for n in range(nb_spheres):
     print 'Len(areas[', n, ']):', len(areas_spheres[n])
 """
-for n in range(nb_spheres):
+"""for n in range(nb_spheres):
     print len(slices_spheres[n])
     print slices_spheres[n]
     print radii_slices[n]
-
+"""
 # ---------------------------------- Save centres + radii -----------------------------------
 # --------------------------------- (write data in a file) ----------------------------------
 
 print("Saving data")
 
-f = open('centres.txt', 'w')
-f.write('Centres of the spheres')
+f = open('/dls/tmp/jjl36382/results/centresX.txt', 'w')
 for i in range(nb_spheres):
-    f.write(repr(centroids[i]) + '\n')
+    f.write(repr(centroids[i][0]) + '\n')
 f.close()
 
-f = open('radii.txt', 'w')
-f.write('Radii of the spheres: [horizontal, vertical]')
+f = open('/dls/tmp/jjl36382/results/centresY.txt', 'w')
+for i in range(nb_spheres):
+    f.write(repr(centroids[i][1]) + '\n')
+f.close()
+
+f = open('/dls/tmp/jjl36382/results/centresZ.txt', 'w')
+for i in range(nb_spheres):
+    f.write(repr(centroids[i][2]) + '\n')
+f.close()
+
+f = open('/dls/tmp/jjl36382/results/radii.txt', 'w')
 for i in range(nb_spheres):
     f.write(repr(radii_slices[i]) + '\n')
+f.close()
+
+f = open('/dls/tmp/jjl36382/results/radii_max.txt', 'w')
+for i in range(nb_spheres):
+    f.write(repr(max(radii_slices[i])) + '\n')
+f.close()
+
+f = open('/dls/tmp/jjl36382/results/nb_spheres.txt', 'w')
+f.write(repr(nb_spheres))
 f.close()

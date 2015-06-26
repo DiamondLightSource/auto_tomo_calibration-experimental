@@ -1,2 +1,2 @@
 module load python/ana
-python ~/auto_tomo_calibration-experimental/Cluster_Data/detector.py $@
+python ~/auto_tomo_calibration-experimental/Analysis_Cluster/get_radii.py -x 456 -y 456 -z 456 $@
