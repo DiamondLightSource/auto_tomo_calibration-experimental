@@ -2,7 +2,7 @@
 module load global/cluster
 module load python/ana
 
-cd /dls/tmp/jjl36382/logs
+#cd /dls/tmp/jjl36382/logs
 
 #read -p "enter path " path
 
@@ -18,17 +18,19 @@ cd /dls/tmp/jjl36382/logs
 
 # Area selector ------------------------------------------------------------
 
-
-nb_spheres=`cat /dls/tmp/jjl36382/results/nb_spheres.txt`
-centX=`cat /dls/tmp/jjl36382/results/centresX.txt`
-centY=`cat /dls/tmp/jjl36382/results/centresY.txt`
-centZ=`cat /dls/tmp/jjl36382/results/centresZ.txt`
+nb_spheres=`cat ~/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/nb_spheres.txt`
+centX=`~/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/centresX.txt`
+centY=`~/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/centresY.txt`
+centZ=`~/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/centresZ.txt`
 
 for i in `seq 1 $nb_spheres`;
 do
-	echo $i
-	echo awk 'NR==$i' `cat /dls/tmp/jjl36382/results/centresX.txt`
+	X=`awk "NR=="$i ~/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/centresX.txt`
+	echo $X
+	qsub -pe smp 2 -j y -t $ ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh
 done
+
+
 #qsub -pe smp 2 -j y -t 1-7 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy
 
 #python ~/auto_tomo_calibration-experimental/Analysis_Cluster/selector.py -x 456 -y 456 -z 456 -r 380 $@
