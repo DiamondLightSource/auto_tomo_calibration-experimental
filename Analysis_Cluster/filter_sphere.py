@@ -33,7 +33,7 @@ if __name__ == '__main__' :
     print("Filter image %s" % input_filename)
     #sphere = median_filter(sphere, 10)
     #sphere = gaussian_filter(sphere,3)
-    sphere = gaussian_filter(sphere, 2)
+    sphere = gaussian_filter(sphere, 1.5)
     
     # save image
     print("Saving image %s" % output_filename)

@@ -11,7 +11,7 @@ cd /dls/tmp/jjl36382/logs
 #qsub -pe smp 2 -j y -t 2 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy /dls/tmp/jjl36382/spheres/sphere_gaussian%02i.npy
 
 #get radii
-qsub -pe smp 2 -j y -t 1-360:10 -tc 15 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere_gaussian02.npy /dls/tmp/jjl36382/radii/radii%03i.npy
+#qsub -pe smp 2 -j y -t 1-360:10 -tc 15 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere_gaussian02.npy /dls/tmp/jjl36382/radii/radii%03i.npy
 
 #plot
-#qsub -pe smp 2 -j y -t 1 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh
+qsub -pe smp 2 -j y -t 1 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh
