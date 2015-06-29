@@ -7,8 +7,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 pl.close('all')
 
-#fig = pl.figure()
-#ax = fig.gca(projection='3d')
+fig = pl.figure()
+ax = fig.gca(projection='3d')
 
 # ---------------------------------------- Get data -----------------------------------------
 """
@@ -44,17 +44,17 @@ print radii_circles
 """
 # Plot
 
-#for slice in range(N):
-#    for i in range(len(perimeters[slice])):
-#        ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*10+10)
+"""for slice in range(N):
+    for i in range(len(perimeters[slice])):
+        ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*10+10)
 
-#ax.set_xlim(0,2560)
-#ax.set_ylim(0,2560)
-#ax.set_zlim(0,2560)
-#pl.title('Sphere detection on real image')
+ax.set_xlim(0,2560)
+ax.set_ylim(0,2560)
+ax.set_zlim(0,2560)
+pl.title('Sphere detection on real image')
 
-#pl.show()
-
+pl.show()
+"""
 # ------------ Sort out spheres for radii_angles (i.e. sort out centres + radii) ------------
 
 # Calculate centres according to the whole image
@@ -159,8 +159,21 @@ if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 10):
 
 centroids = zip(centres_xy[:,0], centres_xy[:,1], centres_z)
 
+print len(centres)
+
 print 'Nb of spheres:', len(centroids)
 print 'Centres of spheres:', centroids
+
+for slice in range(N):
+    for i in range(len(perimeters[slice])):
+        ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*10+10)
+
+ax.set_xlim(0,2560)
+ax.set_ylim(0,2560)
+ax.set_zlim(0,2560)
+pl.title('Sphere detection on real image')
+
+pl.show()
 
 # Sort out the 2D areas among spheres
 
@@ -169,6 +182,7 @@ nb_spheres = len(centroids)
 slices_spheres = []
 bords_spheres = []
 radii_slices = []
+perimeters_sort = []
 
 """
 For each sphere and for every slice of that sphere...
@@ -188,6 +202,7 @@ for n in range(nb_spheres):
     slices = []
     bords = []
     radii = []
+    perim = []
     
     for slice in range(edges[n][0], edges[n][1]+1):
         
@@ -198,24 +213,26 @@ for n in range(nb_spheres):
                 slices.append(slice)
                 bords.append(bord_circles[slice][i])
                 radii.append(radii_circles[slice][i])
-    
+                perim.append(perimeters[slice][i])
+   
     if len(slices) > 10:
         slices_spheres.append(slices)
         bords_spheres.append(bords)
         radii_slices.append(radii)
+        perimeters_sort.append(perim)
 
 """for n in range(nb_spheres):
     print 'Len(areas[', n, ']):', len(areas_spheres[n])
-"""
-"""for n in range(nb_spheres):
-    print len(slices_spheres[n])
-    print slices_spheres[n]
-    print radii_slices[n]
 """
 # ---------------------------------- Save centres + radii -----------------------------------
 # --------------------------------- (write data in a file) ----------------------------------
 
 print("Saving data")
+
+f = open('/dls/tmp/jjl36382/results/centres.txt', 'w')
+for i in range(nb_spheres):
+    f.write(repr(centroids[i]) + '\n')
+f.close()
 
 f = open('/dls/tmp/jjl36382/results/centresX.txt', 'w')
 for i in range(nb_spheres):

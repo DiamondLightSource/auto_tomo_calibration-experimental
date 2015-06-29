@@ -1,6 +1,7 @@
 import os
 from skimage import io
 import numpy as np
+
 import radii_angles
 
 def save_data(filename, data):
@@ -15,21 +16,9 @@ if __name__ == '__main__' :
         "  input_file_template  = /location/of/file/filename%02i.npy \n" + \
         "  output_file_template = /location/of/output/filename%02i.dat"
     parser = optparse.OptionParser(usage=usage)
-    parser.add_option("-x", "--xpos",
-                      dest="x_pos",
-                      help="X position of the centre of the sphere of interest",
-                      default=500,
-                      type='int')
-    parser.add_option("-y", "--ypos",
-                      dest="y_pos",
-                      help="Y position of the centre of the sphere of interest",
-                      default=500,
-                      type='int')
-    parser.add_option("-z", "--zpos",
-                      dest="z_pos",
-                      help="Z position of the centre of the sphere of interest",
-                      default=500,
-                      type='int')
+    parser.add_option("-x", "--xpos", dest="x_pos", help="X position of the centre of the sphere of interest", default=500, type='int')
+    parser.add_option("-y", "--ypos", dest="y_pos", help="Y position of the centre of the sphere of interest", default=500, type='int')
+    parser.add_option("-z", "--zpos", dest="z_pos", help="Z position of the centre of the sphere of interest", default=500, type='int')
     
     (options, args) = parser.parse_args()
     
@@ -45,7 +34,7 @@ if __name__ == '__main__' :
     task_id = int(os.environ['SGE_TASK_ID']) - 1
     
     # make the filename
-    input_filename = args[0] 
+    input_filename = args[0]
     output_filename = args[1] % task_id
     
     # load the sphere

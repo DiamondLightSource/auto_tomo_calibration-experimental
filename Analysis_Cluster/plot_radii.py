@@ -2,11 +2,11 @@ import numpy as np
 import pylab as pl
 
 radii = []
-for i in range(0,250,10):
-    radii.append(np.load('/dls/tmp/jjl36382/radii/radii%03i.npy' % i))
+for i in range(0,360,10):
+    radii.append(np.load('/dls/science/groups/das/norine/radii/radii%03i.npy' % i))
 
-radii_np = np.zeros((250,181))
-for i in range(25):
+radii_np = np.zeros((360,181))
+for i in range(36):
     radii_np[i*10:i*10+10,:] = radii[i]
 
 # Plot

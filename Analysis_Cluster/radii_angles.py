@@ -49,7 +49,7 @@ def plot_radii(image_area, centre, start, stop):
     
     # Calculate radii for every angle 
     
-    step = 10
+    step = 1
     theta_bord = np.arange(start,stop,step)
     phi_bord = np.arange(0,180+step,step)
     
@@ -65,4 +65,3 @@ def plot_radii(image_area, centre, start, stop):
             radii_sphere[(theta-start)/step, phi/step] = get_radius(image_area, theta_rad, phi_rad, centre, rad_min)
     
     return radii_sphere
-

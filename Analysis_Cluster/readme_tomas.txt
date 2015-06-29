@@ -13,7 +13,7 @@
 # Detector -----------------------------------------------------------------
 module load global/cluster
 cd /dls/tmp/jjl36382/logs
-qsub -pe smp 2 -j y -t 1-2159:10 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/science/groups/das/ExampleData/SphereTestData/38644/recon_%05i.tif /dls/tmp/jjl36382/results/out%05i.dat
+qsub -pe smp 2 -j y -t 1:2159:10 -tc 20 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/science/groups/das/ExampleData/SphereTestData/38644/recon_%05i.tif /dls/tmp/jjl36382/results/out%05i.dat
 # In run.sh
 module load python/ana
 python ~/auto_tomo_calibration-experimental/Analysis_Cluster/detector.py $@
@@ -29,16 +29,16 @@ python ~/auto_tomo_calibration-experimental/Analysis_Cluster/analyse.py
 # Area selector ------------------------------------------------------------
 module load global/cluster
 cd /dls/tmp/jjl36382/logs
-qsub -pe smp 2 -j y -t 1-7 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy
+qsub -pe smp 2 -j y -t 1 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy
 # In run.sh
 module load python/ana
-python ~/auto_tomo_calibration-experimental/Analysis_Cluster/selector.py -x 456 -y 456 -z 456 -r 380 $@
+python ~/auto_tomo_calibration-experimental/Analysis_Cluster/selector.py -x 1105 -y 1002 -z 1470 -r 380 $@
 
 
 # Filter whole spheres (numbers 3 to 6 in this data) -----------------------
 module load global/cluster
 cd /dls/tmp/jjl36382/logs
-qsub -pe smp 2 -j y -t 3-6 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy /dls/tmp/jjl36382/spheres/sphere_f%02i.npy
+qsub -pe smp 2 -j y -t 1 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy /dls/tmp/jjl36382/spheres/sphere_f%02i.npy
 # In run.sh
 module load python/ana
 python ~/auto_tomo_calibration-experimental/Analysis_Cluster/filter_sphere.py $@
@@ -47,10 +47,10 @@ python ~/auto_tomo_calibration-experimental/Analysis_Cluster/filter_sphere.py $@
 # Get radii according to angles --------------------------------------------
 module load global/cluster
 cd /dls/tmp/jjl36382/logs
-qsub -pe smp 2 -j y -t 1-360:10 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere_f%02i.npy /dls/tmp/jjl36382/radii/radii%03i.npy
+qsub -pe smp 2 -j y -t 1-360:10 -tc 20 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere_f%02i.npy /dls/tmp/jjl36382/radii/radii%03i.npy
 # In run.sh
 module load python/ana
-python ~/auto_tomo_calibration-experimental/Analysis_Cluster/get_radii.py -x 456 -y 456 -z 456 $@
+python ~/auto_tomo_calibration-experimental/Analysis_Cluster/get_radii.py -x 1105 -y 1002 -z 1470 $@
 
 
 # Plot radii ----------------------------------------------------------------

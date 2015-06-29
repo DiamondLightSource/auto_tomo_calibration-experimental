@@ -18,16 +18,16 @@ module load python/ana
 
 # Area selector ------------------------------------------------------------
 
-nb_spheres=`cat ~/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/nb_spheres.txt`
-centX=`~/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/centresX.txt`
-centY=`~/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/centresY.txt`
-centZ=`~/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/centresZ.txt`
+nb_spheres=`cat /dls/tmp/jjl36382/results/nb_spheres.txt`
+centX=`/dls/tmp/jjl36382/results/centresX.txt`
+centY=`/dls/tmp/jjl36382/results/centresY.txt`
+centZ=`/dls/tmp/jjl36382/results/centresZ.txt`
 
 for i in `seq 1 $nb_spheres`;
 do
-	X=`awk "NR=="$i ~/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/centresX.txt`
+	X=`awk "NR=="$i /dls/tmp/jjl36382/results/centresX.txt`
 	echo $X
-	qsub -pe smp 2 -j y -t $ ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh
+	#qsub -pe smp 2 -j y -t $i ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy
 done
 
 
