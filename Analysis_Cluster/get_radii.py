@@ -26,9 +26,9 @@ if __name__ == '__main__' :
     
     (options, args) = parser.parse_args()
     
-    x = options.x_pos
-    y = options.y_pos
-    z = options.z_pos
+    x = options.x_pos * 1.2
+    y = options.y_pos * 1.2
+    z = options.z_pos * 1.2
     
     # get the number of the frame to process
     task_id = int(os.environ['SGE_TASK_ID']) - 1
@@ -43,7 +43,7 @@ if __name__ == '__main__' :
     
     # measure radii
     radii = radii_angles.plot_radii(sphere, (x, y, z), task_id, task_id+10)
-    
+
     # save data
     print("Saving data %s" % output_filename)
     save_data(output_filename, radii)

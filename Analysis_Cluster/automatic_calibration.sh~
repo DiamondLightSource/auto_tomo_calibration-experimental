@@ -2,51 +2,57 @@
 module load global/cluster
 module load python/ana
 
-#cd /dls/tmp/jjl36382/logs
+cd /dls/tmp/jjl36382/logs
 
-#read -p "enter path " path
-
-#read -p "enter step " step
-
-#qsub -pe smp 2 -j y -t 1-2159:10 -tc 10 python ~/auto_tomo_calibration-experimental/Analysis_Cluster/detector.py $path"recon_%05i.tif" /dls/tmp/jjl36382/results/out%05i.dat
-
-# CHANGE THE RANGE IN ANALYSE.PY. THE RANGE CORRESPONDS TO THE NUMBER OF FILES IN
-# Analyse: get centres and radii -------------------------------------------
-
-#python ~/auto_tomo_calibration-experimental/Analysis_Cluster/analyse.py
-
-
-# Area selector ------------------------------------------------------------
+read -p "enter path together with the file name and format > " path
+read -p "enter starting file number > " start
+read -p "enter final file number > " final
+read -p "enter step > " step
 
 nb_spheres=`cat /dls/tmp/jjl36382/results/nb_spheres.txt`
-centX=`/dls/tmp/jjl36382/results/centresX.txt`
-centY=`/dls/tmp/jjl36382/results/centresY.txt`
-centZ=`/dls/tmp/jjl36382/results/centresZ.txt`
 
-for i in `seq 1 $nb_spheres`;
+# Detect circles ------------------------------------------------------------------------------------------------------
+echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/detector.py $@" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/test_run.sh
+echo qsub -pe smp 2 -j y -t $start:$final:$step -tc 15 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh $path"recon_%05i.tif" /dls/tmp/jjl36382/results/out%05i.dat
+
+# CHANGE THE RANGE IN ANALYSE.PY. THE RANGE CORRESPONDS TO THE NUMBER OF FILES IN
+# Analyse areas ------------------------------------------------------------------------------------------------------
+echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/analyse.py -a $start -b $final -c $step $path" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/test_run.sh
+#qsub -pe smp 2 -j y -t 1 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh 
+
+# Select areas ------------------------------------------------------------------------------------------------------
+for i in `seq $nb_spheres`;
 do
-	X=`awk "NR=="$i ~/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/centresX.txt`
-	echo $X
-	#qsub -pe smp 2 -j y -t $i ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy
+	X=`awk "NR=="$i /dls/tmp/jjl36382/results/centresX.txt`
+	Y=`awk "NR=="$i /dls/tmp/jjl36382/results/centresY.txt`
+	Z=`awk "NR=="$i /dls/tmp/jjl36382/results/centresZ.txt`
+	R=`awk "NR=="$i /dls/tmp/jjl36382/results/radii_max.txt`
+	
+	echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/selector.py -x $X -y $Y -z $Z -r $R $@" >  ~/auto_tomo_calibration-experimental/Analysis_Cluster/test_run.sh 
+	#echo qsub -pe smp 2 -j y -t $i ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy $path"recon_%05i.tif"
 done
 
+# Filter spheres ------------------------------------------------------------------------------------------------------
+for i in `seq $nb_spheres`;
+do	
+	echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/filter_sphere.py $@" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/test_run.sh
+	echo qsub -pe smp 2 -j y -t 2 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere0$i.npy /dls/tmp/jjl36382/spheres/sphere_filt%$i.npy
+done
 
-#qsub -pe smp 2 -j y -t 1-7 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy
+# Get radii ------------------------------------------------------------------------------------------------------
+read -p "enter starting radii (use 1 if not sure) > " start
+read -p "enter final file number (use 360 if not sure) > " final
+read -p "enter step > " step
 
-#python ~/auto_tomo_calibration-experimental/Analysis_Cluster/selector.py -x 456 -y 456 -z 456 -r 380 $@
-
-
-# Filter whole spheres (numbers 3 to 6 in this data) -----------------------
-#qsub -pe smp 2 -j y -t 3-6 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy /dls/tmp/jjl36382/spheres/sphere_f%02i.npy
-#python ~/auto_tomo_calibration-experimental/Analysis_Cluster/filter_sphere.py $@
-
-
-# Get radii according to angles --------------------------------------------
-#qsub -pe smp 2 -j y -t 1-360:10 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere_f%02i.npy /dls/tmp/jjl36382/radii/radii%03i.npy
-
-#python ~/auto_tomo_calibration-experimental/Analysis_Cluster/get_radii.py -x 456 -y 456 -z 456 $@
+for i in `seq $nb_spheres`;
+do
+	R=`awk "NR=="$i /dls/tmp/jjl36382/results/radii_max.txt`
+	
+	echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/get_radii.py -x $R -y $R -z $R $@" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/test_run.sh
+	#echo qsub -pe smp 2 -j y -t $start-$final:$step -tc 15 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere_median02.npy /dls/tmp/jjl36382/radii/radii%03i.npy
+done 
 
 
-# Plot radii ----------------------------------------------------------------
-
-#python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py
+# Plot radii ------------------------------------------------------------------------------------------------------
+echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/test_run.sh
+#qsub -pe smp 2 -j y -t 1 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh

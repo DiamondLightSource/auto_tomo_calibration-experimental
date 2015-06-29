@@ -165,10 +165,10 @@ def detect_circles(np_image):
         
         # For each radius, extract one circle
         for radius, h in zip(hough_radii, hough_res):
-            peaks = peak_local_max(h, num_peaks=1)
+            peaks = peak_local_max(h, num_peaks=2)
             centers.extend(peaks)
             accums.extend(h[peaks[:, 0], peaks[:, 1]])
-            radii.extend([radius])
+            radii.extend([radius,radius])
         
         # Find the most prominent N circles (depends on how many circles we want to detect) => here only 1 thanks to select_area
         for idx in np.argsort(accums)[::-1][:1]:

@@ -1,7 +1,8 @@
 import os
 from skimage import io
 import numpy as np
-from scipy.ndimage import median_filter
+from scipy.ndimage import median_filter,gaussian_filter
+from skimage.restoration import denoise_tv_chambolle
 
 def save_data(filename, data):
     print("Saving data")
@@ -30,7 +31,9 @@ if __name__ == '__main__' :
     
     # filter the image for radii detection
     print("Filter image %s" % input_filename)
-    sphere = median_filter(sphere, 10)
+    #sphere = median_filter(sphere, 10)
+    #sphere = gaussian_filter(sphere,3)
+    sphere = gaussian_filter(sphere, 2)
     
     # save image
     print("Saving image %s" % output_filename)
