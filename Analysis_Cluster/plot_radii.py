@@ -1,5 +1,6 @@
 import numpy as np
 import pylab as pl
+from math import sqrt
 
 if __name__ == '__main__' :
     import optparse
@@ -45,14 +46,21 @@ if __name__ == '__main__' :
     # Remove the anomalous radii
     radii_med = np.mean(radii_np)
     one_std_dev = np.std(radii_np)
-    for i in xrange(start,stop):
-        for j in xrange(0,181):
+    count = 0
+    for i in range(start,stop):
+        for j in range(0,180):
             # Values within 3stdev
-            if abs(radii_np[i, j] - radii_med) > one_std_dev*3:
+            count = count + 1
+            if abs(abs(radii_np[i, j]) - abs(radii_med)) > (one_std_dev*3):
+                print radii_np[i, j]
                 radii_np[i, j] = radii_med
                 
+    print count  
     print np.mean(radii_np)
-    print one_std_dev
+    print "3 sigma : ", one_std_dev*3
+    print "3 sigma after repair : ", np.std(radii_np)*3
+    
+    
     # Plot
 
     pl.imshow(radii_np.T)

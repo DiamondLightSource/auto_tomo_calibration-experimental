@@ -26,16 +26,16 @@ nb_spheres=`cat /dls/tmp/jjl36382/results/nb_spheres.txt`
 
 
 # Select areas ------------------------------------------------------------------------------------------------------
-for i in `seq $nb_spheres`;
+for i in `seq 2`; # $nb_spheres`;
 do
 	X=`awk "NR=="$i /dls/tmp/jjl36382/results/centresX.txt`
 	Y=`awk "NR=="$i /dls/tmp/jjl36382/results/centresY.txt`
 	Z=`awk "NR=="$i /dls/tmp/jjl36382/results/centresZ.txt`
 	R=`awk "NR=="$i /dls/tmp/jjl36382/results/radii_max.txt`
 	
-	#echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-	#echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-	#echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/selector.py -x $X -y $Y -z $Z -r $R \$@" >>  ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh 
+	echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+	echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+	echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/selector.py -x $X -y $Y -z $Z -r $R \$@" >>  ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh 
 	#qsub -pe smp 2 -j y -t $i ~/auto_tomo_calibration-experimental/Analysis_Cluster/run.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy $path"recon_%05i.tif"
 done
 
@@ -44,7 +44,7 @@ done
 echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/filter_sphere.py \$@" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-#qsub -pe smp 2 -j y -t 2 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy /dls/tmp/jjl36382/spheres/sphere_3gaus%02i.npy
+#qsub -pe smp 2 -j y -t 2 -tc 10 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh /dls/tmp/jjl36382/spheres/sphere%02i.npy /dls/tmp/jjl36382/spheres/sphere_5gaus%02i.npy
 
 
 
@@ -61,8 +61,9 @@ do
 	echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 	echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 	echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/get_radii.py -x $R -y $R -z $R \$@" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-	#mkdir /dls/tmp/jjl36382/radii$i
-	#qsub -pe smp 2 -j y -t $start-$final:$step -tc 15 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh /dls/tmp/jjl36382/spheres/sphere_2gaus02.npy /dls/tmp/jjl36382/radii$i/radii%03i.npy
+	rm -r /dls/tmp/jjl36382/radii$i
+	mkdir /dls/tmp/jjl36382/radii$i
+	qsub -pe smp 2 -j y -t $start-$final:$step -tc 15 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh /dls/tmp/jjl36382/spheres/sphere_5gaus02.npy /dls/tmp/jjl36382/radii$i/radii%03i.npy
 	# Wait for the whole loop to finish
 done 
 
@@ -74,5 +75,5 @@ do
 	echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 	echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py -a $start -b $final -c $step /dls/tmp/jjl36382/radii1/radii%03i.npy" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 	#qsub -pe smp 2 -j y -t $i ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh /dls/tmp/jjl36382/radii$i/radii%03i.npy
-	~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+	#~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 done
