@@ -228,7 +228,7 @@ def get_resolution(contact, indices):
     pl.subplot(1, 2, 1)
     pl.imshow(area1)
     from scipy.ndimage import median_filter, gaussian_filter
-    from skimage.filter import sobel, threshold_otsu
+    import get_blob as gb
     #area1 = median_filter(area1, 10)
     area1 = gaussian_filter(area1, 2)
     pl.subplot(1, 2, 2)
@@ -245,6 +245,8 @@ def get_resolution(contact, indices):
 #     area2 = area2 >= 420
     pl.imshow(area2)
     pl.show()
+    
+    gb.plot_radii(area1)
     
     return
 
