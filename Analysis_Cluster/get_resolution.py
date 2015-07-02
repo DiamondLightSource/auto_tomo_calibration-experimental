@@ -152,6 +152,7 @@ def get_resolution(contact, indices):
     """
     
     import numpy as np
+    import pylab as pl
     from math import radians, cos
     # Load data
     radii_spheres, angles_outliers = load_data("/dls/tmp/jjl36382/analysis/")
@@ -171,7 +172,7 @@ def get_resolution(contact, indices):
     mean_radii1 = np.mean(radii_spheres[i1])
     mean_radii2 = np.mean(radii_spheres[i2])
    
-    # Get the iterators for each angle range
+    """# Get the iterators for each angle range
     # They are within four stdev's of each mean
     range_theta1 = range(int(mean_theta1 - np.std(angles_theta1) * 5),\
                          int(mean_theta1 + np.std(angles_theta1) * 5))
@@ -196,10 +197,10 @@ def get_resolution(contact, indices):
         if (delta > 10):
             if phi > max_ang1:
                 max_ang1 = phi
-                #print max_ang1
+                # print max_ang1
                 pt1 = (radii, mean_theta1, max_ang1)
     
-    #print "gap"
+    # print "gap"
     
     for phi in range_phi2:
         radii = radii_spheres[i2][mean_theta2, phi]
@@ -207,11 +208,43 @@ def get_resolution(contact, indices):
         if (delta > 10):
             if phi > max_ang2:
                 max_ang2 = phi
-                #print max_ang2
+                # print max_ang2
                 pt2 = (radii, mean_theta2, max_ang2)
             
     resolution = pt1[0] * (1 - cos(radians(pt1[2]))) + pt2[0] * (1 - cos(radians(pt2[2])))
-    print resolution
+    print resolution"""
+    
+    # -------------- use selector and plot radii techniques -------
+    
+    # segment the blobs out of the plot
+    R1 = int(1.2 * (max(angles_theta1) - min(angles_theta1)))
+    R2 = int(1.2 * (max(angles_theta2) - min(angles_theta2)))
+    
+    area1 = radii_spheres[i1][mean_theta1 - R1:mean_theta1 + R1,\
+                              mean_phi1 - R1:mean_phi1 + R1]
+    area2 = radii_spheres[i2][mean_theta2 - R2:mean_theta2 + R2,\
+                              mean_phi2 - R2:mean_phi2 + R2]
+    
+    pl.subplot(1, 2, 1)
+    pl.imshow(area1)
+    from scipy.ndimage import median_filter, gaussian_filter
+    from skimage.filter import sobel, threshold_otsu
+    #area1 = median_filter(area1, 10)
+    area1 = gaussian_filter(area1, 2)
+    pl.subplot(1, 2, 2)
+    pl.imshow(area1)
+    pl.show()
+
+    pl.subplot(1, 2, 1)
+    pl.imshow(area2)
+    pl.subplot(1, 2, 2)
+    #area2 = gaussian_filter(area2, 5)
+    area2 = median_filter(area2, 6)
+#     area2 = sobel(area2)
+#     threshold = threshold_otsu(area2)
+#     area2 = area2 >= 420
+    pl.imshow(area2)
+    pl.show()
     
     return
 
