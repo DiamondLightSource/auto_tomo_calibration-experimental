@@ -9,6 +9,13 @@ def save_data(filename, data):
     np.save(f, data)
     f.close()
 
+def save_dict(filename, data):
+    import pickle
+    print("Saving data")
+    f = open(filename, 'w')
+    pickle.dump(data, f)
+    f.close()
+
 if __name__ == '__main__' :
     import optparse
     parser = optparse.OptionParser()
@@ -35,6 +42,7 @@ if __name__ == '__main__' :
     stop = options.b
     step = options.c
     radii_filename = args[0]
+    index = int(args[1])
     
     # get the number of the frame to process
     # task_id = int(os.environ['SGE_TASK_ID'])
@@ -61,21 +69,19 @@ if __name__ == '__main__' :
     for i in range(start,stop):
         for j in range(0,180):
             # Values within 2stdev
-            if abs(abs(radii_np[i, j]) - abs(radii_med)) > (one_std_dev*2):
-            	angl = '(%s,%s)' % (i,j)
+            # Anomalous radii will always be bigger than the mean
+            if abs(radii_np[i, j]) - abs(radii_med) > (one_std_dev*2):
+            	angl = (i,j)
                 outliers[angl] = radii_np[i, j]
-                radii_np[i, j] = radii_med 
+                #radii_np[i, j] = radii_med 
                 
-	print outliers
 	# save image
-	# output_filename = "/dls/tmp/jjl36382/analysis/outliers%02i.npy" % task_id
-	# output_angles = "/dls/tmp/jjl36382/analysis/radii%02i.npy" % task_id
-	output_filename = "/dls/tmp/jjl36382/analysis/outliers02.npy"
-	output_angles = "/dls/tmp/jjl36382/analysis/radii02.npy"
+	output_filename = "/dls/tmp/jjl36382/analysis/outliers%02i.dat" % index
+	output_angles = "/dls/tmp/jjl36382/analysis/radii%02i.npy" % index
     print("Saving image %s" % output_filename)
     print("Saving image %s" % output_angles)
     save_data(output_angles, radii_np)
-    save_data(output_filename, outliers)
+    save_dict(output_filename, outliers)
 	   
     # Plot
     
@@ -87,6 +93,6 @@ if __name__ == '__main__' :
     #pl.xticks(np.arange(0, 360, 10), theta_bord)
     #pl.yticks(np.arange(0, len(phi_bord)+1, 10), phi_bord)
     pl.colorbar(shrink=0.8)
-    pl.savefig("/dls/tmp/jjl36382/results/std2_array_gaus2.png")
+    pl.savefig("/dls/tmp/jjl36382/analysis/radii%02i_%f.png" % (index, radii_med))
 
     pl.show()
