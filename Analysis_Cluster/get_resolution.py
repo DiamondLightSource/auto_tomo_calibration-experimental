@@ -7,7 +7,7 @@ def load_data(path):
         path string
         
     Output:
-        radii np array and outliers dictionary 
+        radii np array and outliers dictionary
     """
     import os
     import numpy as np
@@ -18,7 +18,7 @@ def load_data(path):
     outliers = []
     for f in os.listdir(path):
         if f.endswith(".npy") and f.startswith("radii"):
-            radii.append(os.path.join(path, f)) 
+            radii.append(os.path.join(path, f))
         elif f.endswith(".dat") and f.startswith("outliers"):
             outliers.append(os.path.join(path, f))
     
@@ -39,21 +39,21 @@ def load_data(path):
     return radii_spheres, angles_outliers
 
 
-def approx_phi(x, y, tolerance=5):
+def approx_value(x, y, value, tolerance=5):
     """
-    Check if the phi angle is within a certain tolerance
+    Check if two values are within a certain tolerance
     
     Input:
-        two angles and a tolerance
+        two values and a tolerance
     
     Output:
         True boolean value
     """
-    if (180 - tolerance) <= (x + y) <= (180 + tolerance):
+    if (value - tolerance) <= (x + y) <= (value + tolerance):
         return True
 
 
-def get_resolution():
+def find_contact():
     """
     Loads up the dictionary containing the outlier radii
     and their angles. This will load up all the outlier arrays
@@ -68,9 +68,9 @@ def get_resolution():
     Radii not satisfying this condition are probably just displaced
     due to the inaccurate center position
     
-    Once the point of contact is known, then the function will go along one direction
-    and check at what angle the radii become normal. Using this angle for
-    both spheres which are touching it is possible to calculate the
+    Once the point of contact is known, then the function will go along one
+    direction and check at what angle the radii become normal. Using this angle
+    for both spheres which are touching it is possible to calculate the
     distance where they can be resolved. This distance is the resolution.
     
     Pseudocode:
@@ -83,35 +83,28 @@ def get_resolution():
     Check the above one by looking whether the anomalous radii angle
     is near the touching point. If not then that is simply a defect.
     
-    Once all pairs are found and touching spheres are indicated find the resolution. 
+    Once all pairs are found and touching spheres are indicated
+    find the resolution
     
     Input:
         nothing
     
     Output:
-        None
+        Dictionary containing sphere indexes and angles indicating
+        points of contact
     """
     
-    import os
-    import numpy as np
-    import pylab as pl
-    import pickle
-
-    
-    # Load up the data    
+    # Load up the data
     radii_spheres, angles_outliers = load_data("/dls/tmp/jjl36382/analysis/")
-    
-    
-        
-    # Find the touching angle position
-    # touching_pts = [ ([theta1], [theta2][phi1], [phi2]) ]
+
+    # touching_pts = [ ([theta1], [theta2], [phi1], [phi2]) ]
     touching_pts = {}
     
     # Loop through all pairs
     for i in range(len(radii_spheres)):
         for j in range(i + 1, len(radii_spheres)):
-            print i
-            print j
+            # print i
+            # print j
             
             ith_dict = angles_outliers[i]
             jth_dict = angles_outliers[j]
@@ -129,22 +122,102 @@ def get_resolution():
                     i_theta, i_phi = i_angle[0], i_angle[1]
                     j_theta, j_phi = j_angle[0], j_angle[1]
                     delta_theta = abs(i_theta - j_theta)
-                    delta_phi = i_phi + j_phi
                     
-                    if delta_theta == 180 and approx_phi(i_phi, j_phi, 0):
+                    if delta_theta == 180\
+                     and approx_value(i_phi, j_phi, 180, 0):
                         touching_i_theta.append(i_theta)
                         touching_j_theta.append(j_theta)
                         touching_i_phi.append(i_phi)
                         touching_j_phi.append(j_phi)
                         
-            touching_pts[i, j] = touching_i_theta, touching_j_theta, touching_i_phi, touching_j_phi
-            
-    print touching_pts
-    
-    print np.mean(radii_spheres[0])
-    print np.mean(radii_spheres[1])
+            touching_pts[i, j] = touching_i_theta, touching_j_theta,\
+                                 touching_i_phi, touching_j_phi
     
     return touching_pts
     
+
+def get_resolution(contact, indices):
+    """
+    Find the mean value of the angle indicating point of contact
+    Loop around it within a certain range and find when radii
+    become non anomalous i.e. close to the mean
     
-get_resolution()
+    Input:
+        Dictionary with indices of spheres and their angles of
+        contact
+        Indices of the spheres as a tuple
+    
+    Output:
+        None
+    """
+    
+    import numpy as np
+    from math import radians, cos
+    # Load data
+    radii_spheres, angles_outliers = load_data("/dls/tmp/jjl36382/analysis/")
+    
+    angles_theta1 = contact[0]
+    angles_theta2 = contact[1]
+    angles_phi1 = contact[2]
+    angles_phi2 = contact[3]
+    i1 = indices[0]
+    i2 = indices[1]
+    
+    # Mean values of radii and angles
+    mean_theta1 = np.mean(angles_theta1)
+    mean_theta2 = np.mean(angles_theta2)
+    mean_phi1 = np.mean(angles_phi1)
+    mean_phi2 = np.mean(angles_phi2)
+    mean_radii1 = np.mean(radii_spheres[i1])
+    mean_radii2 = np.mean(radii_spheres[i2])
+   
+    # Get the iterators for each angle range
+    # They are within four stdev's of each mean
+    range_theta1 = range(int(mean_theta1 - np.std(angles_theta1) * 5),\
+                         int(mean_theta1 + np.std(angles_theta1) * 5))
+    range_phi1 = range(int(mean_phi1 - np.std(angles_phi1) * 5),\
+                       int(mean_phi1 + np.std(angles_phi1) * 5))
+    range_theta2 = range(int(mean_theta2 - np.std(angles_theta2) * 5),\
+                         int(mean_theta2 + np.std(angles_theta2) * 5))
+    range_phi2 = range(int(mean_phi2 - np.std(angles_phi2) * 5),\
+                       int(mean_phi2 + np.std(angles_phi2) * 5))
+    
+    # The blobs are more or less circular
+    # Hence, if the middle is know from mean_theta
+    # and mean_phi then only one edge is needed to
+    # know the approximate resolution
+    # Start at the middle and go along phi (altitude)
+    # above the theta angle (horizon/azimuth)
+    max_ang1 = 0
+    max_ang2 = 0
+    for phi in range_phi1:
+        radii = radii_spheres[i1][mean_theta1, phi]
+        delta = radii - mean_radii1
+        if (delta > 10):
+            if phi > max_ang1:
+                max_ang1 = phi
+                #print max_ang1
+                pt1 = (radii, mean_theta1, max_ang1)
+    
+    #print "gap"
+    
+    for phi in range_phi2:
+        radii = radii_spheres[i2][mean_theta2, phi]
+        delta = radii - mean_radii2
+        if (delta > 10):
+            if phi > max_ang2:
+                max_ang2 = phi
+                #print max_ang2
+                pt2 = (radii, mean_theta2, max_ang2)
+            
+    resolution = pt1[0] * (1 - cos(radians(pt1[2]))) + pt2[0] * (1 - cos(radians(pt2[2])))
+    print resolution
+    
+    return
+
+
+contact = find_contact()
+index = contact.keys()
+# Take the 0th and 1st spheres
+# and find the resolution between them
+get_resolution(contact[0, 1], index[0])
