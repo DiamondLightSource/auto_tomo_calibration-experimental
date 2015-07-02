@@ -3,6 +3,7 @@ import numpy as np
 import pylab as pl
 from scipy import misc
 from fpformat import extract
+import get_radii as gr
 
 """
 Input:
@@ -75,7 +76,7 @@ def select_area_for_detector(np_image):
     edges_bin = edges >= threshold
     label_image = label(edges_bin)
     
-    pl.subplot(1,3,1)
+    """ pl.subplot(1,3,1)
     pl.imshow(image_filtered)
     
     pl.subplot(1,3,2)
@@ -83,7 +84,7 @@ def select_area_for_detector(np_image):
     
     pl.subplot(1,3,3)
     pl.imshow(label_image)
-    pl.show()
+    pl.show()"""
     
     areas = []
     areas_full = []
@@ -101,12 +102,12 @@ def select_area_for_detector(np_image):
             continue
          
         # Skip small images
-        if region['Area'] < 100:
-            continue
+        """if region['Area'] < 100:
+            continue"""
          
         # Extract the coordinates of regions
         minr, minc, maxr, maxc = region['BoundingBox']
-        margin = len(np_image) / 100
+        margin = 2#len(np_image) / 100
         bord.append((minr - margin, maxr + margin, minc - margin, maxc + margin))
         areas.append(edges_bin[minr - margin:maxr + margin, minc - margin:maxc + margin].copy())
         areas_full.append(np_image[minr - margin:maxr + margin, minc - margin:maxc + margin].copy())
@@ -165,7 +166,7 @@ def detect_circles(np_image):
         # Jump too big or too small areas
         if areas[i].shape[0] >= size or areas[i].shape[1] >= size\
         or areas[i].shape[0] <= size/3 or areas[i].shape[1] <= size/3\
-        or abs(areas[i].shape[0] - areas[i-1].shape[0]) <= 10:
+        or abs(areas[i].shape[0] - areas[i-1].shape[0]) <= 2:
             index.append(i)
             continue
     
@@ -254,14 +255,14 @@ def detect_circles(np_image):
     pl.imshow(np_image_norm)
     pl.title('Circle detection on real image using Hough transform\n- optimised with image labelling algorithm -', fontdict={'fontsize': 20,'verticalalignment': 'baseline','horizontalalignment': 'center'})
     pl.colorbar()
-    pl.show()
+    #pl.show()
         
     """
     If the circle is an odd number of pixels wide, then that will displace the center by one pixel and give
     an uncertainty in the radius, producing the sine wave shape.
     
     THERE IS NO CLEAR WAY WHETHER TO SUBTRACT OR TO ADD THE HALF RADIUS
-    
+    """
     C_cp = C
     C = []
     
@@ -281,6 +282,34 @@ def detect_circles(np_image):
             C.append((C_cp[i][0], C_cp[i][1] + 0.5))
         else:
             C.append((C_cp[i][0], C_cp[i][1]))
-	"""
+	
     return areas, circles, C, bord, rad
 
+# analyse an image
+#img = np.array(Image.open("noisy_circles.png").convert('L'))
+# get all data about the images
+#areas, circles, centres, bord, radii = detect_circles(img)
+
+
+"""def add_noise(np_image, amount):
+    import numpy as np
+    import pylab as pl
+    from scipy import misc
+    
+    noise = np.random.randn(np_image.shape[0],np_image.shape[1])
+    norm_noise = noise/np.max(noise)
+    np_image = np_image + norm_noise*np.max(np_image)*amount
+    pl.imshow(np_image, cmap=pl.cm.Greys)
+    pl.show()
+    misc.imsave("noisy_circles.png",np_image)
+    return np_image"""
+
+#noisy = add_noise(img, 0.9)
+
+
+radii = []
+img = np.array(Image.open("noisy_circles.png").convert('L'))
+rad = gr.plot_radii(img, (64,65.5))
+radii.append(rad)
+
+print np.mean(radii)

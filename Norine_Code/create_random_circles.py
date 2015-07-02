@@ -54,4 +54,4 @@ def random_circles(nb_circles):
     
     return image
 
-random_circles(4)
+random_circles(1)

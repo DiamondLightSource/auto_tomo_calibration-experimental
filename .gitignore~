@@ -3,9 +3,7 @@ __pycache__/
 *.py[cod]
 
 # Autosaves
-*.py~
-*.txt~
-*.sh~
+*~
 
 # C extensions
 *.so

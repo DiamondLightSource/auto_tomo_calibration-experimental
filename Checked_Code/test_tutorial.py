@@ -13,7 +13,7 @@ import numpy.testing as npt
 class TestClass:
 	
 	# analyse an image
-	img = np.array(Image.open("./Test_Images/real.png").convert('L'))
+	img = np.array(Image.open("../Test_Images/real.png").convert('L'))
 	# get all data about the images
 	areas, circles, centres, bord, radii = cd.detect_circles(img)
 
