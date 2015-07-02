@@ -1,6 +1,13 @@
 import numpy as np
 import pylab as pl
 from math import sqrt
+import os
+
+def save_data(filename, data):
+    print("Saving data")
+    f = open(filename, 'w')
+    np.save(f, data)
+    f.close()
 
 if __name__ == '__main__' :
     import optparse
@@ -29,6 +36,9 @@ if __name__ == '__main__' :
     step = options.c
     radii_filename = args[0]
     
+    # get the number of the frame to process
+    # task_id = int(os.environ['SGE_TASK_ID'])
+    
     print start
     print stop
     print step
@@ -42,27 +52,33 @@ if __name__ == '__main__' :
     radii_np = np.zeros((stop,181))
     for i in range(stop/step):
         radii_np[i*step:i*step+step,:] = radii[i]
-
+	
+	outliers = {}
+	
     # Remove the anomalous radii
     radii_med = np.mean(radii_np)
     one_std_dev = np.std(radii_np)
-    count = 0
     for i in range(start,stop):
         for j in range(0,180):
-            # Values within 3stdev
-            count = count + 1
-            if abs(abs(radii_np[i, j]) - abs(radii_med)) > (one_std_dev*3):
-                print radii_np[i, j]
-                radii_np[i, j] = radii_med
+            # Values within 2stdev
+            if abs(abs(radii_np[i, j]) - abs(radii_med)) > (one_std_dev*2):
+            	angl = '(%s,%s)' % (i,j)
+                outliers[angl] = radii_np[i, j]
+                radii_np[i, j] = radii_med 
                 
-    print count  
-    print np.mean(radii_np)
-    print "3 sigma : ", one_std_dev*3
-    print "3 sigma after repair : ", np.std(radii_np)*3
-    
-    
+	print outliers
+	# save image
+	# output_filename = "/dls/tmp/jjl36382/analysis/outliers%02i.npy" % task_id
+	# output_angles = "/dls/tmp/jjl36382/analysis/radii%02i.npy" % task_id
+	output_filename = "/dls/tmp/jjl36382/analysis/outliers02.npy"
+	output_angles = "/dls/tmp/jjl36382/analysis/radii02.npy"
+    print("Saving image %s" % output_filename)
+    print("Saving image %s" % output_angles)
+    save_data(output_angles, radii_np)
+    save_data(output_filename, outliers)
+	   
     # Plot
-
+    
     pl.imshow(radii_np.T)
     pl.title(r'Radii of real sphere as a function of 2 spherical angles $\theta$ and $\phi$',\
              fontdict={'fontsize': 16,'verticalalignment': 'bottom','horizontalalignment': 'center'})
@@ -71,6 +87,6 @@ if __name__ == '__main__' :
     #pl.xticks(np.arange(0, 360, 10), theta_bord)
     #pl.yticks(np.arange(0, len(phi_bord)+1, 10), phi_bord)
     pl.colorbar(shrink=0.8)
-    pl.savefig("/dls/tmp/jjl36382/results/std2_auto.png")
+    pl.savefig("/dls/tmp/jjl36382/results/std2_array_gaus2.png")
 
     pl.show()
