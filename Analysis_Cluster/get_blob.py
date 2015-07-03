@@ -35,13 +35,13 @@ def get_radius(image, theta, centre):
     Yc = centre[1]
     
     # Denoise the image
-
-    image = denoise_tv_chambolle(image, weight=0.5)
-    pl.imsave("denoised.png",image)
+    
+    #image = denoise_tv_chambolle(image, weight=0.5)
+    #pl.imsave("denoised.png",image)
 
     # Get values of pixels according to an increasing radius for a same angle
     # Get the radius to be at most half the image since the circle can't be bigger
-    R = min(image.shape[0] / 2, image.shape[1] / 2) - 1
+    R = min(image.shape[0] / 2, image.shape[1] / 2) - 2
     
     # Simple trig identities
     # R is the max value that we can reach
@@ -51,12 +51,12 @@ def get_radius(image, theta, centre):
     points = []
     
     # Go from 0 to 1.001 in steps of 0.001
-    for alpha in np.arange(0,1.001,0.001):
+    for alpha in np.arange(0, 1.001, 0.001):
         # Xc and Yc are the positions from the center
         # points stores all the points from the center going along the radius
         points.append(image[Xc + alpha * delta_x, Yc + alpha * delta_y])
     
-    #points = smooth(np.asarray(points),100)
+    #points = smooth(np.asarray(points), 3)
     # Find the radius of the circle
     #print points 
     # Calculate discrete difference and find the edge via the extremum
@@ -67,7 +67,7 @@ def get_radius(image, theta, centre):
     # background is white and circles are black.
     # White is 255 pixel value so when we reach the edge and subtract 0 from 255 we will
     # get a MAX value, which will mean that we found the edge.
-    index_edge = np.argwhere(dif == np.min(dif))[0][0]
+    index_edge = np.argwhere(dif == np.max(dif))[0][0]
     #index_edge = dif.argmax(axis=0) 
     # Calculate the radius
     # R was the max length of our line
@@ -116,8 +116,18 @@ def plot_radii(image, centre):
     
     pl.close('all')
     
-    # Calculate radii for every angle
+    pl.imshow(image)
+    pl.show()
     
+    print "after padding..."
+    print "center is..", centre[0]+10, centre[1]+10
+    image = np.pad(image,10, 'edge')
+    pl.imshow(image)
+    pl.show()
+    
+    centre = centre[0] + 10, centre[1] + 10
+    
+    # Calculate radii for every angle
     radii_circle = []
     
     theta_bord = np.arange(0, 360, 1)
@@ -134,7 +144,7 @@ def plot_radii(image, centre):
     pl.plot(np.arange(0,360,1), radii_new, '-')
     #pl.show()
     """
-    
+
     # Plot
     radius = np.mean(radii_circle)
     
@@ -146,7 +156,7 @@ def plot_radii(image, centre):
     pl.xlim(0,360)
     pl.show()
     
-    return radii_circle
+    return np.mean(radii_circle)
 
 
 """

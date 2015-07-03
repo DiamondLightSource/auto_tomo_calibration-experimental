@@ -135,12 +135,43 @@ def find_contact():
     
     return touching_pts
     
+def pair_closest_mean(list1, list2):
+    """
+    Takes in two lists and finds the pair closest
+    to the mean while satisfying the angle conditions:
+    Difference of Theta pair must be equal to 180
+    Sum of Phi pair must be equal to 180
+    
+    Input:
+        Lists containing the angles (same length)
+    Output:
+        The pair closest to the mean as a tuple
+    """
+    
+    import numpy as np
+    
+    for i in range(len(list1)):
+        tol1 = 100
+        tol2 = 100
+        if (abs(list1[i] - np.mean(list1)) < tol1) and\
+            (abs(list2[i] - np.mean(list2)) < tol2):
+            
+            tol1 = list1[i] - np.mean(list1)
+            tol2 = list2[i] - np.mean(list2)
+            X = list1[i]
+            Y = list2[i]
+    
+    return (X, Y)
 
 def get_resolution(contact, indices):
     """
-    Find the mean value of the angle indicating point of contact
-    Loop around it within a certain range and find when radii
-    become non anomalous i.e. close to the mean
+    Segment the blobs at the point of contact.
+    Threshold and smear them out to get a circular shape
+    Use Hough transform circle detector to get their centres
+    Detect the edges of these blobs and obtain their radii
+    Use this radii in the resolution equation.
+    This is as precise as it can get in my opinion
+    using simple methods like these.
     
     Input:
         Dictionary with indices of spheres and their angles of
@@ -148,14 +179,17 @@ def get_resolution(contact, indices):
         Indices of the spheres as a tuple
     
     Output:
-        None
+        Resolution between two touching spheres
     """
     
     import numpy as np
     import pylab as pl
     from math import radians, cos
-    from scipy.ndimage import median_filter, gaussian_filter
+    from scipy.ndimage import gaussian_filter
+    
     import get_blob as gb
+    import blob_circles as bc
+    
     # Load data
     radii_spheres, angles_outliers = load_data("/dls/tmp/jjl36382/analysis/")
     
@@ -171,104 +205,76 @@ def get_resolution(contact, indices):
     mean_theta2 = np.mean(angles_theta2)
     mean_phi1 = np.mean(angles_phi1)
     mean_phi2 = np.mean(angles_phi2)
-    mean_radii1 = np.mean(radii_spheres[i1])
-    mean_radii2 = np.mean(radii_spheres[i2])
-   
-    """# Get the iterators for each angle range
-    # They are within four stdev's of each mean
-    range_theta1 = range(int(mean_theta1 - np.std(angles_theta1) * 5),\
-                         int(mean_theta1 + np.std(angles_theta1) * 5))
-    range_phi1 = range(int(mean_phi1 - np.std(angles_phi1) * 5),\
-                       int(mean_phi1 + np.std(angles_phi1) * 5))
-    range_theta2 = range(int(mean_theta2 - np.std(angles_theta2) * 5),\
-                         int(mean_theta2 + np.std(angles_theta2) * 5))
-    range_phi2 = range(int(mean_phi2 - np.std(angles_phi2) * 5),\
-                       int(mean_phi2 + np.std(angles_phi2) * 5))
     
-    # The blobs are more or less circular
-    # Hence, if the middle is know from mean_theta
-    # and mean_phi then only one edge is needed to
-    # know the approximate resolution
-    # Start at the middle and go along phi (altitude)
-    # above the theta angle (horizon/azimuth)
-    max_ang1 = 0
-    max_ang2 = 0
-    for phi in range_phi1:
-        radii = radii_spheres[i1][mean_theta1, phi]
-        delta = radii - mean_radii1
-        if (delta > 10):
-            if phi > max_ang1:
-                max_ang1 = phi
-                # print max_ang1
-                pt1 = (radii, mean_theta1, max_ang1)
+    # This was pointless - didn't help much
+    # average_theta1, average_theta2 = pair_closest_mean(angles_theta1, angles_theta2)
+    # average_phi1, average_phi2 = pair_closest_mean(angles_phi1, angles_phi2)
     
-    # print "gap"
-    
-    for phi in range_phi2:
-        radii = radii_spheres[i2][mean_theta2, phi]
-        delta = radii - mean_radii2
-        if (delta > 10):
-            if phi > max_ang2:
-                max_ang2 = phi
-                # print max_ang2
-                pt2 = (radii, mean_theta2, max_ang2)
-            
-    resolution = pt1[0] * (1 - cos(radians(pt1[2]))) + pt2[0] * (1 - cos(radians(pt2[2])))
-    print resolution"""
-    
-    # -------------- use selector and plot radii techniques -------
-    
-    # Get the "radii" of the blobs in both directions
+    # Get the "diameters" of the blobs in both directions
     rtheta1 = max(angles_theta1) - min(angles_theta1)
-    rphi1 = max(angles_phi1) - min(angles_phi1) 
+    rphi1 = max(angles_phi1) - min(angles_phi1)
     rtheta2 = max(angles_theta2) - min(angles_theta2)
     rphi2 = max(angles_phi2) - min(angles_phi2)
     
-    # Get the centres
-    centre1 = (rtheta1 / 2.0, rphi1 / 2.0)
-    centre2 = (rtheta2 / 2.0, rphi2 / 2.0)
+    # Borders for the segmented blob area
+    R1 = int(1.5 * max(rtheta1, rphi1))
+    R2 = int(1.5 * max(rtheta2, rphi2))
     
-    # Borders for the segmented blob
-    R1 = int(1.2 * max(rtheta1, rphi1))
-    R2 = int(1.2 * max(rtheta2, rphi2))
-    
-    # Segment the blob areas
+    # Segment the blob areas (can be approximate)
     area1 = radii_spheres[i1][mean_theta1 - R1:mean_theta1 + R1,\
                               mean_phi1 - R1:mean_phi1 + R1]
     area2 = radii_spheres[i2][mean_theta2 - R2:mean_theta2 + R2,\
                               mean_phi2 - R2:mean_phi2 + R2]
     
-    pl.subplot(1, 2, 1)
+    # Threshold the pixels above average since
+    # they are anomalous
+    # Then apply a Gaussian filter to smear the
+    # speckle pattern and threshold to get a
+    # circular blob. It then is analysed to find
+    # the mean radius
+    pl.subplot(2, 2, 1)
     pl.imshow(area1)
-    area1 = gaussian_filter(area1, 2)
+        
+    pl.subplot(2, 2, 2)
+    absolute1 = abs(area1 - np.mean(radii_spheres[i1])) + np.mean(radii_spheres[i1])
+    area1 = gaussian_filter(absolute1, 2)
+    area1 = area1 >= np.mean(area1)
+    pl.imshow(area1)
     
-    pl.subplot(1, 2, 2)
-    pl.imshow(area1)
+    pl.subplot(2, 2, 3)
+    pl.imshow(area2)
+    
+    pl.subplot(2, 2, 4)
+    absolute2 = abs(area2 - np.mean(radii_spheres[i2])) + np.mean(radii_spheres[i2])
+    area2 = gaussian_filter(absolute2, 2)
+    area2 = area2 >= np.mean(area2)
+    pl.imshow(area2)
+    
     pl.show()
+    
+    # Get the centre positions of the blobs
+    # using Hough transform
+    C1 = bc.detect_circles(area1)
+    C2 = bc.detect_circles(area2)
+    print "centre from circle detection ", C1[0], C2[0]
+    
+    # THE BORDER COULD BE SHIFTED AT THE EDGES
+    radius1 = gb.plot_radii(area1, C1[0])
+    radius2 = gb.plot_radii(area2, C2[0])
+    
+    print "Radius before smoothing is ", rtheta1 / 2.0
+    print "Radius before smoothing is ", rtheta2 / 2.0
+    print "Radius after smoothing is ", radius1
+    print "Radius after smoothing is ", radius2
 
-    pl.subplot(1, 2, 1)
-    pl.imshow(area2)
+    resolution = np.mean(radii_spheres[i1]) * (1 - cos(radians(radius1))) +\
+                 np.mean(radii_spheres[i2]) * (1 - cos(radians(radius2)))
     
-    pl.subplot(1, 2, 2)
-    #area2 = gaussian_filter(area2, 5)
-    area2 = median_filter(area2, 6)
-#     area2 = sobel(area2)
-#     threshold = threshold_otsu(area2)
-#     area2 = area2 >= 420
-    pl.imshow(area2)
-    pl.show()
-    
-    radius1 = gb.plot_radii(area1, centre1)
-    radius2 = gb.plot_radii(area2, centre2)
-    
-    # Once the radius is obtained calculate resolution
-    resolution = radius1 * (1 - cos(radians(mean_phi1))) + radius2 * (1 - cos(radians(mean_phi2)))
-    
-    return
+    return resolution
 
 
 contact = find_contact()
 index = contact.keys()
 # Take the 0th and 1st spheres
 # and find the resolution between them
-get_resolution(contact[0, 1], index[0])
+print get_resolution(contact[index[0]], index[0])
