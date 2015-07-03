@@ -154,6 +154,8 @@ def get_resolution(contact, indices):
     import numpy as np
     import pylab as pl
     from math import radians, cos
+    from scipy.ndimage import median_filter, gaussian_filter
+    import get_blob as gb
     # Load data
     radii_spheres, angles_outliers = load_data("/dls/tmp/jjl36382/analysis/")
     
@@ -216,20 +218,21 @@ def get_resolution(contact, indices):
     
     # -------------- use selector and plot radii techniques -------
     
-    # segment the blobs out of the plot
+    # Get the "radii" of the blobs in both directions
     rtheta1 = max(angles_theta1) - min(angles_theta1)
     rphi1 = max(angles_phi1) - min(angles_phi1) 
     rtheta2 = max(angles_theta2) - min(angles_theta2)
     rphi2 = max(angles_phi2) - min(angles_phi2)
     
-    print rtheta1
-    print rphi1
+    # Get the centres
+    centre1 = (rtheta1 / 2.0, rphi1 / 2.0)
+    centre2 = (rtheta2 / 2.0, rphi2 / 2.0)
     
-    centre1 = (rtheta1 or rphi1) / 2
+    # Borders for the segmented blob
+    R1 = int(1.2 * max(rtheta1, rphi1))
+    R2 = int(1.2 * max(rtheta2, rphi2))
     
-    R1 = int(1.2 * rtheta1)
-    R2 = int(1.2 * rtheta2)
-    
+    # Segment the blob areas
     area1 = radii_spheres[i1][mean_theta1 - R1:mean_theta1 + R1,\
                               mean_phi1 - R1:mean_phi1 + R1]
     area2 = radii_spheres[i2][mean_theta2 - R2:mean_theta2 + R2,\
@@ -237,16 +240,15 @@ def get_resolution(contact, indices):
     
     pl.subplot(1, 2, 1)
     pl.imshow(area1)
-    from scipy.ndimage import median_filter, gaussian_filter
-    import get_blob as gb
-    #area1 = median_filter(area1, 10)
     area1 = gaussian_filter(area1, 2)
+    
     pl.subplot(1, 2, 2)
     pl.imshow(area1)
     pl.show()
 
     pl.subplot(1, 2, 1)
     pl.imshow(area2)
+    
     pl.subplot(1, 2, 2)
     #area2 = gaussian_filter(area2, 5)
     area2 = median_filter(area2, 6)
@@ -256,7 +258,11 @@ def get_resolution(contact, indices):
     pl.imshow(area2)
     pl.show()
     
-    gb.plot_radii(area1)
+    radius1 = gb.plot_radii(area1, centre1)
+    radius2 = gb.plot_radii(area2, centre2)
+    
+    # Once the radius is obtained calculate resolution
+    resolution = radius1 * (1 - cos(radians(mean_phi1))) + radius2 * (1 - cos(radians(mean_phi2)))
     
     return
 
