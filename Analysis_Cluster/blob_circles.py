@@ -46,7 +46,7 @@ def detect_circles(np_image):
     pl.colorbar()
     #pl.show()
         
-    """    C_cp = C
+    C_cp = C
     C = []
   
     if radius % 2 != 0:
@@ -56,7 +56,7 @@ def detect_circles(np_image):
     elif radius % 2 != 0:
         C.append((C_cp[0][0], C_cp[0][1] + 0.5))
     else:
-        C.append((C_cp[0][0], C_cp[0][1]))"""
+        C.append((C_cp[0][0], C_cp[0][1]))
   	
     return C
 

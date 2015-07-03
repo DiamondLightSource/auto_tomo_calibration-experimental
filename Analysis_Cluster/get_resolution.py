@@ -258,23 +258,37 @@ def get_resolution(contact, indices):
     C2 = bc.detect_circles(area2)
     print "centre from circle detection ", C1[0], C2[0]
     
-    # THE BORDER COULD BE SHIFTED AT THE EDGES
-    radius1 = gb.plot_radii(area1, C1[0])
-    radius2 = gb.plot_radii(area2, C2[0])
+    radius1 = gb.remove_large_sine(area1, C1[0])
+    radius2 = gb.remove_large_sine(area2, C2[0])
     
-    print "Radius before smoothing is ", rtheta1 / 2.0
-    print "Radius before smoothing is ", rtheta2 / 2.0
-    print "Radius after smoothing is ", radius1
-    print "Radius after smoothing is ", radius2
-
+    print "Radius1 using min/max ", rtheta1 / 2.0
+    print "Radius2 using min/max ", rtheta2 / 2.0
+    print "Precise Radius1 ", radius1
+    print "Precise Radius2 ", radius2
+    
+    # Distance between spheres when they become
+    # barely resolved
     resolution = np.mean(radii_spheres[i1]) * (1 - cos(radians(radius1))) +\
                  np.mean(radii_spheres[i2]) * (1 - cos(radians(radius2)))
     
     return resolution
 
+def calculate_resolutions():
+    """
+    Loop through all the pairs and calculate their resolution
+    
+    Input:
+        None
+    Output:
+        None
+    """
+    
+    contact = find_contact()
+    index = contact.keys()
+    
+    for i in range(len(index)):
+        print get_resolution(contact[index[i]], index[i])
+    
+    return
 
-contact = find_contact()
-index = contact.keys()
-# Take the 0th and 1st spheres
-# and find the resolution between them
-print get_resolution(contact[index[0]], index[0])
+calculate_resolutions()

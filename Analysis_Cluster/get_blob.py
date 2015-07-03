@@ -116,14 +116,14 @@ def plot_radii(image, centre):
     
     pl.close('all')
     
-    pl.imshow(image)
-    pl.show()
+#     pl.imshow(image)
+#     pl.show()
     
-    print "after padding..."
-    print "center is..", centre[0]+10, centre[1]+10
+#     print "after padding..."
+#     print "center is..", centre[0]+10, centre[1]+10
     image = np.pad(image,10, 'edge')
-    pl.imshow(image)
-    pl.show()
+#     pl.imshow(image)
+#     pl.show()
     
     centre = centre[0] + 10, centre[1] + 10
     
@@ -237,7 +237,7 @@ def remove_large_sine(image, centre):
     # pl.ylim(radius-5,radius+5)
     pl.show()
     
-    return [radius, radius_flat]
+    return radius_flat
 
 
 
