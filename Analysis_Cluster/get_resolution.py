@@ -217,8 +217,18 @@ def get_resolution(contact, indices):
     # -------------- use selector and plot radii techniques -------
     
     # segment the blobs out of the plot
-    R1 = int(1.2 * (max(angles_theta1) - min(angles_theta1)))
-    R2 = int(1.2 * (max(angles_theta2) - min(angles_theta2)))
+    rtheta1 = max(angles_theta1) - min(angles_theta1)
+    rphi1 = max(angles_phi1) - min(angles_phi1) 
+    rtheta2 = max(angles_theta2) - min(angles_theta2)
+    rphi2 = max(angles_phi2) - min(angles_phi2)
+    
+    print rtheta1
+    print rphi1
+    
+    centre1 = (rtheta1 or rphi1) / 2
+    
+    R1 = int(1.2 * rtheta1)
+    R2 = int(1.2 * rtheta2)
     
     area1 = radii_spheres[i1][mean_theta1 - R1:mean_theta1 + R1,\
                               mean_phi1 - R1:mean_phi1 + R1]
