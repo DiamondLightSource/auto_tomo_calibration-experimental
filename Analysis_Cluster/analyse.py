@@ -7,7 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 pl.close('all')
 
-if __name__ == '__main__' :
+"""if __name__ == '__main__' :
     import optparse
     parser = optparse.OptionParser()
     parser.add_option("-a", "--start",
@@ -32,8 +32,11 @@ if __name__ == '__main__' :
     start = options.a
     stop = options.b
     step = options.c
-    input_filename = args[0]
+    input_filename = args[0]"""
 
+start = 0
+step = 10
+stop = 2100
 
 fig = pl.figure()
 ax = fig.gca(projection='3d')
@@ -45,8 +48,9 @@ in a slice and appends them to a list.
 """
 data = []
 #CHANGE RANGE ACCORDING TO ANALYSED SLICES
-for i in range(start, stop, step):
-    f = open(input_filename %i, 'r')
+for i in range(start, stop + 1, step):
+    #f = open(input_filename %i, 'r')
+    f = open("/dls/tmp/jjl36382/results/out%05i.dat" %i, 'r')
     data.append(pickle.load(f))
     f.close()
 
@@ -74,11 +78,11 @@ print radii_circles
 
 for slice in range(N):
     for i in range(len(perimeters[slice])):
-        ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*10+10)
+        ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*step + step)
 
-ax.set_xlim(0,2560)
-ax.set_ylim(0,2560)
-ax.set_zlim(0,2560)
+ax.set_xlim(start,stop)
+ax.set_ylim(start,stop)
+ax.set_zlim(start,stop)
 pl.title('Sphere detection on real image')
 
 pl.show()
@@ -134,18 +138,18 @@ for slice in range(1,N-2):
         # If the centre is not in the two following slices (to prevent from bugs): bottom of sphere
         for centre_fol in centres[slice+1]:
             # if centres equal to within about 10 pixels
-            if np.allclose(np.asarray(centre), np.asarray(centre_fol), 0, 1): 
+            if np.allclose(np.asarray(centre), np.asarray(centre_fol), 0, step): 
                 break
         else:
             for centre_foll in centres[slice+2]:
-                if np.allclose(np.asarray(centre), np.asarray(centre_foll), 0, 1):
+                if np.allclose(np.asarray(centre), np.asarray(centre_foll), 0, step):
                     break
             else:
                 index_bot.append(slice)
                 centres_bot.append(centre)
         # If the centre has not been picked before: top of sphere
         for centre_p in centres_picked:
-            if np.allclose(np.asarray(centre), np.asarray(centre_p), 0, 1):
+            if np.allclose(np.asarray(centre), np.asarray(centre_p), 0, step):
                 break
         else:
             centres_picked.append(centre)
@@ -171,7 +175,7 @@ centres_bot[:] = [item for i,item in enumerate(centres_bot) if i not in index_bo
 
 # Get (x,y) coordinates of centres of spheres
 
-if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 1):
+if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, step):
     centres_zipped = np.asarray(zip(centres_top,centres_bot))
     centres_xy = np.array(np.median(centres_zipped, axis=1), dtype='int64')
 
@@ -181,9 +185,9 @@ Data is taken in increments of 10 (slices)
 this is why we multiply
 Also we start taking them from 10 so we add 10
 """
-if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 1):
+if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, step):
     edges = np.asarray(zip(index_top, index_bot))
-    centres_z = np.array(np.median(edges, axis=1), dtype='int64')*1 + 1
+    centres_z = np.array(np.median(edges, axis=1), dtype='int64')*step + step
 
 centroids = zip(centres_xy[:,0], centres_xy[:,1], centres_z)
 
@@ -194,11 +198,11 @@ print 'Centres of spheres:', centroids
 
 for slice in range(N):
     for i in range(len(perimeters[slice])):
-        ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*1+1)
+        ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*step+step)
 
-ax.set_xlim(0,2560)
-ax.set_ylim(0,2560)
-ax.set_zlim(0,2560)
+ax.set_xlim(start,stop)
+ax.set_ylim(start,stop)
+ax.set_zlim(start,stop)
 pl.title('Sphere detection on real image')
 
 pl.show()
@@ -236,14 +240,14 @@ for n in range(nb_spheres):
         
         for i in range(len(centres[slice])):
             #TO BE CHANGED TO FIT DATA
-            if (abs(centres[slice][i][0] - centroids[n][0]) < 1)\
-            and (abs(centres[slice][i][1] - centroids[n][1]) < 1):
+            if (abs(centres[slice][i][0] - centroids[n][0]) < step)\
+            and (abs(centres[slice][i][1] - centroids[n][1]) < step):
                 slices.append(slice)
                 bords.append(bord_circles[slice][i])
                 radii.append(radii_circles[slice][i])
                 perim.append(perimeters[slice][i])
    
-    if len(slices) > 1:
+    if len(slices) > step:
         slices_spheres.append(slices)
         bords_spheres.append(bords)
         radii_slices.append(radii)

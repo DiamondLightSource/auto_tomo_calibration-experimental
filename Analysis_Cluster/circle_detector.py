@@ -57,19 +57,22 @@ def select_area_for_detector(np_image):
     from skimage.morphology import label
     from skimage.measure import regionprops
     from skimage.filter import denoise_tv_chambolle
-    
+    from skimage.feature import canny
     pl.close('all')
     
     # Find regions
     
     image_filtered = denoise_tv_chambolle(np_image, weight=0.002)
-    edges = sobel(image_filtered)
+    edges = roberts(image_filtered)
     
     nbins = 50
     threshold = threshold_otsu(edges, nbins)
     edges_bin = edges >= threshold
     
     label_image = label(edges_bin)
+    
+    pl.imshow(edges)
+    pl.show()
     
     areas = []
     areas_full = []
@@ -119,8 +122,8 @@ def detect_circles(np_image):
 
     for i in range(0, len(areas)):
         # Jump too big or too small areas
-        if areas[i].shape[0] >= size or areas[i].shape[1] >= size\
-        or areas[i].shape[0] <= size/5 or areas[i].shape[1] <= size/5:
+        if areas[i].shape[0] >= size or areas[i].shape[1] >= size:
+        #or areas[i].shape[0] <= size/5 or areas[i].shape[1] <= size/5:
             index.append(i)
             continue
     
@@ -206,3 +209,19 @@ def detect_circles(np_image):
             C.append((C_cp[i][0], C_cp[i][1]))
     """
     return [bord, C, R, circles]
+
+import h5py
+import pylab as pl
+import numpy as np
+
+f = h5py.File('/dls/science/groups/i12/for Tomas/pco1-45808.hdf', 'r')
+PATH = '/entry/instrument/detector/data/'
+s = f[PATH]
+
+slice = s[1000]
+
+pl.imshow(slice)
+pl.gray()
+pl.show()
+
+data = detect_circles(slice)

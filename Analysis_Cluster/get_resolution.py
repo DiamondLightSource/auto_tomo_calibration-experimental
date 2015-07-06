@@ -258,8 +258,8 @@ def get_resolution(contact, indices):
     C2 = bc.detect_circles(area2)
     print "centre from circle detection ", C1[0], C2[0]
     
-    radius1 = gb.remove_large_sine(area1, C1[0])
-    radius2 = gb.remove_large_sine(area2, C2[0])
+    radius1 = gb.plot_radii(area1, C1[0])
+    radius2 = gb.plot_radii(area2, C2[0])
     
     print "Radius1 using min/max ", rtheta1 / 2.0
     print "Radius2 using min/max ", rtheta2 / 2.0
