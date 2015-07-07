@@ -1,11 +1,7 @@
 import os
 from skimage import io
-import numpy as np
-import h5py
-import pylab as pl
 
 import circle_detector
-
 
 def save_data(filename, data):
     import pickle
@@ -14,36 +10,29 @@ def save_data(filename, data):
     pickle.dump(data, f)
     f.close()
 
-
-if __name__ == '__main__':
-    
+if __name__ == '__main__' :
     import optparse
-    parser = optparse.OptionParser()
+    usage = "%prog [options] input_file_template, output_file_template \n" + \
+        "  input_file_template  = /location/of/file/filename%05i.tif \n" + \
+        "  output_file_template = /location/of/output/filename%05i.tif"
+    parser = optparse.OptionParser(usage=usage)
 
     (options, args) = parser.parse_args()
 
     # get the number of the frame to process
-    task_id = int(os.environ['SGE_TASK_ID']) - 1
+    task_id = int(os.environ['SGE_TASK_ID'])
 
     # make the filename
-    input_filename = args[0]
+    input_filename = args[0] % task_id
     output_filename = args[1] % task_id
-    
-    f = h5py.File(input_filename, 'r')
-    PATH = '/entry/instrument/detector/data/'
-    s = f[PATH]
-    #nb_slice = s.shape[0] - 1
-    
+
     # load image
-    #print("Loading image %s" % input_filename)
-    #image = io.imread(input_filename)
-    image = s[task_id]
-    
+    print("Loading image %s" % input_filename)
+    image = io.imread(input_filename)
+
     # process image
     print("Processing data")
-    #time.sleep(10)
     result = circle_detector.detect_circles(image)
-#    result = ""
 
     # save image
     print("Saving image %s" % output_filename)

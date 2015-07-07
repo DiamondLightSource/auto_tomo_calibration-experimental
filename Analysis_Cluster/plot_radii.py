@@ -45,7 +45,7 @@ if __name__ == '__main__' :
     index = int(args[1])
     
     # get the number of the frame to process
-    # task_id = int(os.environ['SGE_TASK_ID'])
+    #task_id = int(os.environ['SGE_TASK_ID'])
     
     print start
     print stop

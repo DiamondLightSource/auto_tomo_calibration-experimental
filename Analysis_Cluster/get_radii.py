@@ -10,7 +10,7 @@ def save_data(filename, data):
     np.save(f, data)
     f.close()
 
-if __name__ == '__main__' :
+if __name__ == '__main__':
     import optparse
     usage = "%prog [options] input_file_template, output_file_template \n" + \
         "  input_file_template  = /location/of/file/filename%02i.npy \n" + \
@@ -42,7 +42,7 @@ if __name__ == '__main__' :
     sphere = np.load(input_filename)
     
     # measure radii
-    radii = radii_angles.plot_radii(sphere, (x, y, z), task_id, task_id+10)
+    radii = radii_angles.plot_radii(sphere, (x, y, z), task_id, task_id + 10)
 
     # save data
     print("Saving data %s" % output_filename)

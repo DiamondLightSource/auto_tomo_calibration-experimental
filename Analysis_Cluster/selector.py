@@ -49,9 +49,11 @@ if __name__ == '__main__' :
     # make the filename
     output_filename = args[0] % task_id
     input_filename = args[1]
-
+    shift = int(args[2]) - 1
+    
+    
     # load image
-    R = int(1.2*r)
+    R = r + 1#int(1.2*r)
     area = np.zeros((2*R+1, 2*R+1, 2*R+1))
     for i in range(z-R, z+R+1):
         input_file = input_filename % i
