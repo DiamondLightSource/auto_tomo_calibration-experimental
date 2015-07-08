@@ -12,7 +12,8 @@ resultspath="/dls/tmp/jjl36382/results"
 spherepath="/dls/tmp/jjl36382/spheres"
 # enter starting folder + 1
 start=322
-stop=1557
+stop=600
+#stop=1557
 step=10
 
 
