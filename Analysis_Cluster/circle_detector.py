@@ -90,7 +90,7 @@ def select_area_for_detector(np_image):
         
         # Extract the coordinates of regions
         minr, minc, maxr, maxc = region['BoundingBox']
-        margin = len(np_image) / 100
+        margin = len(np_image) / 50
         bord.append((minr-margin, maxr+margin, minc-margin, maxc+margin))
         areas.append(edges_bin[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())
         areas_full.append(np_image[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())
@@ -120,7 +120,7 @@ def detect_circles(np_image):
     for i in range(0, len(areas)):
         # Jump too big or too small areas
         if areas[i].shape[0] >= size or areas[i].shape[1] >= size\
-        or areas[i].shape[0] <= size/6 or areas[i].shape[1] <= size/6:
+        or areas[i].shape[0] <= size/5 or areas[i].shape[1] <= size/5:
             index.append(i)
             continue
     
