@@ -90,7 +90,7 @@ def select_area_for_detector(np_image):
         
         # Extract the coordinates of regions
         minr, minc, maxr, maxc = region['BoundingBox']
-        margin = len(np_image) / 50
+        margin = len(np_image) / 100
         bord.append((minr-margin, maxr+margin, minc-margin, maxc+margin))
         areas.append(edges_bin[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())
         areas_full.append(np_image[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())

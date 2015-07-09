@@ -11,7 +11,7 @@ spherepath=$6
 nb_spheres=`cat /dls/tmp/jjl36382/results/nb_spheres.txt`
 for i in `seq $nb_spheres`;
 do
-	R=`awk "NR=="$i $resultspath/radii_max.txt`
+	R=`awk "NR=="$i $resultspath/radii_mean.txt`
 	mkdir /dls/tmp/jjl36382/radii$i
 	next=$(($i+1))
 	holder="-hold_jid job0$i -N job0$next"

@@ -13,7 +13,7 @@ do
 	X=`awk "NR=="$i $resultspath/centresX.txt`
 	Y=`awk "NR=="$i $resultspath/centresY.txt`
 	Z=`awk "NR=="$i $resultspath/centresZ.txt`
-	R=`awk "NR=="$i $resultspath/radii_max.txt`
+	R=`awk "NR=="$i $resultspath/radii_mean.txt`
 	
 	qsub -pe smp 2 -j y -t $i -tc 20 $homepath/selector.sh $X $Y $Z $R $spherepath $datapath $start
 done
