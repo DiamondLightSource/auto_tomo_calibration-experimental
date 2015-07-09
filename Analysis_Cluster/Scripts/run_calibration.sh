@@ -7,31 +7,35 @@ cd /dls/tmp/jjl36382/logs
 #read -p "enter step > " step
 
 homepath="${HOME}/auto_tomo_calibration-experimental/Analysis_Cluster/Scripts"
-datapath="/dls/science/groups/das/ExampleData/SphereTestData/45808/recon_%05i.tif"
+datapath="/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_%05i.tif"
 resultspath="/dls/tmp/jjl36382/results"
 spherepath="/dls/tmp/jjl36382/spheres"
-# enter starting folder + 1
-start=1222
-stop=1557
-#stop=1557
+start=1
+stop=2159
 step=10
+#datapath="/dls/science/groups/das/ExampleData/SphereTestData/45808/recon_%05i.tif"
+# enter starting folder + 1
+#start=1122
+#stop=1557
+#stop=1557
+#step=10
 
 
 # Detect circles ------------------------------------------------------------------------------------------------------
 holder="-N job1"
-#qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 20 $homepath/detector.sh $datapath $resultspath/out%05i.dat
+qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 20 $homepath/detector.sh $datapath $resultspath/out%05i.dat
 
 
 # Analyse areas ------------------------------------------------------------------------------------------------------
 holder="-hold_jid job1 -N job2"
 #holder="-N job2"
-#qsub $holder -pe smp 2 -j y -t 1 $homepath/analyse.sh $start $stop $step $resultspath/out%05i.dat
-$homepath/analyse.sh $start $stop $step $resultspath/out%05i.dat
+qsub $holder -pe smp 2 -j y -t 1 $homepath/analyse.sh $start $stop $step $resultspath/out%05i.dat
+#$homepath/analyse.sh $start $stop $step $resultspath/out%05i.dat
 
 
 # Select areas ------------------------------------------------------------------------------------------------------
 holder="-hold_jid job2 -N job3"
-#qsub -pe smp 2 -j y -t 1 $homepath/selector_loop.sh $spherepath/sphere%i.npy $datapath $start $resultspath $homepath
+qsub $holder -pe smp 2 -j y -t 1 $homepath/selector_loop.sh $spherepath/sphere%i.npy $datapath $start $resultspath $homepath
 
 
 # Get radii ------------------------------------------------------------------------------------------------------
@@ -43,7 +47,7 @@ startang=1
 stopang=360
 stepang=10
 holder="-hold_jid job3 -N job4"
-#qsub $holder -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath/sphere%i.npy
+qsub $holder -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath/sphere%i.npy
 
 
 

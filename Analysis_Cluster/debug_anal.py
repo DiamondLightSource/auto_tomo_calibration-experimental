@@ -90,7 +90,7 @@ centres_top = [] # centres of tops of spheres
 index_bot = [] # indexes of bottoms of spheres
 centres_bot = [] # centres of bottoms of spheres
 centres_picked = [] # to store the (x,y) centres of spheres
-radius_top = [] # Mimick the centre deletion process
+radius_top = [] # Mimic the centre deletion process
 radius_bot = []
 
 # If a slice does not have neighbours within 4 slices
@@ -136,40 +136,11 @@ for slice in range(0, N-4):
 
 # FIX IF THE CENTRES STARTED ACCUMULATING NEAR THE END
 # AND THEN THE SLICES ENDED
-
-
-
-"""for slice in range(N-4,N-1):
-    # Pick centres
-    for centre in centres[slice]:
-        # If the centre is not in the two following slices (to prevent from bugs): bottom of sphere
-        for centre_fol in centres[slice+1]:
-            # if centres equal to within about 10 pixels
-            if np.allclose(np.asarray(centre), np.asarray(centre_fol), 0, 20): 
-                break
-        else:
-            index_bot.append(slice)
-            centres_bot.append(centre)
-#             radius_bot.append(radius[slice])
-        # If the centre has not been picked before: top of sphere
-        # If the neighbouring slices have centres close together
-        # then add them to centres picked and top arrays
-        for centre_p in centres_picked:
-            if np.allclose(np.asarray(centre), np.asarray(centre_p), 0, 20):
-                break
-        else:
-            centres_picked.append(centre)
-            index_top.append(slice)
-            centres_top.append(centre)
-#             radius_top.append(radius[slice])"""
-
-# for centre in centres[N-1]:
-#     index_bot.append(N-1)
-#     centres_bot.append(centre)
+for centre in centres[N-1]:
+    index_bot.append(N-1)
+    centres_bot.append(centre)
 #     radius_bot.append(radius[N-1])
-"""            
-print len(index_bot)
-print len(index_top)"""
+
 
 # temp_cent = []
 # for bot in centres_bot:
@@ -183,21 +154,21 @@ print len(index_top)"""
 # Remove bugs = wrong centres that were detected only once
 index_top_del = []
 index_bot_del = []
-# for i_top in range(len(index_top)):
-#     if (index_top[i_top] in index_bot) and (centres_top[i_top] in centres_bot): # bugs are the only centres that appear once in both lists of edges
-#         print index_top[i_top]
-#         print centres_top[i_top]
-#         i_bot = centres_bot.index((centres_top[i_top]))
-#         index_top_del.append(i_top)
-#         index_bot_del.append(i_bot)
-
-        
-# index_top[:] = [item for i,item in enumerate(index_top) if i not in index_top_del]
-# centres_top[:] = [item for i,item in enumerate(centres_top) if i not in index_top_del]
-# index_bot[:] = [item for i,item in enumerate(index_bot) if i not in index_bot_del]
-# centres_bot[:] = [item for i,item in enumerate(centres_bot) if i not in index_bot_del]
-# radius_top[:] = [item for i,item in enumerate(radius_top) if i not in index_top_del]
-# radius_bot[:] = [item for i,item in enumerate(radius_bot) if i not in index_bot_del]
+for i_top in range(len(index_top)):
+    if (index_top[i_top] in index_bot) and (centres_top[i_top] in centres_bot): # bugs are the only centres that appear once in both lists of edges
+        print index_top[i_top]
+        print centres_top[i_top]
+        i_bot = centres_bot.index((centres_top[i_top]))
+        index_top_del.append(i_top)
+        index_bot_del.append(i_bot)
+ 
+         
+index_top[:] = [item for i,item in enumerate(index_top) if i not in index_top_del]
+centres_top[:] = [item for i,item in enumerate(centres_top) if i not in index_top_del]
+index_bot[:] = [item for i,item in enumerate(index_bot) if i not in index_bot_del]
+centres_bot[:] = [item for i,item in enumerate(centres_bot) if i not in index_bot_del]
+radius_top[:] = [item for i,item in enumerate(radius_top) if i not in index_top_del]
+radius_bot[:] = [item for i,item in enumerate(radius_bot) if i not in index_bot_del]
 
 
 # remove the padded lists

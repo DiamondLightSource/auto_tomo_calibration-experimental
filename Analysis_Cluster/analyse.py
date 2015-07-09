@@ -37,9 +37,6 @@ if __name__ == '__main__' :
     start = start + step
     stop = stop - step
 
-fig = pl.figure()
-ax = fig.gca(projection='3d')
-
 # ---------------------------------------- Get data -----------------------------------------
 """
 Loads all of the detected parameters of segmented circles
@@ -72,7 +69,7 @@ f = open('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/ori
 f.write(repr(centroids_sphere))
 f.close()
 
-# Remove empty lists
+# Remove empty lists---------------------------------------------------------
 bad_indices = []
 for n in range(N):
     empt = centroids_sphere[n]
@@ -83,21 +80,24 @@ centroids_sphere = np.delete(centroids_sphere, bad_indices)
 bord_circles = np.delete(bord_circles, bad_indices)
 radii_circles = np.delete(radii_circles, bad_indices)
 perimeters = np.delete(perimeters, bad_indices)
+#--------------------------------------------------------
 
 N = len(perimeters)
 
 
-for slice in range(N):
-    for i in range(len(perimeters[slice])):
-        ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*step+step)
-
-ax.set_xlim(0, 1557)
-ax.set_ylim(0, 1557)
-ax.set_zlim(0, 1557)
-pl.title('Sphere detection on real image')
-pl.savefig("/dls/tmp/jjl36382/analysis/reconstruction.png")
-
-#pl.show()
+# fig = pl.figure()
+# ax = fig.gca(projection='3d')
+# for slice in range(N):
+#     for i in range(len(perimeters[slice])):
+#         ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*step+step)
+# 
+# 
+# ax.set_xlim(0, stop)
+# ax.set_ylim(0, stop)
+# ax.set_zlim(0, stop)
+# pl.title('Sphere detection on real image')
+# pl.savefig("/dls/tmp/jjl36382/analysis/reconstruction.png")
+# pl.show()
 
 # ------------ Sort out spheres for radii_angles (i.e. sort out centres + radii) ------------
 
@@ -109,7 +109,7 @@ and tuples store the centres of the segmented circles
 of the slice
 """
 
-
+# Remove repeating centres--------------------------------------------------------
 centres = []
 radius = []
 for slice in range(N):
@@ -130,27 +130,34 @@ for slice in range(N):
     #cxcy = np.asarray(cxcy)
     centres.append(cxcy)
     radius.append(r)
+#--------------------------------------------------------
 
 
 # PAD THE END OF THE LIST IN ORDER TO CHECK THROUGH
 # EVERY ELEMENT IN THE NEXT STEP EASILY
+#--------------------------------------------------------
 centres.append([(1,1)])
 centres.append([(1,1)])
 centres.append([(1,1)])
 centres.append([(1,1)])
 centres.append([(1,1)])
 centres.append([(1,1)])
+radius.append([(666)])
+radius.append([(666)])
+radius.append([(666)])
+radius.append([(666)])
 radius.append([(666)])
 radius.append([(666)])
 N = len(centres)
+#--------------------------------------------------------
 
+# Load data --------------------------------------------------------
 np.save('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/modified_centroids.npy', centres)
 
 
 # Find the (slice, index) of the elements which have no
 # near neighbour, but are located further in the array
-# 
-
+#--------------------------------------------------------------------
 bad_pair = []
 for slice in range(0, N - 2):
     for centre_index in range(len(centres[slice])):
@@ -180,40 +187,46 @@ for slice in range(0, N - 2):
 
 # Get unique pairs of the slices and indices to be
 # removed
-unique_pairs = []
-unique_pairs.append(bad_pair[0])
-for index in range(1, len(bad_pair)):
-    if bad_pair[index] in unique_pairs:
-        continue
-    else:
-        unique_pairs.append(bad_pair[index])
+if bad_pair:
+    unique_pairs = []
+    unique_pairs.append(bad_pair[0])
+    for index in range(1, len(bad_pair)):
+        if bad_pair[index] in unique_pairs:
+            continue
+        else:
+            unique_pairs.append(bad_pair[index])
 
-# Remove the indices slices and elements in them
-# which are anomalous
-centres = np.asarray(centres)
-sorted_by_slice = sorted(unique_pairs, key=lambda tup: tup[0])
-rev_unique = list(reversed(sorted_by_slice))
-
-# print "unique slices for deletion and reversed"
-# print rev_unique
-for i in rev_unique:
-    slice = i[0]
-    index = i[1]
-    centres[slice][index] = []
-    radius[slice][index] = []
+    # Remove the indices slices and elements in them
+    # which are anomalous
+    centres = np.asarray(centres)
+    sorted_by_slice = sorted(unique_pairs, key=lambda tup: tup[0])
+    rev_unique = list(reversed(sorted_by_slice))
     
-# If a list was completely wiped out
-# it will be empty, hence delete empty lists
-bad_indices = []
-N = len(centres)
-for n in range(N):
-    for element in centres[n]:
-        if not element:
-            bad_indices.append(n)
+    # print "unique slices for deletion and reversed"
+    # print rev_unique
+    for i in rev_unique:
+        slice = i[0]
+        index = i[1]
+        centres[slice][index] = []
+    #     radius[slice][index] = []
         
-centres = np.delete(centres, bad_indices)
-radius = np.delete(radius, bad_indices)
+    # If a list was completely wiped out
+    # it will be empty, hence delete empty lists
+    bad_indices = []
+    N = len(centres)
+    for n in range(N):
+        for element in centres[n]:
+            if not element:
+                bad_indices.append(n)
+            
+    centres = np.delete(centres, bad_indices)
+    radius = np.delete(radius, bad_indices)
+#--------------------------------------------------------------------
 
+
+
+#--------------------------------------------------------------------
+# Find the centres and how much do they span (their size)
 N = len(centres)
 index_top = [] # indexes of tops of spheres
 centres_top = [] # centres of tops of spheres
@@ -223,27 +236,33 @@ centres_picked = [] # to store the (x,y) centres of spheres
 radius_top = [] # Mimick the centre deletion process
 radius_bot = []
 
-
-
-# Process
-for slice in range(0, N-2):
-    # Pick centres
+for slice in range(0, N-4):
     for centre in centres[slice]:
-        # If the centre is not in the two following slices (to prevent from bugs): bottom of sphere
-        for centre_fol in centres[slice+1]:
-            # if centres equal to within about 10 pixels
-            if np.allclose(np.asarray(centre), np.asarray(centre_fol), 0, 20): 
+        
+        # See if the centres appear within 4 slices
+        for centre_1 in centres[slice+1]:
+            # if centres equal to within about 20 pixels
+            if np.allclose(np.asarray(centre), np.asarray(centre_1), 0, 20): 
                 break
         else:
-            for centre_foll in centres[slice+2]:
-                if np.allclose(np.asarray(centre), np.asarray(centre_foll), 0, 20):
+            for centre_2 in centres[slice+2]:
+                if np.allclose(np.asarray(centre), np.asarray(centre_2), 0, 20):
                     break
-            # if centres are not the same within two neighbouring
-            # slices then add them to centre bot
             else:
-                index_bot.append(slice)
-                centres_bot.append(centre)
-                radius_bot.append(radius[slice])
+                for centre_3 in centres[slice+3]:
+                    if np.allclose(np.asarray(centre), np.asarray(centre_3), 0, 20):
+                        break
+                else:
+                    for centre_4 in centres[slice+4]:
+                        if np.allclose(np.asarray(centre), np.asarray(centre_4), 0, 20):
+                            break
+                    # if centres are not the same within four neighbouring
+                    # slices then add them to centre_bot
+                    else:
+                        index_bot.append(slice)
+                        centres_bot.append(centre)
+                        radius_bot.append(radius[slice])
+                        
         # If the centre has not been picked before: top of sphere
         # If the neighbouring slices have centres close together
         # then add them to centres picked and top arrays
@@ -256,34 +275,12 @@ for slice in range(0, N-2):
             centres_top.append(centre)
             radius_top.append(radius[slice])
 
-for slice in range(N-2,N-1):
-    # Pick centres
-    for centre in centres[slice]:
-        # If the centre is not in the two following slices (to prevent from bugs): bottom of sphere
-        for centre_fol in centres[slice+1]:
-            # if centres equal to within about 10 pixels
-            if np.allclose(np.asarray(centre), np.asarray(centre_fol), 0, 20): 
-                break
-        else:
-            index_bot.append(slice)
-            centres_bot.append(centre)
-            radius_bot.append(radius[slice])
-        # If the centre has not been picked before: top of sphere
-        # If the neighbouring slices have centres close together
-        # then add them to centres picked and top arrays
-        for centre_p in centres_picked:
-            if np.allclose(np.asarray(centre), np.asarray(centre_p), 0, 20):
-                break
-        else:
-            centres_picked.append(centre)
-            index_top.append(slice)
-            centres_top.append(centre)
-            radius_top.append(radius[slice])
-
+# This fixes the end of the list
 for centre in centres[N-1]:
     index_bot.append(N-1)
     centres_bot.append(centre)
     radius_bot.append(radius[N-1])
+    
 """            
 print len(index_bot)
 print len(index_top)"""
@@ -308,6 +305,7 @@ print len(index_top)"""
 
 
 # remove the padded lists
+#--------------------------------------------------------------------
 del centres_bot[-1]
 del centres_top[-1]
 del radius_bot[-1]
@@ -318,8 +316,17 @@ centres = np.delete(centres, -1)
 centres = np.delete(centres, -1)
 radius = np.delete(radius, -1)
 radius = np.delete(radius, -1)
+centres = np.delete(centres, -1)
+centres = np.delete(centres, -1)
+radius = np.delete(radius, -1)
+radius = np.delete(radius, -1)
+centres = np.delete(centres, -1)
+centres = np.delete(centres, -1)
+radius = np.delete(radius, -1)
+radius = np.delete(radius, -1)
+#--------------------------------------------------------------------
 
-
+print "indices and centres bot/top"                   
 print len(index_bot)
 print len(index_top)
 print len(centres_top)
@@ -347,16 +354,15 @@ temp_rad = []
 #         print element_top
 #         temp_cent.append(element_top[0])
 #         temp_rad.append(element_rad[0])
-
-
 # radius_bot = temp_rad
 # centres_bot = temp_cent
 
 # Get (x,y) coordinates of centres of spheres
+
 #just leave it as top
 if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 15):
-    centres_zipped = np.asarray(zip(centres_top, centres_top))
-    radius_zipped = np.asarray(zip(radius_top, radius_top))
+    centres_zipped = np.asarray(zip(centres_top, centres_bot))
+    radius_zipped = np.asarray(zip(radius_top, radius_bot))
     centres_xy = np.array(np.median(centres_zipped, axis=1), dtype='int64')
 
 # Get the mean of the radius double values
@@ -387,46 +393,35 @@ print len(centroids)
 print len(radius_zipped)
 print radius_zipped
 print radius_mean
-"""
-For each sphere and for every slice of that sphere...
-Take the x and y coordinates of the centres and check with
-the centroids of each slice
 
-If they are "close enough" i.e. within 10 pixels then we assume
-that the data is correct and append those slices to the final lists
-
-Finally append those lists to a list for each sphere. 
-
-This gives spheres with all of the displaced circles
-removed (they must be bigger than 10 pixels as well)
-"""
-for n in range(nb_spheres):
-    
-    slices = []
-    bords = []
-    perim = []
-    
-    for slice in range(edges[n][0], edges[n][1]+1):
-        
-        for i in range(len(centres[slice])):
-            slices.append(slice)
-       
-    #if len(slices) > 5:
-    slices_spheres.append(slices)
-    bords_spheres.append(bords)
+# for n in range(nb_spheres):
+#     
+#     slices = []
+#     bords = []
+#     perim = []
+#     
+#     for slice in range(edges[n][0], edges[n][1]+1):
+#         
+#         for i in range(len(centres[slice])):
+#             slices.append(slice)
+#        
+#     #if len(slices) > 5:
+#     slices_spheres.append(slices)
+#    bords_spheres.append(bords)
 #     else:
 #         nb_spheres -= 1
 #         bad_indices.append(n)
 
-new_centroids = []
-new_radius = []
-for i in range(old_nb):
-    if i not in bad_indices:
-        new_centroids.append(centroids[i])
-        radii_slices.append(radius_mean[i])
+# new_centroids = []
+# new_radius = []
+# for i in range(old_nb):
+#     if i not in bad_indices:
+#         new_centroids.append(centroids[i])
+#         radii_slices.append(radius_mean[i])
 
 # coordinates are shifted due to filenames
 # not starting form 0
+new_centroids = centroids
 z_coordinate = []
 for i in range(len(new_centroids)):
     z_coordinate.append(new_centroids[i][2] + start)
