@@ -12,7 +12,7 @@ centres = [[(568, 582), (592, 492), (686, 802)],
            [(838, 668), (967, 886)],
            [(838, 668), (967, 886)],
            [(838, 668), (967, 886)],
-           [(838, 668), (967, 886)],
+           [(220, 220), (967, 886)],
            [(598, 845), (787, 1208), (1043, 568), (1072, 1058)],
            [(598, 845), (787, 1208), (1043, 568), (1072, 1059)],
            [(598, 845), (787, 1208), (1043, 568), (1072, 1059)],
@@ -46,16 +46,22 @@ import numpy as np
 
 # Pad the end of the list to enable removal
 # of end elements
+# PAD THE END OF THE LIST IN ORDER TO CHECK THROUGH
+# EVERY ELEMENT IN THE NEXT STEP EASILY
 centres.append([(1,1)])
 centres.append([(1,1)])
+
 
 N = len(centres)
 print "centre length before processing", len(centres)
-
+for i in centres:
+    print i
+    
 # Find the (slice, index) of the elements which have no
 # near neighbour, but are located further in the array
+# 
 bad_pair = []
-for slice in range(N - 2):
+for slice in range(0, N - 2):
     for centre_index in range(len(centres[slice])):
         centre = centres[slice][centre_index]
         for centre_next in centres[slice + 1]:
@@ -75,13 +81,13 @@ for slice in range(N - 2):
                         centre_further = centres[slice2][index]
                         #print "pair ", centre_further, centre
                         if np.allclose(np.asarray(centre), np.asarray(centre_further), 0, 15):
-                            bad_pair.append((slice, centre_index))
-                            
+                            bad_pair.append((slice2, index))
+
 # Get unique pairs of the slices and indices to be
 # removed
 unique_pairs = []
 unique_pairs.append(bad_pair[0])
-for index in range(len(bad_pair)):
+for index in range(1, len(bad_pair)):
     if bad_pair[index] in unique_pairs:
         continue
     else:
@@ -89,13 +95,11 @@ for index in range(len(bad_pair)):
 
 # Remove the indices slices and elements in them
 # which are anomalous
-print unique_pairs
 centres = np.asarray(centres)
-for i in centres:
+rev_unique = list(reversed(unique_pairs))
+print rev_unique
+for i in rev_unique:
     print i
-    
-for i in range(len(unique_pairs), -1):
-    print 
     slice = i[0]
     index = i[1]
     del centres[slice][index]
@@ -115,7 +119,7 @@ centres = np.delete(centres, bad_indices)
 print "centre length after processing", len(centres)
 for i in centres:
     print i
-    
+
 N = len(centres)
 
 index_top = [] # indexes of tops of spheres
@@ -125,11 +129,6 @@ centres_bot = [] # centres of bottoms of spheres
 centres_picked = [] # to store the (x,y) centres of spheres
 
 
-"""for centre in centres[0]:
-    centres_picked.append(centre)
-    index_top.append(0)
-    centres_top.append(centre)"""
-#     
 # Process
 for slice in range(0, N-2):
     # Pick centres
@@ -201,8 +200,8 @@ index_top[:] = [item for i,item in enumerate(index_top) if i not in index_top_de
 centres_top[:] = [item for i,item in enumerate(centres_top) if i not in index_top_del]
 index_bot[:] = [item for i,item in enumerate(index_bot) if i not in index_bot_del]
 centres_bot[:] = [item for i,item in enumerate(centres_bot) if i not in index_bot_del]
-print len(index_bot)
-print len(index_top)
+print index_bot
+print index_top
 
 # The centres correspond to the index array
 # only centres_top corresponds to the indices

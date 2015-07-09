@@ -109,21 +109,29 @@ for slice in range(N):
     for i in range(len(centroids_sphere[slice])):
         cx = centroids_sphere[slice][i][0] + bord_circles[slice][i][0]
         cy = centroids_sphere[slice][i][1] + bord_circles[slice][i][2]
+        # IF THERE ARE SAME CENTRES IN THE SAME SLICE THEN
+        # WE WILL GET ERRORS - REMOVE THEM
+    	cxcy[:] = [item for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, 10)]
         cxcy.append((cx,cy))
     #cxcy = np.asarray(cxcy)
     centres.append(cxcy)
 
-# pad the centres
+# PAD THE END OF THE LIST IN ORDER TO CHECK THROUGH
+# EVERY ELEMENT IN THE NEXT STEP EASILY
 centres.append([(1,1)])
 centres.append([(1,1)])
+
 
 N = len(centres)
-print "centre length before processing", len(centres)
-
+#print "centre length before processing", len(centres)
+"""for i in centres:
+    print i
+print N"""
 # Find the (slice, index) of the elements which have no
 # near neighbour, but are located further in the array
+# 
 bad_pair = []
-for slice in range(N - 2):
+for slice in range(0, N - 2):
     for centre_index in range(len(centres[slice])):
         centre = centres[slice][centre_index]
         for centre_next in centres[slice + 1]:
@@ -143,16 +151,17 @@ for slice in range(N - 2):
                         centre_further = centres[slice2][index]
                         #print "pair ", centre_further, centre
                         if np.allclose(np.asarray(centre), np.asarray(centre_further), 0, 15):
-                            #print "bad_pair", centre, centre_further
                             bad_pair.append((slice, centre_index))
-                            
+                            #slice2 index gives fat too little
+                            #slice2 centre_index gives nonsense
+                            #slice centr_ind seems reasonable
+                            #bs
+
 # Get unique pairs of the slices and indices to be
 # removed
-print bad_pair
-
 unique_pairs = []
 unique_pairs.append(bad_pair[0])
-for index in range(len(bad_pair)):
+for index in range(1, len(bad_pair)):
     if bad_pair[index] in unique_pairs:
         continue
     else:
@@ -160,26 +169,30 @@ for index in range(len(bad_pair)):
 
 # Remove the indices slices and elements in them
 # which are anomalous
-print unique_pairs
-print centres
-
-for i in unique_pairs:
+centres = np.asarray(centres)
+sorted_by_slice = sorted(unique_pairs, key=lambda tup: tup[0])
+rev_unique = list(reversed(sorted_by_slice))
+print "unique slices for deletion and reversed"
+print rev_unique
+for i in rev_unique:
+    print i
     slice = i[0]
     index = i[1]
-    del centres[slice][index]
+    centres[slice][index] = []
 
-N = len(centres)
 # If a list was completely wiped out
 # it will be empty, hence delete empty lists
+
+
 bad_indices = []
+N = len(centres)
 for n in range(N):
-    empt = centres[n]
-    if not empt:
-        bad_indices.append(n)
+	for element in centres[n]:
+		if not element:
+			bad_indices.append(n)
         
 centres = np.delete(centres, bad_indices)
 
-print "centre length after processing", len(centres)
 
 N = len(centres)
 
@@ -244,9 +257,9 @@ for slice in range(N-2,N-1):
 for centre in centres[N-1]:
     index_bot.append(N-1)
     centres_bot.append(centre)
-            
+"""            
 print len(index_bot)
-print len(index_top)
+print len(index_top)"""
 
 # Remove bugs = wrong centres that were detected only once
 index_top_del = []
@@ -262,13 +275,26 @@ centres_top[:] = [item for i,item in enumerate(centres_top) if i not in index_to
 index_bot[:] = [item for i,item in enumerate(index_bot) if i not in index_bot_del]
 centres_bot[:] = [item for i,item in enumerate(centres_bot) if i not in index_bot_del]
 
+for i in centres:
+    print i
+
 # remove the padded lists
 del centres_bot[-1]
 del centres_top[-1]
 del index_top[-1] 
 del index_bot[-1]
+centres = np.delete(centres, -1)
+centres = np.delete(centres, -1)
 
-
+"""
+print len(index_bot)
+print len(index_top)
+print centres_bot
+print centres_top
+"""
+print "centre length after processing", len(centres)
+for i in centres:
+    print i
 
 
 # """index_top = [] # indexes of tops of spheres
@@ -333,6 +359,16 @@ del index_bot[-1]
 # 
 # print "lengths ", len(centres_bot), len(centres_top)"""
 
+# SORT CENTRES_BOT AND CENTRES_TOP TO MATCH SIMILAR CENTRES
+# THEN TAKE THE MEDIAN. IF THEY ARE NOT SORTER ALL_CLOSE DOES
+# NOT WORK
+# SORT ACCORDING TO THE CENTRES_TOP LIST
+temp = []
+for top in centres_top:
+	element_bot = [bot for bot in centres_bot if np.allclose(np.asarray(bot), np.asarray(top), 0, 10)]
+	temp.append(element_bot[0])
+centres_bot = temp
+
 # Get (x,y) coordinates of centres of spheres
 if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 15):
     centres_zipped = np.asarray(zip(centres_top, centres_bot))
@@ -378,13 +414,9 @@ for n in range(nb_spheres):
     for slice in range(edges[n][0], edges[n][1]+1):
         
         for i in range(len(centres[slice])):
-            #TO BE CHANGED TO FIT DATA
-            #if (abs(centres[slice][i][0] - centroids[n][0]) < 10)\
-            #and (abs(centres[slice][i][1] - centroids[n][1]) < 10):
             slices.append(slice)
-            bords.append(bord_circles[slice][i])
-            radii.append(radii_circles[slice][i])
-   
+            #radii.append(radii_circles[slice][i])
+       
    #TO BE CHANGED
     if len(slices) > 5:
         slices_spheres.append(slices)
