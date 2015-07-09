@@ -23,19 +23,19 @@ step=10
 
 # Detect circles ------------------------------------------------------------------------------------------------------
 holder="-N job1"
-qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 20 $homepath/detector.sh $datapath $resultspath/out%05i.dat
+#qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 20 $homepath/detector.sh $datapath $resultspath/out%05i.dat
 
 
 # Analyse areas ------------------------------------------------------------------------------------------------------
 holder="-hold_jid job1 -N job2"
 #holder="-N job2"
-qsub $holder -pe smp 2 -j y -t 1 $homepath/analyse.sh $start $stop $step $resultspath/out%05i.dat
+#qsub $holder -pe smp 2 -j y -t 1 $homepath/analyse.sh $start $stop $step $resultspath/out%05i.dat
 #$homepath/analyse.sh $start $stop $step $resultspath/out%05i.dat
 
 
 # Select areas ------------------------------------------------------------------------------------------------------
 holder="-hold_jid job2 -N job3"
-qsub $holder -pe smp 2 -j y -t 1 $homepath/selector_loop.sh $spherepath/sphere%i.npy $datapath $start $resultspath $homepath
+qsub -pe smp 2 -j y -t 1 $homepath/selector_loop.sh $spherepath/sphere%i.npy $datapath $start $resultspath $homepath
 
 
 # Get radii ------------------------------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ startang=1
 stopang=360
 stepang=10
 holder="-hold_jid job3 -N job4"
-qsub $holder -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath/sphere%i.npy
+#qsub $holder -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath/sphere%i.npy
 
 
 

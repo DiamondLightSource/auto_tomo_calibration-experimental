@@ -153,6 +153,7 @@ N = len(centres)
 
 # Load data --------------------------------------------------------
 np.save('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/modified_centroids.npy', centres)
+np.save('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/radius.npy', radius)
 
 
 # Find the (slice, index) of the elements which have no
@@ -174,16 +175,13 @@ for slice in range(0, N - 2):
             # if they are similar ant not neighbours
             # then remove it from the list
             else:
-                for slice2 in range(slice + 3, N):
-                    for index in range(len(centres[slice2])):
-                        centre_further = centres[slice2][index]
-                        #print "pair ", centre_further, centre
-                        if np.allclose(np.asarray(centre), np.asarray(centre_further), 0, 15):
-                            bad_pair.append((slice, centre_index))
-                            #slice2 index gives fat too little
-                            #slice2 centre_index gives nonsense
-                            #slice centr_ind seems reasonable
-                            #bs
+                bad_pair.append((slice, centre_index))
+#                 for slice2 in range(slice + 3, N):
+#                     for index in range(len(centres[slice2])):
+#                         centre_further = centres[slice2][index]
+#                         #print "pair ", centre_further, centre
+#                         if np.allclose(np.asarray(centre), np.asarray(centre_further), 0, 15):
+#                             bad_pair.append((slice, centre_index))
 
 # Get unique pairs of the slices and indices to be
 # removed
@@ -208,7 +206,7 @@ if bad_pair:
         slice = i[0]
         index = i[1]
         centres[slice][index] = []
-    #     radius[slice][index] = []
+        radius[slice][index] = []
         
     # If a list was completely wiped out
     # it will be empty, hence delete empty lists
@@ -261,7 +259,7 @@ for slice in range(0, N-4):
                     else:
                         index_bot.append(slice)
                         centres_bot.append(centre)
-                        radius_bot.append(radius[slice])
+#                         radius_bot.append(radius[slice])
                         
         # If the centre has not been picked before: top of sphere
         # If the neighbouring slices have centres close together
@@ -273,33 +271,30 @@ for slice in range(0, N-4):
             centres_picked.append(centre)
             index_top.append(slice)
             centres_top.append(centre)
-            radius_top.append(radius[slice])
+#             radius_top.append(radius[slice])
 
 # This fixes the end of the list
 for centre in centres[N-1]:
     index_bot.append(N-1)
     centres_bot.append(centre)
-    radius_bot.append(radius[N-1])
-    
-"""            
-print len(index_bot)
-print len(index_top)"""
+#     radius_bot.append(radius[N-1])
 
-
+print centres_top
+print centres_bot
 # Remove bugs = wrong centres that were detected only once
-# index_top_del = []
-# index_bot_del = []
-# for i_top in range(len(index_top)):
-#     if (index_top[i_top] in index_bot) and (centres_top[i_top] in centres_bot): # bugs are the only centres that appear once in both lists of edges
-#         i_bot = centres_bot.index((centres_top[i_top]))
-#         index_top_del.append(i_top)
-#         index_bot_del.append(i_bot)
-        
-        
-# index_top[:] = [item for i,item in enumerate(index_top) if i not in index_top_del]
-# centres_top[:] = [item for i,item in enumerate(centres_top) if i not in index_top_del]
-# index_bot[:] = [item for i,item in enumerate(index_bot) if i not in index_bot_del]
-# centres_bot[:] = [item for i,item in enumerate(centres_bot) if i not in index_bot_del]
+index_top_del = []
+index_bot_del = []
+for i_top in range(len(index_top)):
+    if (index_top[i_top] in index_bot) and (centres_top[i_top] in centres_bot): # bugs are the only centres that appear once in both lists of edges
+        i_bot = centres_bot.index((centres_top[i_top]))
+        index_top_del.append(i_top)
+        index_bot_del.append(i_bot)
+         
+     
+index_top[:] = [item for i,item in enumerate(index_top) if i not in index_top_del]
+centres_top[:] = [item for i,item in enumerate(centres_top) if i not in index_top_del]
+index_bot[:] = [item for i,item in enumerate(index_bot) if i not in index_bot_del]
+centres_bot[:] = [item for i,item in enumerate(centres_bot) if i not in index_bot_del]
 # radius_top[:] = [item for i,item in enumerate(radius_top) if i not in index_top_del]
 # radius_bot[:] = [item for i,item in enumerate(radius_bot) if i not in index_bot_del]
 
@@ -308,8 +303,8 @@ print len(index_top)"""
 #--------------------------------------------------------------------
 del centres_bot[-1]
 del centres_top[-1]
-del radius_bot[-1]
-del radius_top[-1]
+# del radius_bot[-1]
+# del radius_top[-1]
 del index_top[-1] 
 del index_bot[-1]
 centres = np.delete(centres, -1)
@@ -358,21 +353,21 @@ temp_rad = []
 # centres_bot = temp_cent
 
 # Get (x,y) coordinates of centres of spheres
-
-#just leave it as top
-if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 15):
+print centres_top
+print centres_bot
+if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 20):
     centres_zipped = np.asarray(zip(centres_top, centres_bot))
-    radius_zipped = np.asarray(zip(radius_top, radius_bot))
+#     radius_zipped = np.asarray(zip(radius_top, radius_bot))
     centres_xy = np.array(np.median(centres_zipped, axis=1), dtype='int64')
 
 # Get the mean of the radius double values
-radius_mean = []
-for slice in range(len(radius_zipped)):
-    for i in range(len(radius_zipped[slice])):
-        radius_mean.append(np.mean(radius_zipped[slice][i]))
+# radius_mean = []
+# for slice in radius_zipped:
+#     print slice
+#     radius_mean.append(np.mean(np.max(slice)))
 
 # Calculate z coordinate of centres of spheres
-if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 15):
+if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 20):
     edges = np.asarray(zip(index_top, index_bot))
     centres_z = np.array(np.median(edges, axis=1), dtype='int64')*step + step
 
@@ -386,38 +381,40 @@ slices_spheres = []
 bords_spheres = []
 radii_slices = []
 bad_indices = []
+radii_spheres = []
 old_nb = nb_spheres
 
 print "end of processing"
 print len(centroids)
-print len(radius_zipped)
-print radius_zipped
-print radius_mean
+# print len(radius_zipped)
+# print radius_zipped
+# print radius_mean
 
-# for n in range(nb_spheres):
-#     
-#     slices = []
-#     bords = []
-#     perim = []
-#     
-#     for slice in range(edges[n][0], edges[n][1]+1):
-#         
-#         for i in range(len(centres[slice])):
-#             slices.append(slice)
-#        
-#     #if len(slices) > 5:
-#     slices_spheres.append(slices)
-#    bords_spheres.append(bords)
-#     else:
-#         nb_spheres -= 1
-#         bad_indices.append(n)
+for n in range(nb_spheres):
+     
+    slices = []
+    bords = []
+    radii = []
+     
+    for slice in range(edges[n][0], edges[n][1]+1):
+         
+        for i in range(len(centres[slice])):
+            slices.append(slice)
+            radii.append(radius[slice][i])
+        
+    if len(slices) > 5:
+        slices_spheres.append(slices)
+        radii_spheres.append(radii)
+    else:
+        nb_spheres -= 1
+        bad_indices.append(n)
 
-# new_centroids = []
-# new_radius = []
-# for i in range(old_nb):
-#     if i not in bad_indices:
-#         new_centroids.append(centroids[i])
-#         radii_slices.append(radius_mean[i])
+new_centroids = []
+new_radius = []
+for i in range(old_nb):
+    if i not in bad_indices:
+        new_centroids.append(centroids[i])
+#         new_radius.append(ra)
 
 # coordinates are shifted due to filenames
 # not starting form 0
@@ -461,9 +458,9 @@ f.close()
 #     f.write(repr(max(radii_slices[i])) + '\n')
 # f.close()
 
-f = open('/dls/tmp/jjl36382/results/radii_mean.txt', 'w')
+f = open('/dls/tmp/jjl36382/results/radii_max.txt', 'w')
 for i in range(nb_spheres):
-    f.write(repr(int(radii_slices[i])) + '\n')
+    f.write(repr(int(max(radii_spheres[i]))) + '\n')
 f.close()
 
 f = open('/dls/tmp/jjl36382/results/nb_spheres.txt', 'w')
