@@ -99,11 +99,11 @@ N = len(perimeters)
 # for slice in range(N):
 #     for i in range(len(perimeters[slice])):
 #         ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*step+step)
-#  
-#  
-# ax.set_xlim(0, stop)
-# ax.set_ylim(0, stop)
-# ax.set_zlim(0, stop)
+#    
+#    
+# # ax.set_xlim(0, stop)
+# # ax.set_ylim(0, stop)
+# # ax.set_zlim(0, stop)
 # pl.title('Sphere detection on real image')
 # pl.savefig("/dls/tmp/jjl36382/analysis/reconstruction.png")
 # pl.show()

@@ -78,11 +78,11 @@ if __name__ == '__main__' :
 	# save image
 	output_filename = "/dls/tmp/jjl36382/analysis/outliers%02i.dat" % index
 	output_angles = "/dls/tmp/jjl36382/analysis/radii%02i.npy" % index
-    print("Saving image %s" % output_filename)
-    print("Saving image %s" % output_angles)
+    print("Saving data %s" % output_filename)
+    print("Saving data %s" % output_angles)
     save_data(output_angles, radii_np)
     save_dict(output_filename, outliers)
-	   
+
     # Plot
     
     pl.imshow(radii_np.T)

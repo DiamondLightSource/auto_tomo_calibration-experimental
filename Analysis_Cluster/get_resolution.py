@@ -25,6 +25,15 @@ def load_data(path):
     radii_names = sorted(radii)
     dict_names = sorted(outliers)
     
+    list_indices = []
+    for name in radii_names:
+        list_indices.append(int(name.split("radii")[1][:-4]))
+    
+    # translate radii numbers to file names
+    index_dict = {}
+    for i in range(len(radii_names)):
+        index_dict[i] = list_indices[i]
+        
     # a list of radii vs angle
     radii_spheres = []
     # this is a list of dicts
@@ -36,10 +45,24 @@ def load_data(path):
         angles_outliers.append(pickle.load(f))
         f.close()
     
-    return radii_spheres, angles_outliers
+    return radii_spheres, angles_outliers, index_dict
 
 
-def approx_value(x, y, value, tolerance=5):
+def approx_diff(x, y, value, tolerance=5):
+    """
+    Check if two values are within a certain tolerance
+    
+    Input:
+        two values and a tolerance
+    
+    Output:
+        True boolean value
+    """
+    if (value - tolerance) <= abs(x - y) <= (value + tolerance):
+        return True
+
+
+def approx_sum(x, y, value, tolerance=5):
     """
     Check if two values are within a certain tolerance
     
@@ -95,7 +118,7 @@ def find_contact():
     """
     
     # Load up the data
-    radii_spheres, angles_outliers = load_data("/dls/tmp/jjl36382/analysis/")
+    radii_spheres, angles_outliers, index_dict = load_data("/dls/tmp/jjl36382/analysis/")
 
     # touching_pts = [ ([theta1], [theta2], [phi1], [phi2]) ]
     touching_pts = {}
@@ -105,6 +128,7 @@ def find_contact():
         for j in range(i + 1, len(radii_spheres)):
             # print i
             # print j
+            is_touching = False
             
             ith_dict = angles_outliers[i]
             jth_dict = angles_outliers[j]
@@ -123,17 +147,20 @@ def find_contact():
                     j_theta, j_phi = j_angle[0], j_angle[1]
                     delta_theta = abs(i_theta - j_theta)
                     
-                    if delta_theta == 180\
-                     and approx_value(i_phi, j_phi, 180, 0):
+                    if approx_diff(i_theta, j_theta, 180, 0.5)\
+                     and approx_sum(i_phi, j_phi, 180, 0.5):
                         touching_i_theta.append(i_theta)
                         touching_j_theta.append(j_theta)
                         touching_i_phi.append(i_phi)
                         touching_j_phi.append(j_phi)
-                        
-            touching_pts[i, j] = touching_i_theta, touching_j_theta,\
-                                 touching_i_phi, touching_j_phi
+                        is_touching = True
+            
+            if is_touching:            
+                touching_pts[i, j] = touching_i_theta, touching_j_theta,\
+                                     touching_i_phi, touching_j_phi
     
     return touching_pts
+  
     
 def pair_closest_mean(list1, list2):
     """
@@ -163,6 +190,7 @@ def pair_closest_mean(list1, list2):
     
     return (X, Y)
 
+
 def get_resolution(contact, indices):
     """
     Segment the blobs at the point of contact.
@@ -186,12 +214,13 @@ def get_resolution(contact, indices):
     import pylab as pl
     from math import radians, cos
     from scipy.ndimage import gaussian_filter
+    import os
     
     import get_blob as gb
     import blob_circles as bc
     
     # Load data
-    radii_spheres, angles_outliers = load_data("/dls/tmp/jjl36382/analysis/")
+    radii_spheres, angles_outliers, index_dict = load_data("/dls/tmp/jjl36382/analysis/")
     
     angles_theta1 = contact[0]
     angles_theta2 = contact[1]
@@ -199,6 +228,11 @@ def get_resolution(contact, indices):
     angles_phi2 = contact[3]
     i1 = indices[0]
     i2 = indices[1]
+    
+    
+    if len(angles_theta1) < 2:
+        print "not enough data obtained"
+        return 999
     
     # Mean values of radii and angles
     mean_theta1 = np.mean(angles_theta1)
@@ -232,44 +266,68 @@ def get_resolution(contact, indices):
     # speckle pattern and threshold to get a
     # circular blob. It then is analysed to find
     # the mean radius
-    pl.subplot(2, 2, 1)
+    
+    # pad the edges to make the shape better for circle detection
+    #area1 = np.pad(area1, 10, 'edge')
+    #area2 = np.pad(area2, 10, 'edge')
+    
+    pl.subplot(2, 3, 1)
     pl.imshow(area1)
-        
-    pl.subplot(2, 2, 2)
+    
+    pl.subplot(2, 3, 2)
     absolute1 = abs(area1 - np.mean(radii_spheres[i1])) + np.mean(radii_spheres[i1])
-    area1 = gaussian_filter(absolute1, 2)
-    area1 = area1 >= np.mean(area1)
+    gaus1 = gaussian_filter(absolute1, 2, mode = 'wrap')
+    pl.imshow(gaus1)
+    
+    pl.subplot(2, 3, 3)
+    area1 = gaus1 >= np.mean(gaus1)
     pl.imshow(area1)
     
-    pl.subplot(2, 2, 3)
+    pl.subplot(2, 3, 4)
     pl.imshow(area2)
     
-    pl.subplot(2, 2, 4)
+    pl.subplot(2, 3, 5)
     absolute2 = abs(area2 - np.mean(radii_spheres[i2])) + np.mean(radii_spheres[i2])
-    area2 = gaussian_filter(absolute2, 2)
-    area2 = area2 >= np.mean(area2)
+    gaus2 = gaussian_filter(absolute2, 2, mode = 'wrap')
+    pl.imshow(gaus2)
+
+    pl.subplot(2, 3, 6)
+    area2 = gaus2 >= np.mean(gaus2)
     pl.imshow(area2)
+    
+    # convert indices to file indices
+    name1 = indices[0]
+    name2 = indices[1]
+    
+    indices = (index_dict[name1], index_dict[name2]) 
+    directory = "/dls/tmp/jjl36382/analysis/plot_{0}"
+    name = "/dls/tmp/jjl36382/analysis/plot_{0}/Subplot_{1}.png"
+    if not os.path.exists(directory.format(indices)):
+        os.makedirs(directory.format(indices))
+    pl.savefig(name.format(indices, indices))
+    
     
     pl.show()
+    pl.close('all')
+#     pl.show()
     
     # Get the centre positions of the blobs
     # using Hough transform
-    C1 = bc.detect_circles(area1)
-    C2 = bc.detect_circles(area2)
-    print "centre from circle detection ", C1[0], C2[0]
-    
-    radius1 = gb.plot_radii(area1, C1[0])
-    radius2 = gb.plot_radii(area2, C2[0])
-    
-    print "Radius1 using min/max ", rtheta1 / 2.0
-    print "Radius2 using min/max ", rtheta2 / 2.0
-    print "Precise Radius1 ", radius1
-    print "Precise Radius2 ", radius2
-    
-    # Distance between spheres when they become
-    # barely resolved
-    resolution = np.mean(radii_spheres[i1]) * (1 - cos(radians(radius1))) +\
-                 np.mean(radii_spheres[i2]) * (1 - cos(radians(radius2)))
+#     C1 = bc.detect_circles(area1)
+#     C2 = bc.detect_circles(area2)
+#     print "centre from circle detection ", C1[0], C2[0]
+#     
+#     radius1 = gb.plot_radii(area1, C1[0])
+#     radius2 = gb.plot_radii(area2, C2[0])
+# 
+#     print "Precise Radius1 ", radius1
+#     print "Precise Radius2 ", radius2
+#     
+#     # Distance between spheres when they become
+#     # barely resolved
+#     resolution = np.mean(radii_spheres[i1]) * (1 - cos(radians(radius1))) +\
+#                  np.mean(radii_spheres[i2]) * (1 - cos(radians(radius2)))
+    resolution = 1
     
     return resolution
 
@@ -284,11 +342,16 @@ def calculate_resolutions():
     """
     
     contact = find_contact()
-    index = contact.keys()
+    key_list = contact.keys()
+    print contact
     
-    for i in range(len(index)):
-        print get_resolution(contact[index[i]], index[i])
-    
+    for key in contact.iterkeys():
+        res = get_resolution(contact[key], key)
+        print "Key %s resolution is %f" % (key, res)
+        f = open('/dls/tmp/jjl36382/analysis/%i_%i.txt' % (key[0], key[1]), 'w')
+        f.write("Resolution for spheres %i and %i is %f \n" % (key[0], key[1], res))
+        f.close()
+        
     return
 
 calculate_resolutions()

@@ -2,7 +2,7 @@ import numpy as np
 import pylab as pl
 from skimage import io
 
-recon = np.load("/dls/tmp/jjl36382/spheres/sphere4.npy")
+recon = np.load("/dls/tmp/jjl36382/spheres/sphere8.npy")
 
 """ind = 355
 for i in range(355, 500, 10):

@@ -56,8 +56,12 @@ holder="-hold_jid job4 -N job5"
 #qsub -pe smp 2 -j y -t 1 $homepath/plot_radii_loop.sh $startang $stopang $stepang
 
 
-echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py -a $startang -b $stopang -c $stepang /dls/tmp/jjl36382/radii5/radii%03i.npy 5" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh 
 
+nb_spheres=`cat /dls/tmp/jjl36382/results/nb_spheres.txt`
+for i in `seq $nb_spheres`;
+do
+	echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+	echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+	echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py -a $startang -b $stopang -c $stepang /dls/tmp/jjl36382/radii$i/radii%03i.npy $i" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+	~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh 
+done

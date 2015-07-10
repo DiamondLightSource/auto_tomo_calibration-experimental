@@ -41,21 +41,24 @@ def get_radius(image, theta, centre):
 
     # Get values of pixels according to an increasing radius for a same angle
     # Get the radius to be at most half the image since the circle can't be bigger
-    R = min(image.shape[0] / 2, image.shape[1] / 2) - 2
+    R = min(image.shape[0] / 2, image.shape[1] / 2) - 5
     
     # Simple trig identities
     # R is the max value that we can reach
     delta_x = R * math.sin(theta)
     delta_y = R * math.cos(theta)
-     
     points = []
     
     # Go from 0 to 1.001 in steps of 0.001
     for alpha in np.arange(0, 1.001, 0.001):
         # Xc and Yc are the positions from the center
         # points stores all the points from the center going along the radius
-        points.append(image[Xc + alpha * delta_x, Yc + alpha * delta_y])
-    
+        points.append(image[int(Xc + alpha * delta_x), int(Yc + alpha * delta_y)])
+#         image[int(Xc + alpha * delta_x), int(Yc + alpha * delta_y)] = 256
+#         pl.imshow(image)
+#         pl.gray()
+#         pl.pause(0.01)
+        
     #points = smooth(np.asarray(points), 3)
     # Find the radius of the circle
     #print points 
@@ -154,7 +157,7 @@ def plot_radii(image, centre):
     pl.ylabel('radius')
     #pl.ylim(radius-5,radius+5)
     pl.xlim(0,360)
-    pl.show()
+    #pl.show()
     
     return np.mean(radii_circle)
 
