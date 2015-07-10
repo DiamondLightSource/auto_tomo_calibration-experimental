@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<workbench progressCount="17" version="2.0">
+<workbench progressCount="34" version="2.0">
 <workbenchAdvisor/>
-<window height="720" width="1024" x="0" y="24">
+<window height="720" maximized="true" width="1024" x="0" y="24">
 <fastViewData fastViewLocation="1024"/>
 <perspectiveBar>
 <itemSize x="160"/>
@@ -29,36 +29,31 @@
 <folder appearance="1" expanded="2">
 <presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">
 <part id="0"/>
+<part id="1"/>
+<part id="2"/>
 </presentation>
 </folder>
 </info>
 </editorArea>
-<editor activePart="true" focus="true" id="org.python.pydev.editor.PythonEditor" name="get_resolution.py" partName="get_resolution" title="get_resolution" tooltip="/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/get_resolution.py" workbook="DefaultEditorWorkbook">
+<editor id="org.python.pydev.editor.PythonEditor" name="get_resolution.py" partName="get_resolution" title="get_resolution" tooltip="/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/get_resolution.py" workbook="DefaultEditorWorkbook">
 <input factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" uri="file:/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/get_resolution.py"/>
-<editorState selectionHorizontalPixel="0" selectionLength="0" selectionOffset="0" selectionTopPixel="0"/>
+<editorState selectionHorizontalPixel="0" selectionLength="0" selectionOffset="8704" selectionTopPixel="3302"/>
+</editor>
+<editor id="org.python.pydev.editor.PythonEditor" name="get_radii.py" partName="get_radii" title="get_radii" tooltip="/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/get_radii.py" workbook="DefaultEditorWorkbook">
+<input factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" uri="file:/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/get_radii.py"/>
+<editorState selectionHorizontalPixel="0" selectionLength="2" selectionOffset="849" selectionTopPixel="293"/>
+</editor>
+<editor activePart="true" focus="true" id="org.python.pydev.editor.PythonEditor" name="radii_angles.py" partName="radii_angles" title="radii_angles" tooltip="/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/radii_angles.py" workbook="DefaultEditorWorkbook">
+<input factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" uri="file:/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/radii_angles.py"/>
+<editorState selectionHorizontalPixel="0" selectionLength="0" selectionOffset="363" selectionTopPixel="0"/>
 </editor>
 </editors>
 <views>
 <view id="org.eclipse.ui.navigator.ProjectExplorer" partName="Project Explorer">
 <viewState CommonNavigator.LINKING_ENABLED="0" org.eclipse.ui.navigator.resources.workingSets.showTopLevelWorkingSets="0"/>
 </view>
-<view id="org.eclipse.ui.views.TaskList" partName="Tasks">
-<viewState PRIMARY_SORT_FIELD="org.eclipse.ui.ide.completionField" categoryGroup="none" markerContentGenerator="org.eclipse.ui.ide.tasksGenerator" partName="Tasks">
-<columnWidths org.eclipse.ui.ide.completionField="40" org.eclipse.ui.ide.descriptionField="350" org.eclipse.ui.ide.locationField="105" org.eclipse.ui.ide.markerType="105" org.eclipse.ui.ide.pathField="140" org.eclipse.ui.ide.priorityField="35" org.eclipse.ui.ide.resourceField="105"/>
-<visible IMemento.internal.id="org.eclipse.ui.ide.completionField"/>
-<visible IMemento.internal.id="org.eclipse.ui.ide.priorityField"/>
-<visible IMemento.internal.id="org.eclipse.ui.ide.descriptionField"/>
-<visible IMemento.internal.id="org.eclipse.ui.ide.resourceField"/>
-<visible IMemento.internal.id="org.eclipse.ui.ide.pathField"/>
-<visible IMemento.internal.id="org.eclipse.ui.ide.locationField"/>
-<visible IMemento.internal.id="org.eclipse.ui.ide.markerType"/>
-</viewState>
-</view>
-<view id="org.eclipse.ui.views.ContentOutline" partName="Outline">
-<viewState/>
-</view>
 </views>
-<perspectives activePart="org.eclipse.ui.views.TaskList" activePerspective="org.eclipse.ui.resourcePerspective">
+<perspectives activePart="org.python.pydev.editor.PythonEditor" activePerspective="org.eclipse.ui.resourcePerspective">
 <perspective editorAreaTrimState="2" editorAreaVisible="1" fixed="0" version="0.016">
 <descriptor class="org.eclipse.ui.internal.ide.application.ResourcePerspective" id="org.eclipse.ui.resourcePerspective" label="Resource"/>
 <alwaysOnActionSet id="org.eclipse.ui.cheatsheets.actionSet"/>
@@ -89,8 +84,6 @@
 <hide_toolbar_item_id id="org.eclipse.debug.ui.commands.RunToLine"/>
 <hide_toolbar_item_id id="org.eclipse.jdt.ui.actions.OpenProjectWizard"/>
 <hide_toolbar_item_id id="org.eclipse.ui.edit.text.toggleShowSelectedElementOnly"/>
-<view id="org.eclipse.ui.views.ContentOutline"/>
-<view id="org.eclipse.ui.views.TaskList"/>
 <view id="org.eclipse.ui.navigator.ProjectExplorer"/>
 <fastViewBars/>
 <layout>
@@ -103,7 +96,7 @@
 </presentation>
 </folder>
 </info>
-<info folder="true" part="topLeft" ratio="0.24957842" ratioLeft="148" ratioRight="445" relationship="4" relative="org.eclipse.ui.internal.ViewStack@5f33fd61">
+<info folder="true" part="topLeft" ratio="0.15932204" ratioLeft="94" ratioRight="496" relationship="4" relative="org.eclipse.ui.internal.ViewStack@5f33fd61">
 <folder appearance="2" expanded="2">
 <page content="org.eclipse.ui.views.BookmarkView" label="LabelNotFound"/>
 <page content="org.eclipse.ui.views.ResourceNavigator" label="LabelNotFound"/>
@@ -121,21 +114,17 @@
 </info>
 <info part="org.eclipse.ui.editorss" ratio="0.25940594" ratioLeft="262" ratioRight="748" relationship="2" relative="topLeft"/>
 <info folder="true" part="bottomRight" ratio="0.6593592" ratioLeft="391" ratioRight="202" relationship="4" relative="org.eclipse.ui.editorss">
-<folder activePageID="org.eclipse.ui.views.TaskList" appearance="2" expanded="2">
-<page content="org.eclipse.ui.views.TaskList" label="Tasks"/>
+<folder appearance="2" expanded="2">
+<page content="org.eclipse.ui.views.TaskList" label="LabelNotFound"/>
 <page content="org.eclipse.team.ui.GenericHistoryView" label="LabelNotFound"/>
-<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">
-<part id="0"/>
-</presentation>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory"/>
 </folder>
 </info>
 <info folder="true" part="bottomLeft" ratio="0.49915683" ratioLeft="296" ratioRight="297" relationship="4" relative="topLeft">
-<folder activePageID="org.eclipse.ui.views.ContentOutline" appearance="2" expanded="2">
-<page content="org.eclipse.ui.views.ContentOutline" label="Outline"/>
+<folder appearance="2" expanded="2">
+<page content="org.eclipse.ui.views.ContentOutline" label="LabelNotFound"/>
 <page content="org.eclipse.ant.ui.views.AntView" label="LabelNotFound"/>
-<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">
-<part id="0"/>
-</presentation>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory"/>
 </folder>
 </info>
 </mainWindow>
@@ -146,9 +135,26 @@
 <navigationHistory>
 <editors>
 <editor factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" id="org.python.pydev.editor.PythonEditor" uri="file:/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/get_resolution.py"/>
+<editor factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" id="org.python.pydev.editor.PythonEditor" uri="file:/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/get_radii.py"/>
+<editor factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" id="org.python.pydev.editor.PythonEditor" uri="file:/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/radii_angles.py"/>
 </editors>
-<item active="true" historyLabel="get_resolution" index="0">
+<item historyLabel="get_resolution" index="0">
 <position info="not_deleted" x="0" y="0"/>
+</item>
+<item historyLabel="get_radii" index="1">
+<position info="not_deleted" x="849" y="2"/>
+</item>
+<item historyLabel="radii_angles" index="2">
+<position info="not_deleted" x="363" y="0"/>
+</item>
+<item historyLabel="get_resolution" index="0">
+<position info="not_deleted" x="8704" y="0"/>
+</item>
+<item historyLabel="get_radii" index="1">
+<position info="not_deleted" x="849" y="2"/>
+</item>
+<item active="true" historyLabel="radii_angles" index="2">
+<position info="not_deleted" x="363" y="0"/>
 </item>
 </navigationHistory>
 <input factoryID="org.eclipse.ui.internal.model.ResourceFactory" path="/" type="8"/>
@@ -167,6 +173,12 @@
 </trimLayout>
 </window>
 <mruList>
+<file factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" id="org.python.pydev.editor.PythonEditor" name="radii_angles.py" tooltip="/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/radii_angles.py">
+<persistable uri="file:/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/radii_angles.py"/>
+</file>
+<file factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" id="org.python.pydev.editor.PythonEditor" name="get_radii.py" tooltip="/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/get_radii.py">
+<persistable uri="file:/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/get_radii.py"/>
+</file>
 <file factoryID="org.eclipse.ui.ide.FileStoreEditorInputFactory" id="org.python.pydev.editor.PythonEditor" name="get_resolution.py" tooltip="/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/get_resolution.py">
 <persistable uri="file:/home/tomas/Documents/auto_tomo_calibration-experimental/Analysis_Cluster/get_resolution.py"/>
 </file>
