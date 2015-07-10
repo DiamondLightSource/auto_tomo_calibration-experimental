@@ -7,6 +7,15 @@ from mpl_toolkits.mplot3d import Axes3D
 
 pl.close('all')
 
+
+
+def not_within_range(element, list):
+    for item in list:
+        if np.allclose(element, item, 0, 20):
+            return False
+        
+    return True
+
 if __name__ == '__main__' :
     import optparse
     parser = optparse.OptionParser()
@@ -90,8 +99,8 @@ N = len(perimeters)
 # for slice in range(N):
 #     for i in range(len(perimeters[slice])):
 #         ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*step+step)
-# 
-# 
+#  
+#  
 # ax.set_xlim(0, stop)
 # ax.set_ylim(0, stop)
 # ax.set_zlim(0, stop)
@@ -155,297 +164,178 @@ N = len(centres)
 np.save('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/modified_centroids.npy', centres)
 np.save('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/radius.npy', radius)
 
+# radius = np.load('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/radius.npy')
 
-# Find the (slice, index) of the elements which have no
-# near neighbour, but are located further in the array
-#--------------------------------------------------------------------
-bad_pair = []
-for slice in range(0, N - 2):
-    for centre_index in range(len(centres[slice])):
-        centre = centres[slice][centre_index]
-        for centre_next in centres[slice + 1]:
-            # if the centres are within the tolerance
-            # and they are neighbours then stop
-            if np.allclose(np.asarray(centre), np.asarray(centre_next), 0, 15):
-                break
-        else:
-            for centre_next2 in centres[slice + 2]:
-                if np.allclose(np.asarray(centre), np.asarray(centre_next2), 0, 15):
-                    break
-            # if they are similar ant not neighbours
-            # then remove it from the list
-            else:
-                bad_pair.append((slice, centre_index))
-#                 for slice2 in range(slice + 3, N):
-#                     for index in range(len(centres[slice2])):
-#                         centre_further = centres[slice2][index]
-#                         #print "pair ", centre_further, centre
-#                         if np.allclose(np.asarray(centre), np.asarray(centre_further), 0, 15):
-#                             bad_pair.append((slice, centre_index))
-
-# Get unique pairs of the slices and indices to be
-# removed
-if bad_pair:
-    unique_pairs = []
-    unique_pairs.append(bad_pair[0])
-    for index in range(1, len(bad_pair)):
-        if bad_pair[index] in unique_pairs:
-            continue
-        else:
-            unique_pairs.append(bad_pair[index])
-
-    # Remove the indices slices and elements in them
-    # which are anomalous
-    centres = np.asarray(centres)
-    sorted_by_slice = sorted(unique_pairs, key=lambda tup: tup[0])
-    rev_unique = list(reversed(sorted_by_slice))
-    
-    # print "unique slices for deletion and reversed"
-    # print rev_unique
-    for i in rev_unique:
-        slice = i[0]
-        index = i[1]
-        centres[slice][index] = []
-        radius[slice][index] = []
-        
-    # If a list was completely wiped out
-    # it will be empty, hence delete empty lists
-    bad_indices = []
-    N = len(centres)
-    for n in range(N):
-        for element in centres[n]:
-            if not element:
-                bad_indices.append(n)
-            
-    centres = np.delete(centres, bad_indices)
-    radius = np.delete(radius, bad_indices)
-#--------------------------------------------------------------------
-
-
-
-#--------------------------------------------------------------------
-# Find the centres and how much do they span (their size)
 N = len(centres)
-index_top = [] # indexes of tops of spheres
-centres_top = [] # centres of tops of spheres
-index_bot = [] # indexes of bottoms of spheres
-centres_bot = [] # centres of bottoms of spheres
-centres_picked = [] # to store the (x,y) centres of spheres
-radius_top = [] # Mimick the centre deletion process
-radius_bot = []
 
-for slice in range(0, N-4):
-    for centre in centres[slice]:
-        
-        # See if the centres appear within 4 slices
-        for centre_1 in centres[slice+1]:
-            # if centres equal to within about 20 pixels
-            if np.allclose(np.asarray(centre), np.asarray(centre_1), 0, 20): 
-                break
-        else:
-            for centre_2 in centres[slice+2]:
-                if np.allclose(np.asarray(centre), np.asarray(centre_2), 0, 20):
-                    break
-            else:
-                for centre_3 in centres[slice+3]:
-                    if np.allclose(np.asarray(centre), np.asarray(centre_3), 0, 20):
-                        break
-                else:
-                    for centre_4 in centres[slice+4]:
-                        if np.allclose(np.asarray(centre), np.asarray(centre_4), 0, 20):
-                            break
-                    # if centres are not the same within four neighbouring
-                    # slices then add them to centre_bot
-                    else:
-                        index_bot.append(slice)
-                        centres_bot.append(centre)
-#                         radius_bot.append(radius[slice])
-                        
-        # If the centre has not been picked before: top of sphere
-        # If the neighbouring slices have centres close together
-        # then add them to centres picked and top arrays
-        for centre_p in centres_picked:
-            if np.allclose(np.asarray(centre), np.asarray(centre_p), 0, 20):
-                break
-        else:
-            centres_picked.append(centre)
-            index_top.append(slice)
-            centres_top.append(centre)
-#             radius_top.append(radius[slice])
-
-# This fixes the end of the list
-for centre in centres[N-1]:
-    index_bot.append(N-1)
-    centres_bot.append(centre)
-#     radius_bot.append(radius[N-1])
-
-print centres_top
-print centres_bot
-# Remove bugs = wrong centres that were detected only once
-index_top_del = []
-index_bot_del = []
-for i_top in range(len(index_top)):
-    if (index_top[i_top] in index_bot) and (centres_top[i_top] in centres_bot): # bugs are the only centres that appear once in both lists of edges
-        i_bot = centres_bot.index((centres_top[i_top]))
-        index_top_del.append(i_top)
-        index_bot_del.append(i_bot)
-         
-     
-index_top[:] = [item for i,item in enumerate(index_top) if i not in index_top_del]
-centres_top[:] = [item for i,item in enumerate(centres_top) if i not in index_top_del]
-index_bot[:] = [item for i,item in enumerate(index_bot) if i not in index_bot_del]
-centres_bot[:] = [item for i,item in enumerate(centres_bot) if i not in index_bot_del]
-# radius_top[:] = [item for i,item in enumerate(radius_top) if i not in index_top_del]
-# radius_bot[:] = [item for i,item in enumerate(radius_bot) if i not in index_bot_del]
-
-
-# remove the padded lists
-#--------------------------------------------------------------------
-del centres_bot[-1]
-del centres_top[-1]
-# del radius_bot[-1]
-# del radius_top[-1]
-del index_top[-1] 
-del index_bot[-1]
-centres = np.delete(centres, -1)
-centres = np.delete(centres, -1)
-radius = np.delete(radius, -1)
-radius = np.delete(radius, -1)
-centres = np.delete(centres, -1)
-centres = np.delete(centres, -1)
-radius = np.delete(radius, -1)
-radius = np.delete(radius, -1)
-centres = np.delete(centres, -1)
-centres = np.delete(centres, -1)
-radius = np.delete(radius, -1)
-radius = np.delete(radius, -1)
-#--------------------------------------------------------------------
-
-print "indices and centres bot/top"                   
-print len(index_bot)
-print len(index_top)
-print len(centres_top)
-print len(centres_bot)
-
-# SORT CENTRES_BOT AND CENTRES_TOP TO MATCH SIMILAR CENTRES
-# THEN TAKE THE MEDIAN. IF THEY ARE NOT SORTER ALL_CLOSE DOES
-# NOT WORK
-# SORT ACCORDING TO THE CENTRES_TOP LIST
-temp_cent = []
-temp_rad = []
-# for top in centres_top:
-#     element_bot = [bot for bot in centres_bot if np.allclose(np.asarray(bot), np.asarray(top), 0, 10)]
-#     element_rad = [radius_bot[index] for index, bot in enumerate(centres_bot) if np.allclose(np.asarray(bot), np.asarray(top), 0, 10)]
-#     print element_bot
-#     temp_cent.append(element_bot[0])
-#     temp_rad.append(element_rad[0])
+print "centres at the beginning"
+for i in range(N):
+    print "I: ", i, " ", centres[i]
     
-# Try sorting according to bot since top fails
-# print centres_top
-# for bot in centres_bot:
-#     element_top = [top for top in centres_top if np.allclose(np.asarray(bot), np.asarray(top), 0, 10)]
-#     element_rad = [radius_top[index] for index, top in enumerate(centres_top) if np.allclose(np.asarray(bot), np.asarray(top), 0, 10)]
-#     if element_top:
-#         print element_top
-#         temp_cent.append(element_top[0])
-#         temp_rad.append(element_rad[0])
-# radius_bot = temp_rad
-# centres_bot = temp_cent
+dict = {}
+dict_for_averaging = {}
+dict_radius = {}
 
-# Get (x,y) coordinates of centres of spheres
-print centres_top
-print centres_bot
-if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 20):
-    centres_zipped = np.asarray(zip(centres_top, centres_bot))
-#     radius_zipped = np.asarray(zip(radius_top, radius_bot))
-    centres_xy = np.array(np.median(centres_zipped, axis=1), dtype='int64')
+# Takes an element from every slice and loops through the array to check if
+# if the same centres exist within three slices
+for slice_index in range(N - 4):
+    for centr in centres[slice_index]:
+        len_counter = 0
+        end_loop = False
+        list_for_averaging = []
+        rad_for_averaging = []
+        # For each centre in the slice go through
+        # the whole array of slices and count
+        # brute force...
+        # set up a variable for length
+        # go to the next slice
+        if not_within_range(centr, dict.keys()):
+            for slice_next in range(slice_index + 1, N - 3):
+                
+#                 Check if the array has not ended
+#                 Since padding was used just skip this
+#                 if slice_index == N - 5:
+#                     # start and end index 
+#                     dict[centr] = (slice_index, len_counter + slice_index)
+#                     dict_for_averaging[centr] = list_for_averaging
+#                     end_loop = True
+                        
+                # If one element was found in the slice then this is True
+                # otherwise make it False
+                found_one = False
+                
+                # this allows to loop through till the centre has neighbours
+                # and reaches the end of all the slices
+                # MIGHT NOT BE NECESSARY
+                if not end_loop:
+                    
+                    # check if it is similar to one element
+                    # in the next three slices
+                    # if it is then increase the counter and
+                    # say to the code that the element was found
+                    # also append to the list to take the
+                    # average of the centre
+                    for index in range(len(centres[slice_next])):
+                        element = centres[slice_next][index]
+                        if np.allclose(np.asarray(centr), np.asarray(element), 0, 20):
+                            found_one = True
+                            len_counter += 1
+                            list_for_averaging.append(element)
+                            rad_for_averaging.append(radius[slice_next][index])
+                            break
+                    else:
+                        for index1 in range(len(centres[slice_next + 1])):
+                            element = centres[slice_next + 1][index1]
+                            if np.allclose(np.asarray(centr), np.asarray(element), 0, 20):
+                                found_one = True
+                                len_counter += 1
+                                list_for_averaging.append(element)
+                                rad_for_averaging.append(radius[slice_next + 1][index1])
+                                break
+                        else:
+                            for index2 in range(len(centres[slice_next + 2])):
+                                element = centres[slice_next + 2][index2]
+                                if np.allclose(np.asarray(centr), np.asarray(element), 0, 20):
+                                    found_one = True
+                                    len_counter += 1
+                                    list_for_averaging.append(element)
+                                    rad_for_averaging.append(radius[slice_next + 2][index2])
+                                    break
+                            else:
+                                for index3 in range(len(centres[slice_next + 3])):
+                                    element = centres[slice_next + 3][index3]
+                                    if np.allclose(np.asarray(centr), np.asarray(element), 0, 20):
+                                        found_one = True
+                                        len_counter += 1
+                                        list_for_averaging.append(element)
+                                        rad_for_averaging.append(radius[slice_next + 3][index3])
+                                        break
+                    # If the element was n ot found within 3 slices
+                    # then it does not form a sphere
+                    # hence found_one will be False
+                    # and this part will execute meaning the end
+                    # of the sphere
+                    if not found_one:
+                        if len_counter > 2:
+                            # start and end index 
+                            dict[centr] = (slice_index, len_counter + slice_index)
+                            dict_for_averaging[centr] = list_for_averaging
+                            dict_radius[centr] = rad_for_averaging
+                            end_loop = True
+                        else:
+                            continue
 
-# Get the mean of the radius double values
-# radius_mean = []
-# for slice in radius_zipped:
-#     print slice
-#     radius_mean.append(np.mean(np.max(slice)))
-
-# Calculate z coordinate of centres of spheres
-if np.allclose(np.asarray(centres_bot), np.asarray(centres_top), 0, 20):
-    edges = np.asarray(zip(index_top, index_bot))
-    centres_z = np.array(np.median(edges, axis=1), dtype='int64')*step + step
-
-centroids = zip(centres_xy[:,0], centres_xy[:,1], centres_z)
-
-# Sort out the 2D areas among spheres
-
-nb_spheres = len(centroids)
-
-slices_spheres = []
-bords_spheres = []
-radii_slices = []
-bad_indices = []
-radii_spheres = []
-old_nb = nb_spheres
-
-print "end of processing"
-print len(centroids)
-# print len(radius_zipped)
-# print radius_zipped
-# print radius_mean
-
-for n in range(nb_spheres):
-     
-    slices = []
-    bords = []
-    radii = []
-     
-    for slice in range(edges[n][0], edges[n][1]+1):
-         
-        for i in range(len(centres[slice])):
-            slices.append(slice)
-            radii.append(radius[slice][i])
+# Check if the lengths are more than 2
+for centre in dict.iterkeys():
+    slice_start = dict[centre][0]
+    slice_end = dict[centre][1]
+    # end is inclusive so add 1
+    length = slice_end - slice_start + 1
+    
+    # also take the median of all the centre values
+    avg = np.median(dict_for_averaging[centre], axis=0)
+    dict_for_averaging[centre] = tuple(np.array(avg, dtype='int64'))
+    
+    avg_rad = np.max(dict_radius[centre])
+    dict_radius[centre] = np.array(avg_rad)
+    if length < 3:
+        del dict[centre]
+        del dict_radius[centre]
         
-    if len(slices) > 5:
-        slices_spheres.append(slices)
-        radii_spheres.append(radii)
-    else:
-        nb_spheres -= 1
-        bad_indices.append(n)
+# take the mean value of the centre together
+# with its lengths and make one dict
+centroids = {}
+radii = {}
+for key in dict.iterkeys():
+    centroids[dict_for_averaging[key]] = dict[key]
+    radii[dict_for_averaging[key]] = dict_radius[key]
 
-new_centroids = []
-new_radius = []
-for i in range(old_nb):
-    if i not in bad_indices:
-        new_centroids.append(centroids[i])
-#         new_radius.append(ra)
+print centroids
+print dict_radius
 
-# coordinates are shifted due to filenames
-# not starting form 0
-new_centroids = centroids
-z_coordinate = []
-for i in range(len(new_centroids)):
-    z_coordinate.append(new_centroids[i][2] + start)
+# find the z position of the centres
+# not sure about the plus 10 - must check
+for key in centroids.iterkeys():
+    slice_start = centroids[key][0]
+    slice_end = centroids[key][1]
+    z = (slice_end + slice_start) / 2.0
+    centroids[key] = int(z  * 10 + 10)
 
-# ---------------------------------- Save centres + radii -----------------------------------
-# --------------------------------- (write data in a file) ----------------------------------
+print centroids 
+# make a list with x,y,z coordinates
+centres_list = []
+radii_list = []
+for key in centroids.iterkeys():
+    x = key[0]
+    y = key[1]
+    z = centroids[key]
+    r = radii[key]
+    centres_list.append((x, y, z))
+    radii_list.append(r)
+    
+print centres_list
+nb_spheres = len(centres_list)
 
 print("Saving data")
 
 f = open('/dls/tmp/jjl36382/results/centres.txt', 'w')
 for i in range(nb_spheres):
-    f.write(repr(new_centroids[i]) + '\n')
+    f.write(repr(centres_list[i]) + '\n')
 f.close()
 
 f = open('/dls/tmp/jjl36382/results/centresX.txt', 'w')
 for i in range(nb_spheres):
-    f.write(repr(new_centroids[i][0]) + '\n')
+    f.write(repr(centres_list[i][0]) + '\n')
 f.close()
 
 f = open('/dls/tmp/jjl36382/results/centresY.txt', 'w')
 for i in range(nb_spheres):
-    f.write(repr(new_centroids[i][1]) + '\n')
+    f.write(repr(centres_list[i][1]) + '\n')
 f.close()
 
 f = open('/dls/tmp/jjl36382/results/centresZ.txt', 'w')
 for i in range(nb_spheres):
-    f.write(repr(z_coordinate[i]) + '\n')
+    f.write(repr(centres_list[i][2]) + '\n')
 f.close()
 
 # f = open('/dls/tmp/jjl36382/results/radii.txt', 'w')
@@ -460,7 +350,7 @@ f.close()
 
 f = open('/dls/tmp/jjl36382/results/radii_max.txt', 'w')
 for i in range(nb_spheres):
-    f.write(repr(int(max(radii_spheres[i]))) + '\n')
+    f.write(repr(int(radii_list[i])) + '\n')
 f.close()
 
 f = open('/dls/tmp/jjl36382/results/nb_spheres.txt', 'w')

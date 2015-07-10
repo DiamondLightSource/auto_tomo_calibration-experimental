@@ -35,7 +35,7 @@ holder="-hold_jid job1 -N job2"
 
 # Select areas ------------------------------------------------------------------------------------------------------
 holder="-hold_jid job2 -N job3"
-qsub -pe smp 2 -j y -t 1 $homepath/selector_loop.sh $spherepath/sphere%i.npy $datapath $start $resultspath $homepath
+#qsub -pe smp 2 -j y -t 1 $homepath/selector_loop.sh $spherepath/sphere%i.npy $datapath $start $resultspath $homepath
 
 
 # Get radii ------------------------------------------------------------------------------------------------------
@@ -47,17 +47,17 @@ startang=1
 stopang=360
 stepang=10
 holder="-hold_jid job3 -N job4"
-#qsub $holder -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath/sphere%i.npy
+#qsub -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath
 
 
 
 # Plot radii ------------------------------------------------------------------------------------------------------
 holder="-hold_jid job4 -N job5"
-#qsub $holder -pe smp 2 -j y -t 1 $homepath/plot_radii_loop.sh $startang $stopang $stepang
+#qsub -pe smp 2 -j y -t 1 $homepath/plot_radii_loop.sh $startang $stopang $stepang
 
 
-#echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-#echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-#echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py -a $startang -b $stopang -c $stepang /dls/tmp/jjl36382/radii18/radii%03i.npy 18" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-#~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh 
+echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py -a $startang -b $stopang -c $stepang /dls/tmp/jjl36382/radii5/radii%03i.npy 5" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh 
 
