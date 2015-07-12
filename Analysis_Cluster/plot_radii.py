@@ -69,7 +69,7 @@ if __name__ == '__main__' :
     one_std_dev = np.std(radii_np)
     # threshold limit
     absolute1 = abs(radii_np - radii_med) + radii_med
-    gaus1 = gaussian_filter(absolute1, 1, mode = 'wrap')
+    gaus1 = gaussian_filter(absolute1, 1)
     area1 = gaus1 >= np.mean(gaus1) + np.std(gaus1) * 3
     area1 = area1 * 1
 

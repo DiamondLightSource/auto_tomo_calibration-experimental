@@ -122,6 +122,7 @@ def find_contact():
 
     # touching_pts = [ ([theta1], [theta2], [phi1], [phi2]) ]
     touching_pts = {}
+    centre_pts = {}
     
     # Loop through all pairs
     for i in range(len(radii_spheres)):
@@ -133,64 +134,50 @@ def find_contact():
             ith_dict = angles_outliers[i]
             jth_dict = angles_outliers[j]
             
+            # store the touching pts
             touching_i_theta = []
             touching_j_theta = []
             touching_i_phi = []
             touching_j_phi = []
             
+            # store centre pts
+            centre_i_theta = []
+            centre_j_theta = []
+            centre_i_phi = []
+            centre_j_phi = []
+            
             # compare the angles
             for i_angle in ith_dict:
                 for j_angle in jth_dict:
                     
+                    is_touching = False
                     # theta 0:360 phi 0:180
                     i_theta, i_phi = i_angle[0], i_angle[1]
                     j_theta, j_phi = j_angle[0], j_angle[1]
                     delta_theta = abs(i_theta - j_theta)
                     
-                    if approx_diff(i_theta, j_theta, 180, 0)\
-                     and approx_sum(i_phi, j_phi, 180, 0):
+                    if approx_diff(i_theta, j_theta, 180, 4)\
+                     and approx_sum(i_phi, j_phi, 180, 4):
                         touching_i_theta.append(i_theta)
                         touching_j_theta.append(j_theta)
                         touching_i_phi.append(i_phi)
                         touching_j_phi.append(j_phi)
-                        is_touching = True
-            
-            if is_touching:            
-                touching_pts[i, j] = touching_i_theta, touching_j_theta,\
-                                     touching_i_phi, touching_j_phi
-    return touching_pts
+                        touching_pts[i, j] = touching_i_theta, touching_j_theta,\
+                                             touching_i_phi, touching_j_phi
+                    
+                    if approx_diff(i_theta, j_theta, 180, 0)\
+                     and approx_sum(i_phi, j_phi, 180, 0):
+                        centre_i_theta.append(i_theta)
+                        centre_j_theta.append(j_theta)
+                        centre_i_phi.append(i_phi)
+                        centre_j_phi.append(j_phi)
+                        centre_pts[i, j] = centre_i_theta, centre_j_theta,\
+                                            centre_i_phi, centre_j_phi
+                   
+    return touching_pts, centre_pts
   
-    
-def pair_closest_mean(list1, list2):
-    """
-    Takes in two lists and finds the pair closest
-    to the mean while satisfying the angle conditions:
-    Difference of Theta pair must be equal to 180
-    Sum of Phi pair must be equal to 180
-    
-    Input:
-        Lists containing the angles (same length)
-    Output:
-        The pair closest to the mean as a tuple
-    """
-    
-    import numpy as np
-    
-    for i in range(len(list1)):
-        tol1 = 100
-        tol2 = 100
-        if (abs(list1[i] - np.mean(list1)) < tol1) and\
-            (abs(list2[i] - np.mean(list2)) < tol2):
-            
-            tol1 = list1[i] - np.mean(list1)
-            tol2 = list2[i] - np.mean(list2)
-            X = list1[i]
-            Y = list2[i]
-    
-    return (X, Y)
 
-
-def get_resolution(contact, indices):
+def get_resolution(contact, centres, indices):
     """
     Segment the blobs at the point of contact.
     Threshold and smear them out to get a circular shape
@@ -221,92 +208,81 @@ def get_resolution(contact, indices):
     # Load data
     radii_spheres, angles_outliers, index_dict = load_data("/dls/tmp/jjl36382/analysis/")
     
-    angles_theta1 = contact[0]
-    angles_theta2 = contact[1]
-    angles_phi1 = contact[2]
-    angles_phi2 = contact[3]
+#     centres_theta1 = centres[0]
+#     centres_theta2 = centres[1]
+#     centres_phi1 = centres[2]
+#     centres_phi2 = centres[3]
+    
     i1 = indices[0]
     i2 = indices[1]
     
-    
-    if len(angles_theta1) < 2:
-        print "not enough data obtained"
-        return None
-    
-    # Mean values of radii and angles
-    mean_theta1 = np.mean(angles_theta1)
-    mean_theta2 = np.mean(angles_theta2)
-    mean_phi1 = np.mean(angles_phi1)
-    mean_phi2 = np.mean(angles_phi2)
-    
-    # This was pointless - didn't help much
-    # average_theta1, average_theta2 = pair_closest_mean(angles_theta1, angles_theta2)
-    # average_phi1, average_phi2 = pair_closest_mean(angles_phi1, angles_phi2)
-    
-    # Get the "diameters" of the blobs in both directions
-    # If the blob is not circular then this method fails
-    rtheta1 = max(angles_theta1) - min(angles_theta1)
-    rphi1 = max(angles_phi1) - min(angles_phi1)
-    rtheta2 = max(angles_theta2) - min(angles_theta2)
-    rphi2 = max(angles_phi2) - min(angles_phi2)
+    pl.close('all')
     
     
-    # Borders for the segmented blob area
-    R1 = int(1.5 * max(rtheta1, rphi1))
-    R2 = int(1.5 * max(rtheta2, rphi2))
-    R1p = int(2.5 * rtheta1)
-    R2p = int(2.5 * rtheta2)
-    R1t = int(2.5 * rphi1)
-    R2t = int(2.5 * rphi2)
     
-    # Segment the blob areas (can be approximate)
-    area1 = radii_spheres[i1][mean_theta1 - R1:mean_theta1 + R1,\
-                              mean_phi1 - R1:mean_phi1 + R1]
-    area2 = radii_spheres[i2][mean_theta2 - R2:mean_theta2 + R2,\
-                              mean_phi2 - R2:mean_phi2 + R2]
-     
-#     area1 = radii_spheres[i1][mean_theta1 - R1t:mean_theta1 + R1t,\
-#                               mean_phi1 - R1p:mean_phi1 + R1p]
-#     area2 = radii_spheres[i2][mean_theta2 - R2t:mean_theta2 + R2t,\
-#                               mean_phi2 - R2p:mean_phi2 + R2p]
+    pl.subplot(2, 1, 1)
+    pl.title("Images indicating sphere touch points")
+    pl.imshow(radii_spheres[i1].T)
+    pl.subplot(2, 1, 2)
+    pl.imshow(radii_spheres[i2].T)
+    pl.show()
+    
+    contact_theta1 = contact[0]
+    contact_theta2 = contact[1]
+    contact_phi1 = contact[2]
+    contact_phi2 = contact[3]
+    
+    # Median value of the centres
+#     mean_theta1 = np.mean(centres_theta1)
+#     mean_theta2 = np.mean(centres_theta2)
+#     mean_phi1 = np.mean(centres_phi1)
+#     mean_phi2 = np.mean(centres_phi2)
 #     
-    # Threshold the pixels above average since
-    # they are anomalous
-    # Then apply a Gaussian filter to smear the
-    # speckle pattern and threshold to get a
-    # circular blob. It then is analysed to find
-    # the mean radius
     
-    # pad the edges to make the shape better for circle detection
-    #area1 = np.pad(area1, 10, 'edge')
-    #area2 = np.pad(area2, 10, 'edge')
+    # Get the borders of the blobs used in segmentation
+    bord_theta1 = max(contact_theta1) - min(contact_theta1) + 5
+    bord_phi1 = max(contact_phi1) - min(contact_phi1) + 5
+    bord_theta2 = max(contact_theta2) - min(contact_theta2) + 5
+    bord_phi2 = max(contact_phi2) - min(contact_phi2) + 5
+    
+    # centres (approximate)
+    mean_theta1 = bord_theta1 / 2 + min(contact_theta1)
+    mean_theta2 = bord_theta2 / 2 + min(contact_theta2)
+    mean_phi1 = bord_phi1 / 2 + min(contact_phi1)
+    mean_phi2 = bord_phi2 / 2 + min(contact_phi2)
+    
+    area1 = radii_spheres[i1][mean_theta1 - bord_theta1:mean_theta1 + bord_theta1,\
+                              mean_phi1 - bord_phi1:mean_phi1 + bord_phi1]
+    area2 = radii_spheres[i2][mean_theta2 - bord_theta2:mean_theta2 + bord_theta2,\
+                              mean_phi2 - bord_phi2:mean_phi2 + bord_phi2]
+
+    # Smear the blobs to make them circular
+    # Then threshold the Gaussian image
     
     pl.subplot(2, 3, 1)
-    pl.imshow(area1)
+    pl.imshow(area1.T)
     
     pl.subplot(2, 3, 2)
+    pl.title("Segmented 'blobs' for Phi angle extraction")
     absolute1 = abs(area1 - np.mean(radii_spheres[i1])) + np.mean(radii_spheres[i1])
     gaus1 = gaussian_filter(absolute1, 3, mode = 'wrap')
-    pl.imshow(gaus1)
-    
-    print np.mean(gaus1)
-    print np.std(gaus1)
+    pl.imshow(gaus1.T)
     
     pl.subplot(2, 3, 3)
-    area1 = gaus1 >= np.mean(gaus1) + np.std(gaus1)
-    pl.imshow(area1)
+    area1 = gaus1 >= np.mean(gaus1) + np.std(gaus1) / 2
+    pl.imshow(area1.T)
     
     pl.subplot(2, 3, 4)
-    pl.imshow(area2)
+    pl.imshow(area2.T)
     
     pl.subplot(2, 3, 5)
     absolute2 = abs(area2 - np.mean(radii_spheres[i2])) + np.mean(radii_spheres[i2])
     gaus2 = gaussian_filter(absolute2, 3, mode = 'wrap')
-    pl.imshow(gaus2)
+    pl.imshow(gaus2.T)
 
     pl.subplot(2, 3, 6)
-    area2 = gaus2 >= np.mean(gaus2) + np.std(gaus2)
-    pl.imshow(area2)
+    area2 = gaus2 >= np.mean(gaus2) + np.std(gaus2) / 2
+    pl.imshow(area2.T)
     
     # convert indices to file indices
     name1 = indices[0]
@@ -319,36 +295,41 @@ def get_resolution(contact, indices):
         os.makedirs(directory.format(indices))
     pl.savefig(name.format(indices, indices))
     
-    
     pl.show()
     pl.close('all')
-    pl.show()
-     
+    
+
     # Get the centre positions of the blobs
     # using Hough transform
-    C1 = bc.detect_circles(area1)
-    C2 = bc.detect_circles(area2)
+    #C1 = bc.detect_circles(area1)
+    #C2 = bc.detect_circles(area2)
+ 
+    radius1 = gb.plot_radii(area1)
+    radius2 = gb.plot_radii(area2)
     
-    if not C1 or not C2:
-        print "Circle segmentation was unsuccessful - just use the average angles"
-        radius1 = rphi1 / 2
-        radius2 = rphi2 / 2
+    if radius1[0] and radius2[0]:
+        print "Precise Phi angle 1 ", radius1[1]
+        print "Precise Phi angle 2 ", radius2[1]
     else:
-        print "centre from circle detection ", C1[0], C2[0]
-        print "centre without circle detection ", (R1t, R1p), (R2t, R2p)
-        C1[0] = (R1t, R1p)
-        C2[0] = (R2t, R2p)
-        radius1 = gb.plot_radii(area1, C1[0])
-        radius2 = gb.plot_radii(area2, C2[0])
-     
-    print "Precise Phi angle 1 ", radius1
-    print "Precise Phi angle 2 ", radius2
-     
+                 
+        print """The resolution touch point is not
+                symmetrical - hence the Phi is not uniform"""
+        resolution = np.mean(radii_spheres[i1]) * (1 - cos(radians(radius1[1]))) +\
+                 np.mean(radii_spheres[i2]) * (1 - cos(radians(radius2[1])))
+                        
+        print "Resolution from elongated angle is ", resolution
+        
+        resolution = np.mean(radii_spheres[i1]) * (1 - cos(radians(radius1[2]))) +\
+                 np.mean(radii_spheres[i2]) * (1 - cos(radians(radius2[2])))
+                 
+        print "Resolution from shorter angle is ", resolution
+        return resolution, indices
+        
+
     # Distance between spheres when they become
     # barely resolved
-    resolution = np.mean(radii_spheres[i1]) * (1 - cos(radians(radius1))) +\
-                 np.mean(radii_spheres[i2]) * (1 - cos(radians(radius2)))
-#     resolution = 1
+    resolution = np.mean(radii_spheres[i1]) * (1 - cos(radians(radius1[1]))) +\
+                 np.mean(radii_spheres[i2]) * (1 - cos(radians(radius2[1])))
     
     return resolution, indices
 
@@ -362,17 +343,17 @@ def calculate_resolutions():
         None
     """
     
-    contact = find_contact()
+    contact, centres = find_contact()
     key_list = contact.keys()
     print key_list
+    print contact
     
     for key in contact.iterkeys():
-        if key != (0, 1):
-            res, indices = get_resolution(contact[key], key)
-            print "Spheres %s resolution is %f" % (indices, res)
-            f = open('/dls/tmp/jjl36382/analysis/%i_%i.txt' % (indices[0], indices[1]), 'w')
-            f.write("Resolution for spheres %i and %i is %f \n" % (indices[0], indices[1], res))
-            f.close()
+        res, indices = get_resolution(contact[key], centres[key], key)
+        print "Spheres %s resolution is %f" % (indices, res)
+        f = open('/dls/tmp/jjl36382/analysis/plot_{0}/Resolution_{1}_{2}.txt'.format(indices, indices[0], indices[1]), 'w')
+        f.write("%f" % res)
+        f.close()
         
     return
 

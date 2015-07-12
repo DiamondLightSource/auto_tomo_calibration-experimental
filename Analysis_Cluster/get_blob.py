@@ -110,25 +110,44 @@ If it is constant then we can assume perfect reconstruction.
 """
 
 
-def plot_radii(image, centre):
+def plot_radii(image):
     
     import numpy as np
     import pylab as pl
     import math
     from scipy import interpolate
+    from skimage import color
+    from skimage.util import img_as_ubyte
+    
+    from skimage import measure
+    from skimage.measure import label
     
     pl.close('all')
+
+    image = np.pad(image, 10, 'edge')    
+    label_image = label(image)
     
-#     pl.imshow(image)
+    for info in measure.regionprops(label_image,\
+                 ['major_axis_length', 'Centroid', 'BoundingBox', 'minor_axis_length']):
+        
+        centre = info['Centroid']
+        bound = info['BoundingBox']
+        major_axis = info['major_axis_length']
+        minor_axis = info['minor_axis_length']
+        
+    # if the radii are way off then it is an ellipse
+    # hence, simply return this value
+    if abs((bound[2] - bound[0]) / 2.0 - (bound[3] - bound[1]) / 2.0) > 3: 
+        return (False, major_axis / 2.0, minor_axis / 2.0)
+         
+    
+    # Image with the centre plot
+#     new_image = img_as_ubyte(image)
+#     new_image = color.gray2rgb(new_image)
+#     new_image[centre[0], centre[1]] = (220, 20, 20)
+#     
+#     pl.imshow(new_image)
 #     pl.show()
-    
-#     print "after padding..."
-#     print "center is..", centre[0]+10, centre[1]+10
-    image = np.pad(image, 20, 'edge')
-#     pl.imshow(image)
-#     pl.show()
-    
-    centre = centre[0] + 10, centre[1] + 10
     
     # Calculate radii for every angle
     radii_circle = []
@@ -159,7 +178,7 @@ def plot_radii(image, centre):
     pl.xlim(0,360)
     #pl.show()
     
-    return np.mean(radii_circle)
+    return (True, np.mean(radii_circle))
 
 
 """
