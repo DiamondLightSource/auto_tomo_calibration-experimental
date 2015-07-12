@@ -147,8 +147,8 @@ def find_contact():
                     j_theta, j_phi = j_angle[0], j_angle[1]
                     delta_theta = abs(i_theta - j_theta)
                     
-                    if approx_diff(i_theta, j_theta, 180, 0.5)\
-                     and approx_sum(i_phi, j_phi, 180, 0.5):
+                    if approx_diff(i_theta, j_theta, 180, 0)\
+                     and approx_sum(i_phi, j_phi, 180, 0):
                         touching_i_theta.append(i_theta)
                         touching_j_theta.append(j_theta)
                         touching_i_phi.append(i_phi)
@@ -158,7 +158,6 @@ def find_contact():
             if is_touching:            
                 touching_pts[i, j] = touching_i_theta, touching_j_theta,\
                                      touching_i_phi, touching_j_phi
-    
     return touching_pts
   
     
@@ -232,7 +231,7 @@ def get_resolution(contact, indices):
     
     if len(angles_theta1) < 2:
         print "not enough data obtained"
-        return 999
+        return None
     
     # Mean values of radii and angles
     mean_theta1 = np.mean(angles_theta1)
@@ -245,21 +244,32 @@ def get_resolution(contact, indices):
     # average_phi1, average_phi2 = pair_closest_mean(angles_phi1, angles_phi2)
     
     # Get the "diameters" of the blobs in both directions
+    # If the blob is not circular then this method fails
     rtheta1 = max(angles_theta1) - min(angles_theta1)
     rphi1 = max(angles_phi1) - min(angles_phi1)
     rtheta2 = max(angles_theta2) - min(angles_theta2)
     rphi2 = max(angles_phi2) - min(angles_phi2)
     
+    
     # Borders for the segmented blob area
     R1 = int(1.5 * max(rtheta1, rphi1))
     R2 = int(1.5 * max(rtheta2, rphi2))
+    R1p = int(2.5 * rtheta1)
+    R2p = int(2.5 * rtheta2)
+    R1t = int(2.5 * rphi1)
+    R2t = int(2.5 * rphi2)
     
     # Segment the blob areas (can be approximate)
     area1 = radii_spheres[i1][mean_theta1 - R1:mean_theta1 + R1,\
                               mean_phi1 - R1:mean_phi1 + R1]
     area2 = radii_spheres[i2][mean_theta2 - R2:mean_theta2 + R2,\
                               mean_phi2 - R2:mean_phi2 + R2]
-    
+     
+#     area1 = radii_spheres[i1][mean_theta1 - R1t:mean_theta1 + R1t,\
+#                               mean_phi1 - R1p:mean_phi1 + R1p]
+#     area2 = radii_spheres[i2][mean_theta2 - R2t:mean_theta2 + R2t,\
+#                               mean_phi2 - R2p:mean_phi2 + R2p]
+#     
     # Threshold the pixels above average since
     # they are anomalous
     # Then apply a Gaussian filter to smear the
@@ -276,11 +286,14 @@ def get_resolution(contact, indices):
     
     pl.subplot(2, 3, 2)
     absolute1 = abs(area1 - np.mean(radii_spheres[i1])) + np.mean(radii_spheres[i1])
-    gaus1 = gaussian_filter(absolute1, 2, mode = 'wrap')
+    gaus1 = gaussian_filter(absolute1, 3, mode = 'wrap')
     pl.imshow(gaus1)
     
+    print np.mean(gaus1)
+    print np.std(gaus1)
+    
     pl.subplot(2, 3, 3)
-    area1 = gaus1 >= np.mean(gaus1)
+    area1 = gaus1 >= np.mean(gaus1) + np.std(gaus1)
     pl.imshow(area1)
     
     pl.subplot(2, 3, 4)
@@ -288,11 +301,11 @@ def get_resolution(contact, indices):
     
     pl.subplot(2, 3, 5)
     absolute2 = abs(area2 - np.mean(radii_spheres[i2])) + np.mean(radii_spheres[i2])
-    gaus2 = gaussian_filter(absolute2, 2, mode = 'wrap')
+    gaus2 = gaussian_filter(absolute2, 3, mode = 'wrap')
     pl.imshow(gaus2)
 
     pl.subplot(2, 3, 6)
-    area2 = gaus2 >= np.mean(gaus2)
+    area2 = gaus2 >= np.mean(gaus2) + np.std(gaus2)
     pl.imshow(area2)
     
     # convert indices to file indices
@@ -309,27 +322,35 @@ def get_resolution(contact, indices):
     
     pl.show()
     pl.close('all')
-#     pl.show()
-    
+    pl.show()
+     
     # Get the centre positions of the blobs
     # using Hough transform
-#     C1 = bc.detect_circles(area1)
-#     C2 = bc.detect_circles(area2)
-#     print "centre from circle detection ", C1[0], C2[0]
-#     
-#     radius1 = gb.plot_radii(area1, C1[0])
-#     radius2 = gb.plot_radii(area2, C2[0])
-# 
-#     print "Precise Radius1 ", radius1
-#     print "Precise Radius2 ", radius2
-#     
-#     # Distance between spheres when they become
-#     # barely resolved
-#     resolution = np.mean(radii_spheres[i1]) * (1 - cos(radians(radius1))) +\
-#                  np.mean(radii_spheres[i2]) * (1 - cos(radians(radius2)))
-    resolution = 1
+    C1 = bc.detect_circles(area1)
+    C2 = bc.detect_circles(area2)
     
-    return resolution
+    if not C1 or not C2:
+        print "Circle segmentation was unsuccessful - just use the average angles"
+        radius1 = rphi1 / 2
+        radius2 = rphi2 / 2
+    else:
+        print "centre from circle detection ", C1[0], C2[0]
+        print "centre without circle detection ", (R1t, R1p), (R2t, R2p)
+        C1[0] = (R1t, R1p)
+        C2[0] = (R2t, R2p)
+        radius1 = gb.plot_radii(area1, C1[0])
+        radius2 = gb.plot_radii(area2, C2[0])
+     
+    print "Precise Phi angle 1 ", radius1
+    print "Precise Phi angle 2 ", radius2
+     
+    # Distance between spheres when they become
+    # barely resolved
+    resolution = np.mean(radii_spheres[i1]) * (1 - cos(radians(radius1))) +\
+                 np.mean(radii_spheres[i2]) * (1 - cos(radians(radius2)))
+#     resolution = 1
+    
+    return resolution, indices
 
 def calculate_resolutions():
     """
@@ -343,14 +364,15 @@ def calculate_resolutions():
     
     contact = find_contact()
     key_list = contact.keys()
-    print contact
+    print key_list
     
     for key in contact.iterkeys():
-        res = get_resolution(contact[key], key)
-        print "Key %s resolution is %f" % (key, res)
-        f = open('/dls/tmp/jjl36382/analysis/%i_%i.txt' % (key[0], key[1]), 'w')
-        f.write("Resolution for spheres %i and %i is %f \n" % (key[0], key[1], res))
-        f.close()
+        if key != (0, 1):
+            res, indices = get_resolution(contact[key], key)
+            print "Spheres %s resolution is %f" % (indices, res)
+            f = open('/dls/tmp/jjl36382/analysis/%i_%i.txt' % (indices[0], indices[1]), 'w')
+            f.write("Resolution for spheres %i and %i is %f \n" % (indices[0], indices[1], res))
+            f.close()
         
     return
 

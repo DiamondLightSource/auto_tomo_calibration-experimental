@@ -49,9 +49,12 @@ if __name__ == '__main__' :
     # make the filename
     output_filename = args[0] % task_id
     input_filename = args[1]
+    
+    # CHANGE THIS FOR DATA NOT STARTING AT 0
     shift = int(args[2]) - 1
     
-    
+    # If the image is outside bounds in the z direction
+    # it should not be used
     
     # load image
     R = int(1.2*r)

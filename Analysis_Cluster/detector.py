@@ -20,7 +20,7 @@ if __name__ == '__main__' :
     (options, args) = parser.parse_args()
 
     # get the number of the frame to process
-    task_id = int(os.environ['SGE_TASK_ID'])
+    task_id = int(os.environ['SGE_TASK_ID']) - 1
 
     # make the filename
     input_filename = args[0] % task_id

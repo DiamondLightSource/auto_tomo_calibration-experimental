@@ -13,8 +13,12 @@ for i in `seq $nb_spheres`;
 do
 	R=`awk "NR=="$i $resultspath/radii_max.txt`
 	mkdir /dls/tmp/jjl36382/radii$i
-	next=$(($i+1))
-	holder="-hold_jid job0$i -N job0$next"
+	prev=$(($i-1))
+	holder="-hold_jid job0$prev -N job0$i"
+	
+	if [ $i -eq 1 ]; then
+		holder="-N job01"
+	fi
 	
 	qsub $holder -pe smp 2 -j y -t $startang-$stopang:$stepang -tc 20 $homepath/get_radii.sh $R $spherepath/sphere$i.npy /dls/tmp/jjl36382/radii$i/radii%03i.npy
 done

@@ -11,10 +11,10 @@ datapath="/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_%05i.ti
 resultspath="/dls/tmp/jjl36382/results"
 spherepath="/dls/tmp/jjl36382/spheres"
 start=1
-stop=2159
+stop=2160
 step=10
 #datapath="/dls/science/groups/das/ExampleData/SphereTestData/45808/recon_%05i.tif"
-# enter starting folder + 1
+# enter starting folder + 1 and ending +1
 #start=1122
 #stop=1557
 #stop=1557
@@ -33,9 +33,10 @@ holder="-hold_jid job1 -N job2"
 #$homepath/analyse.sh $start $stop $step $resultspath/out%05i.dat
 
 
+# SHIFT Z COORDS IF NAME STARTS NOT FROM 0
 # Select areas ------------------------------------------------------------------------------------------------------
 holder="-hold_jid job2 -N job3"
-#qsub -pe smp 2 -j y -t 1 $homepath/selector_loop.sh $spherepath/sphere%i.npy $datapath $start $resultspath $homepath
+#qsub $holder -pe smp 2 -j y -t 1 $homepath/selector_loop.sh $spherepath/sphere%i.npy $datapath $start $resultspath $homepath
 
 
 # Get radii ------------------------------------------------------------------------------------------------------
@@ -47,7 +48,7 @@ startang=1
 stopang=360
 stepang=10
 holder="-hold_jid job3 -N job4"
-#qsub -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath
+#qsub $holder -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath
 
 
 

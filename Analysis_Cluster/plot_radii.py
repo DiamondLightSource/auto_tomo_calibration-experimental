@@ -2,6 +2,8 @@ import numpy as np
 import pylab as pl
 from math import sqrt
 import os
+from scipy.ndimage import gaussian_filter
+
 
 def save_data(filename, data):
     print("Saving data")
@@ -38,7 +40,7 @@ if __name__ == '__main__' :
 
     (options, args) = parser.parse_args()
 
-    start = options.a -1
+    start = options.a - 1
     stop = options.b
     step = options.c
     radii_filename = args[0]
@@ -55,9 +57,8 @@ if __name__ == '__main__' :
     radii = []
     for i in range(start, stop, step):
         radii.append(np.load(radii_filename % i))
-        
-            
-    radii_np = np.zeros((stop,181))
+
+    radii_np = np.zeros((stop,180))
     for i in range(stop/step):
         radii_np[i*step:i*step+step,:] = radii[i]
 	
@@ -66,13 +67,20 @@ if __name__ == '__main__' :
     # Remove the anomalous radii
     radii_med = np.mean(radii_np)
     one_std_dev = np.std(radii_np)
+    # threshold limit
+    absolute1 = abs(radii_np - radii_med) + radii_med
+    gaus1 = gaussian_filter(absolute1, 1, mode = 'wrap')
+    area1 = gaus1 >= np.mean(gaus1) + np.std(gaus1) * 3
+    area1 = area1 * 1
+
     for i in range(start,stop):
         for j in range(0,180):
             # Values within 2stdev
             # Anomalous radii will always be bigger than the mean
-            if abs(radii_np[i, j]) - abs(radii_med) > (one_std_dev*2):
+            #if radii_np[i, j] >= ( radii_med + one_std_dev * 2 ):
+            if area1[i, j] == 1:
             	angl = (i,j)
-                outliers[angl] = radii_np[i, j]
+                outliers[angl] = area1[i, j]
                 #radii_np[i, j] = radii_med 
                 
 	# save image
@@ -84,8 +92,9 @@ if __name__ == '__main__' :
     save_dict(output_filename, outliers)
 
     # Plot
-    
+    pl.subplot(2, 1, 1)
     pl.imshow(radii_np.T)
+    
     pl.title(r'Radii of real sphere as a function of 2 spherical angles $\theta$ and $\phi$',\
              fontdict={'fontsize': 16,'verticalalignment': 'bottom','horizontalalignment': 'center'})
     pl.xlabel(r'$\theta$', fontdict={'fontsize': 14,'verticalalignment': 'top','horizontalalignment': 'center'})
@@ -93,6 +102,9 @@ if __name__ == '__main__' :
     #pl.xticks(np.arange(0, 360, 10), theta_bord)
     #pl.yticks(np.arange(0, len(phi_bord)+1, 10), phi_bord)
     pl.colorbar(shrink=0.8)
+    
+    pl.subplot(2, 1, 2)
+    pl.imshow(area1.T)
     pl.savefig("/dls/tmp/jjl36382/analysis/radii%02i_%f.png" % (index, radii_med))
 
     pl.show()

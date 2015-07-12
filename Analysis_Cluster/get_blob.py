@@ -124,7 +124,7 @@ def plot_radii(image, centre):
     
 #     print "after padding..."
 #     print "center is..", centre[0]+10, centre[1]+10
-    image = np.pad(image,10, 'edge')
+    image = np.pad(image, 20, 'edge')
 #     pl.imshow(image)
 #     pl.show()
     

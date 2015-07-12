@@ -43,8 +43,8 @@ if __name__ == '__main__' :
     step = options.c
     input_filename = args[0]
     
-    start = start + step
-    stop = stop - step
+    start = start - 1
+    stop = stop - 1
 
 # ---------------------------------------- Get data -----------------------------------------
 """
@@ -94,19 +94,19 @@ perimeters = np.delete(perimeters, bad_indices)
 N = len(perimeters)
 
 
-# fig = pl.figure()
-# ax = fig.gca(projection='3d')
-# for slice in range(N):
-#     for i in range(len(perimeters[slice])):
-#         ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*step+step)
-#    
-#    
-# # ax.set_xlim(0, stop)
-# # ax.set_ylim(0, stop)
-# # ax.set_zlim(0, stop)
-# pl.title('Sphere detection on real image')
-# pl.savefig("/dls/tmp/jjl36382/analysis/reconstruction.png")
-# pl.show()
+fig = pl.figure()
+ax = fig.gca(projection='3d')
+for slice in range(N):
+    for i in range(len(perimeters[slice])):
+        ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*step+step)
+     
+     
+# ax.set_xlim(0, stop)
+# ax.set_ylim(0, stop)
+# ax.set_zlim(0, stop)
+pl.title('Sphere detection on real image')
+pl.savefig("/dls/tmp/jjl36382/analysis/reconstruction.png")
+pl.show()
 
 # ------------ Sort out spheres for radii_angles (i.e. sort out centres + radii) ------------
 
@@ -299,7 +299,7 @@ for key in centroids.iterkeys():
     slice_start = centroids[key][0]
     slice_end = centroids[key][1]
     z = (slice_end + slice_start) / 2.0
-    centroids[key] = int(z  * 10 + 10)
+    centroids[key] = int(z  * 10)
 
 print centroids 
 # make a list with x,y,z coordinates
