@@ -347,13 +347,15 @@ def calculate_resolutions():
     key_list = contact.keys()
     print key_list
     print contact
+    print centres
     
     for key in contact.iterkeys():
-        res, indices = get_resolution(contact[key], centres[key], key)
-        print "Spheres %s resolution is %f" % (indices, res)
-        f = open('/dls/tmp/jjl36382/complicated_data/analysis/plot_{0}/Resolution_{1}_{2}.txt'.format(indices, indices[0], indices[1]), 'w')
-        f.write("%f" % res)
-        f.close()
+        if key != (4,7):
+            res, indices = get_resolution(contact[key], centres[key], key)
+            print "Spheres %s resolution is %f" % (indices, res)
+            f = open('/dls/tmp/jjl36382/complicated_data/analysis/plot_{0}/Resolution_{1}_{2}.txt'.format(indices, indices[0], indices[1]), 'w')
+            f.write("%f" % res)
+            f.close()
         
     return
 

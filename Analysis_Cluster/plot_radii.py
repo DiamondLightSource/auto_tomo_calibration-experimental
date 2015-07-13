@@ -74,7 +74,7 @@ if __name__ == '__main__' :
     absolute1 = abs(radii_np - radii_mean) + radii_mean
     
     # Apply a Gaussian filter
-    gaus1 = gaussian_filter(absolute1, 1)
+    gaus1 = gaussian_filter(absolute1, 3)
     
     # Threshold the image
     area1 = gaus1 >= np.mean(gaus1) + np.std(gaus1) * 3

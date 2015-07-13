@@ -40,14 +40,14 @@ holder="-hold_jid job1 -N job2"
 # SHIFT Z COORDS IF NAME STARTS NOT FROM 0 (???)
 # Select areas ------------------------------------------------------------------------------------------------------
 holder="-hold_jid job2 -N job3"
-#qsub -pe smp 2 -j y -t 1 -tc 10 $homepath/selector_loop.sh $spherepath/sphere%i.npy $datapath $start $resultspath $homepath
+#qsub $holder -pe smp 2 -j y -t 1 -tc 10 $homepath/selector_loop.sh $spherepath/sphere%i.npy $datapath $start $resultspath $homepath
 
 
 startang=1
 stopang=360
 stepang=10
 # Filter spheres before analysis
-qsub -pe smp 2 -j y -t 1 $homepath/filter_sphere_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath
+#qsub -pe smp 2 -j y -t 1 $homepath/filter_sphere_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath
 
 # Get radii ------------------------------------------------------------------------------------------------------
 #read -p "enter starting radii (use 1 if not sure) > " startang
@@ -66,10 +66,10 @@ holder="-hold_jid job4 -N job5"
 
 
 nb_spheres=`cat $resultspath/nb_spheres.txt`
-for i in `seq 2`;
+for i in `seq $nb_spheres`;
 do
 	echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 	echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 	echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py -a $startang -b $stopang -c $stepang $spherepath/radii$i/radii%03i.npy $i $analysispath" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-#	~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh 
+	~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh 
 done

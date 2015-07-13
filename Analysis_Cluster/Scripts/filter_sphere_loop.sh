@@ -19,5 +19,5 @@ do
 		holder="-N job01"
 	fi
 	
-	qsub -pe smp 2 -j y -t $i -tc 20 $homepath/filter_sphere.sh  $spherepath/sphere$i.npy $spherepath/spherefilt%03i.npy
+	qsub -pe smp 2 -j y -t $i -tc 20 $homepath/filter_sphere.sh  $spherepath/sphere$i.npy $spherepath/spherefilt$i.npy
 done

@@ -34,7 +34,7 @@ def get_radius(image_area, theta, phi, centre, rad_min):
     # Find the radius of the circle
     
     # Calculate discrete difference and find the edge via the extremum
-    #points = gaussian_filter1d(np.asarray(points), 15)
+    points = gaussian_filter1d(np.asarray(points), 3)
     
 
     

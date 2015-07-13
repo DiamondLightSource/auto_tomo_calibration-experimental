@@ -23,7 +23,7 @@ if __name__ == '__main__' :
     
     # make the filename
     input_filename = args[0]
-    output_filename = args[1] % task_id
+    output_filename = args[1]
     
     # load the sphere
     print("Loading image %s" % input_filename)

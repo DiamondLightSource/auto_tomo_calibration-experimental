@@ -76,17 +76,21 @@ f = open('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/ori
 f.write(repr(centroids_sphere))
 f.close()
 
-# Remove empty lists---------------------------------------------------------
-bad_indices = []
-for n in range(N):
-    empt = centroids_sphere[n]
-    if not empt:
-        bad_indices.append(n)
-        
-centroids_sphere = np.delete(centroids_sphere, bad_indices)
-bord_circles = np.delete(bord_circles, bad_indices)
-radii_circles = np.delete(radii_circles, bad_indices)
-perimeters = np.delete(perimeters, bad_indices)
+# # Remove empty lists---------------------------------------------------------
+# bad_indices = []
+# for n in range(N):
+#     empt = centroids_sphere[n]
+#     if not empt:
+#         bad_indices.append(n)
+# 
+# print "length before deletion", len(centroids_sphere)
+# 
+# centroids_sphere = np.delete(centroids_sphere, bad_indices)
+# bord_circles = np.delete(bord_circles, bad_indices)
+# radii_circles = np.delete(radii_circles, bad_indices)
+# perimeters = np.delete(perimeters, bad_indices)
+# 
+# print "length after deletion", len(centroids_sphere)
 #--------------------------------------------------------
 
 N = len(perimeters)
@@ -129,8 +133,8 @@ for slice in range(N):
         rad = radii_circles[slice][i]
         # IF THERE ARE SAME CENTRES IN THE SAME SLICE THEN
         # WE WILL GET ERRORS - REMOVE THEM
-        cxcy[:] = [item for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, 20)]
-        r[:] = [rad for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, 20)]
+        cxcy[:] = [item for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, 15)]
+        r[:] = [rad for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, 15)]
         # MODIFY THE RADIUS ACCORDINGLY
         r.append((rad))
         cxcy.append((cx,cy))
@@ -215,7 +219,7 @@ for slice_index in range(N - 4):
                     # average of the centre
                     for index in range(len(centres[slice_next])):
                         element = centres[slice_next][index]
-                        if np.allclose(np.asarray(centr), np.asarray(element), 0, 20):
+                        if np.allclose(np.asarray(centr), np.asarray(element), 0, 15):
                             found_one = True
                             len_counter += 1
                             list_for_averaging.append(element)
@@ -224,7 +228,7 @@ for slice_index in range(N - 4):
                     else:
                         for index1 in range(len(centres[slice_next + 1])):
                             element = centres[slice_next + 1][index1]
-                            if np.allclose(np.asarray(centr), np.asarray(element), 0, 20):
+                            if np.allclose(np.asarray(centr), np.asarray(element), 0, 15):
                                 found_one = True
                                 len_counter += 1
                                 list_for_averaging.append(element)
@@ -233,7 +237,7 @@ for slice_index in range(N - 4):
                         else:
                             for index2 in range(len(centres[slice_next + 2])):
                                 element = centres[slice_next + 2][index2]
-                                if np.allclose(np.asarray(centr), np.asarray(element), 0, 20):
+                                if np.allclose(np.asarray(centr), np.asarray(element), 0, 15):
                                     found_one = True
                                     len_counter += 1
                                     list_for_averaging.append(element)
@@ -242,7 +246,7 @@ for slice_index in range(N - 4):
                             else:
                                 for index3 in range(len(centres[slice_next + 3])):
                                     element = centres[slice_next + 3][index3]
-                                    if np.allclose(np.asarray(centr), np.asarray(element), 0, 20):
+                                    if np.allclose(np.asarray(centr), np.asarray(element), 0, 15):
                                         found_one = True
                                         len_counter += 1
                                         list_for_averaging.append(element)
@@ -297,7 +301,7 @@ for key in centroids.iterkeys():
     slice_start = centroids[key][0]
     slice_end = centroids[key][1]
     z = (slice_end + slice_start) / 2.0
-    centroids[key] = int(z  * step) + start + step
+    centroids[key] = int(z  * step) + start
 
 print centroids 
 # make a list with x,y,z coordinates

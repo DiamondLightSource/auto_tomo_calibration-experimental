@@ -54,7 +54,7 @@ if __name__ == '__main__' :
     # it should not be used
     
     # load image
-    R = int(1.1*r)
+    R = int(1.2*r)
     area = np.zeros((2*R+1, 2*R+1, 2*R+1))
     for i in range(z-R, z+R+1):
         input_file = input_filename % i
