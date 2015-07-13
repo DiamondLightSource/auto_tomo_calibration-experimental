@@ -16,6 +16,7 @@ def not_within_range(element, list):
         
     return True
 
+
 if __name__ == '__main__' :
     import optparse
     parser = optparse.OptionParser()
@@ -38,14 +39,11 @@ if __name__ == '__main__' :
 
     (options, args) = parser.parse_args()
 
-    start = options.a
-    stop = options.b
+    start = options.a - 1
+    stop = options.b - 1
     step = options.c
     input_filename = args[0]
-    
-    start = start - 1
-    stop = stop - 1
-
+    results_folder = args[1]
 # ---------------------------------------- Get data -----------------------------------------
 """
 Loads all of the detected parameters of segmented circles
@@ -94,19 +92,19 @@ perimeters = np.delete(perimeters, bad_indices)
 N = len(perimeters)
 
 
-fig = pl.figure()
-ax = fig.gca(projection='3d')
-for slice in range(N):
-    for i in range(len(perimeters[slice])):
-        ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*step+step)
-     
-     
-# ax.set_xlim(0, stop)
-# ax.set_ylim(0, stop)
-# ax.set_zlim(0, stop)
-pl.title('Sphere detection on real image')
-pl.savefig("/dls/tmp/jjl36382/analysis/reconstruction.png")
-pl.show()
+# fig = pl.figure()
+# ax = fig.gca(projection='3d')
+# for slice in range(N):
+#     for i in range(len(perimeters[slice])):
+#         ax.plot(perimeters[slice][i][0] + bord_circles[slice][i][0], perimeters[slice][i][1] + bord_circles[slice][i][2], slice*step+step)
+#       
+#       
+# # ax.set_xlim(0, stop)
+# # ax.set_ylim(0, stop)
+# # ax.set_zlim(0, stop)
+# pl.title('Sphere detection on real image')
+# pl.savefig("/dls/tmp/jjl36382/analysis/reconstruction.png")
+# pl.show()
 
 # ------------ Sort out spheres for radii_angles (i.e. sort out centres + radii) ------------
 
@@ -299,7 +297,7 @@ for key in centroids.iterkeys():
     slice_start = centroids[key][0]
     slice_end = centroids[key][1]
     z = (slice_end + slice_start) / 2.0
-    centroids[key] = int(z  * 10)
+    centroids[key] = int(z  * step) + start + step
 
 print centroids 
 # make a list with x,y,z coordinates
@@ -318,41 +316,31 @@ nb_spheres = len(centres_list)
 
 print("Saving data")
 
-f = open('/dls/tmp/jjl36382/results/centres.txt', 'w')
+f = open(results_folder + '/centres.txt', 'w')
 for i in range(nb_spheres):
     f.write(repr(centres_list[i]) + '\n')
 f.close()
 
-f = open('/dls/tmp/jjl36382/results/centresX.txt', 'w')
+f = open(results_folder + '/centresX.txt', 'w')
 for i in range(nb_spheres):
     f.write(repr(centres_list[i][0]) + '\n')
 f.close()
 
-f = open('/dls/tmp/jjl36382/results/centresY.txt', 'w')
+f = open(results_folder + '/centresY.txt', 'w')
 for i in range(nb_spheres):
     f.write(repr(centres_list[i][1]) + '\n')
 f.close()
 
-f = open('/dls/tmp/jjl36382/results/centresZ.txt', 'w')
+f = open(results_folder + '/centresZ.txt', 'w')
 for i in range(nb_spheres):
     f.write(repr(centres_list[i][2]) + '\n')
 f.close()
 
-# f = open('/dls/tmp/jjl36382/results/radii.txt', 'w')
-# for i in range(nb_spheres):
-#     f.write(repr(radii_slices[i]) + '\n')
-# f.close()
-
-# f = open('/dls/tmp/jjl36382/results/radii_max.txt', 'w')
-# for i in range(nb_spheres):
-#     f.write(repr(max(radii_slices[i])) + '\n')
-# f.close()
-
-f = open('/dls/tmp/jjl36382/results/radii_max.txt', 'w')
+f = open(results_folder + '/radii_max.txt', 'w')
 for i in range(nb_spheres):
     f.write(repr(int(radii_list[i])) + '\n')
 f.close()
 
-f = open('/dls/tmp/jjl36382/results/nb_spheres.txt', 'w')
+f = open(results_folder + '/nb_spheres.txt', 'w')
 f.write(repr(nb_spheres))
 f.close()

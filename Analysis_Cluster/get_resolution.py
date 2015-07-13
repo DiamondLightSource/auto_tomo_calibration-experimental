@@ -118,7 +118,7 @@ def find_contact():
     """
     
     # Load up the data
-    radii_spheres, angles_outliers, index_dict = load_data("/dls/tmp/jjl36382/analysis/")
+    radii_spheres, angles_outliers, index_dict = load_data("/dls/tmp/jjl36382/complicated_data/analysis/")
 
     # touching_pts = [ ([theta1], [theta2], [phi1], [phi2]) ]
     touching_pts = {}
@@ -206,7 +206,7 @@ def get_resolution(contact, centres, indices):
     import blob_circles as bc
     
     # Load data
-    radii_spheres, angles_outliers, index_dict = load_data("/dls/tmp/jjl36382/analysis/")
+    radii_spheres, angles_outliers, index_dict = load_data("/dls/tmp/jjl36382/complicated_data/analysis/")
     
 #     centres_theta1 = centres[0]
 #     centres_theta2 = centres[1]
@@ -289,8 +289,8 @@ def get_resolution(contact, centres, indices):
     name2 = indices[1]
     
     indices = (index_dict[name1], index_dict[name2]) 
-    directory = "/dls/tmp/jjl36382/analysis/plot_{0}"
-    name = "/dls/tmp/jjl36382/analysis/plot_{0}/Subplot_{1}.png"
+    directory = "/dls/tmp/jjl36382/complicated_data/analysis/plot_{0}"
+    name = "/dls/tmp/jjl36382/complicated_data/analysis/plot_{0}/Subplot_{1}.png"
     if not os.path.exists(directory.format(indices)):
         os.makedirs(directory.format(indices))
     pl.savefig(name.format(indices, indices))
@@ -351,7 +351,7 @@ def calculate_resolutions():
     for key in contact.iterkeys():
         res, indices = get_resolution(contact[key], centres[key], key)
         print "Spheres %s resolution is %f" % (indices, res)
-        f = open('/dls/tmp/jjl36382/analysis/plot_{0}/Resolution_{1}_{2}.txt'.format(indices, indices[0], indices[1]), 'w')
+        f = open('/dls/tmp/jjl36382/complicated_data/analysis/plot_{0}/Resolution_{1}_{2}.txt'.format(indices, indices[0], indices[1]), 'w')
         f.write("%f" % res)
         f.close()
         

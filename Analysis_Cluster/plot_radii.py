@@ -45,6 +45,7 @@ if __name__ == '__main__' :
     step = options.c
     radii_filename = args[0]
     index = int(args[1])
+    anal_path = args[2]
     
     # get the number of the frame to process
     #task_id = int(os.environ['SGE_TASK_ID'])
@@ -62,30 +63,33 @@ if __name__ == '__main__' :
     for i in range(stop/step):
         radii_np[i*step:i*step+step,:] = radii[i]
 	
+    # Dictionary to store the angles and outlier values
 	outliers = {}
 	
     # Remove the anomalous radii
-    radii_med = np.mean(radii_np)
+    radii_mean = np.mean(radii_np)
     one_std_dev = np.std(radii_np)
-    # threshold limit
-    absolute1 = abs(radii_np - radii_med) + radii_med
+    
+    # Get all radii above the mean
+    absolute1 = abs(radii_np - radii_mean) + radii_mean
+    
+    # Apply a Gaussian filter
     gaus1 = gaussian_filter(absolute1, 1)
+    
+    # Threshold the image
     area1 = gaus1 >= np.mean(gaus1) + np.std(gaus1) * 3
     area1 = area1 * 1
-
+    
+    # Store the angles of the anomalous values
     for i in range(start,stop):
         for j in range(0,180):
-            # Values within 2stdev
-            # Anomalous radii will always be bigger than the mean
-            #if radii_np[i, j] >= ( radii_med + one_std_dev * 2 ):
             if area1[i, j] == 1:
             	angl = (i,j)
-                outliers[angl] = area1[i, j]
-                #radii_np[i, j] = radii_med 
+                outliers[angl] = area1[i, j] 
                 
 	# save image
-	output_filename = "/dls/tmp/jjl36382/analysis/outliers%02i.dat" % index
-	output_angles = "/dls/tmp/jjl36382/analysis/radii%02i.npy" % index
+	output_filename = anal_path + "/outliers%02i.dat" % index
+	output_angles = anal_path + "/radii%02i.npy" % index
     print("Saving data %s" % output_filename)
     print("Saving data %s" % output_angles)
     save_data(output_angles, radii_np)
@@ -105,6 +109,11 @@ if __name__ == '__main__' :
     
     pl.subplot(2, 1, 2)
     pl.imshow(area1.T)
-    pl.savefig("/dls/tmp/jjl36382/analysis/radii%02i_%f.png" % (index, radii_med))
+    pl.xlabel(r'$\theta$', fontdict={'fontsize': 14,'verticalalignment': 'top','horizontalalignment': 'center'})
+    pl.ylabel(r'$\phi$', fontdict={'fontsize': 14,'verticalalignment': 'bottom','horizontalalignment': 'right'}, rotation=0)
+
+    pl.colorbar(shrink=0.8)
+
+    pl.savefig(anal_path + "/radii%02i_%f.png" % (index, radii_mean))
 
     pl.show()
