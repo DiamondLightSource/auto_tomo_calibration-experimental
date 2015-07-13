@@ -24,10 +24,10 @@ r = int(129 * 1.4)
 
 
 N = recon.shape[2]
-
-
+     
 for slice in range(0, N, 10):
     print slice
     pl.imshow(recon[:,:,slice])
     pl.gray()
     pl.pause(0.001)
+

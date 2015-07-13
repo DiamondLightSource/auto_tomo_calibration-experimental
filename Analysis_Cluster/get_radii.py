@@ -26,9 +26,9 @@ if __name__ == '__main__':
     
     (options, args) = parser.parse_args()
     
-    x = options.x_pos * 1.4
-    y = options.y_pos * 1.4
-    z = options.z_pos * 1.4
+    x = options.x_pos * 1.1
+    y = options.y_pos * 1.1
+    z = options.z_pos * 1.1
     
     # get the number of the frame to process
     task_id = int(os.environ['SGE_TASK_ID']) - 1

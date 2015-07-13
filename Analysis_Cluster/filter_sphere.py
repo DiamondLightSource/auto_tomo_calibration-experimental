@@ -22,7 +22,7 @@ if __name__ == '__main__' :
     task_id = int(os.environ['SGE_TASK_ID'])
     
     # make the filename
-    input_filename = args[0] % task_id
+    input_filename = args[0]
     output_filename = args[1] % task_id
     
     # load the sphere
@@ -31,9 +31,9 @@ if __name__ == '__main__' :
     
     # filter the image for radii detection
     print("Filter image %s" % input_filename)
-    #sphere = median_filter(sphere, 10)
+    sphere = median_filter(sphere, 10)
     #sphere = gaussian_filter(sphere,3)
-    sphere = gaussian_filter(sphere, 3)
+    #sphere = gaussian_filter(sphere, 3)
     
     # save image
     print("Saving image %s" % output_filename)
