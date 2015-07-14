@@ -74,7 +74,7 @@ if __name__ == '__main__' :
     absolute1 = abs(radii_np - radii_mean) + radii_mean
     
     # Apply a Gaussian filter
-    gaus1 = gaussian_filter(absolute1, 3)
+    gaus1 = gaussian_filter(absolute1, 1)
     
     # Threshold the image
     area1 = gaus1 >= np.mean(gaus1) + np.std(gaus1) * 3
@@ -116,4 +116,4 @@ if __name__ == '__main__' :
 
     pl.savefig(anal_path + "/radii%02i_%f.png" % (index, radii_mean))
 
-    pl.show()
+    #pl.show()

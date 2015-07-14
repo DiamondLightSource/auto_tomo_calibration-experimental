@@ -2,7 +2,7 @@ import numpy as np
 import pylab as pl
 from skimage import io
 
-recon = np.load("/dls/tmp/jjl36382/complicated_data/spheres/sphere25.npy")
+recon = np.load("/dls/tmp/jjl36382/complicated_data/spheres/spherefilt1.npy")
 
 
 # 1435, 1368, 875

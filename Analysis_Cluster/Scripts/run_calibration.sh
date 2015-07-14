@@ -54,7 +54,6 @@ stepang=10
 #read -p "enter final file number (use 360 if not sure) > " finalang
 #read -p "enter step > " stepang
 
-
 holder="-hold_jid job3 -N job4"
 #qsub -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath
 
@@ -62,14 +61,20 @@ holder="-hold_jid job3 -N job4"
 
 # Plot radii ------------------------------------------------------------------------------------------------------
 holder="-hold_jid job4 -N job5"
-#qsub -pe smp 2 -j y -t 1 $homepath/plot_radii_loop.sh $startang $stopang $stepang $resultspath $spherepath
+#qsub $holder -pe smp 2 -j y -t 1 $homepath/plot_radii_loop.sh $startang $stopang $stepang $resultspath $spherepath
 
 
 nb_spheres=`cat $resultspath/nb_spheres.txt`
-for i in `seq $nb_spheres`;
+#for i in `seq $nb_spheres`;
+for i in `seq 11`;
 do
 	echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 	echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 	echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py -a $startang -b $stopang -c $stepang $spherepath/radii$i/radii%03i.npy $i $analysispath" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 	~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh 
 done
+
+echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/calculate_resolution.py $analysispath" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+#qsub -pe smp 2 -j y -t 1 ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh 

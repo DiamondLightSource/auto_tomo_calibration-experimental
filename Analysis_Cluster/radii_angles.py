@@ -34,12 +34,13 @@ def get_radius(image_area, theta, phi, centre, rad_min):
     # Find the radius of the circle
     
     # Calculate discrete difference and find the edge via the extremum
-    points = gaussian_filter1d(np.asarray(points), 3)
+    points = gaussian_filter1d(np.asarray(points), 12)
     
 
     
     dif = np.diff(points)
 
+    
     index_edge = np.argwhere(dif == np.min(dif))[0][0]
     
     # Calculate the radius
@@ -134,22 +135,22 @@ def smooth(x,window_len=11,window='hanning'):
     y=numpy.convolve(w/w.sum(),s,mode='valid')
     return y
 
-# import numpy as np
-# import pylab as pl
-# 
+import numpy as np
+import pylab as pl
+ 
 # image_area = np.load("/dls/tmp/jjl36382/complicated_data/spheres/sphere1.npy")[:,:,:]
-# 
+#  
 # # pl.imshow(image_area)
 # # pl.show()
-# 
+#  
 # print image_area.shape[0]
 # print image_area.shape[1]
 # print image_area.shape[2]
-# 
+#  
 # centre = (int(128 * 1.1), int(128 * 1.1), int(128 * 1.1))
 # #centre = (380*1.2,380*1.2,380*1.2)
 # start = 0
 # stop = 359
 # step = 10
-# 
-# plot_radii(image_area, centre, start, stop)
+#  
+# print plot_radii(image_area, centre, start, stop)
