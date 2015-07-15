@@ -2,9 +2,9 @@ import numpy as np
 import pylab as pl
 from skimage import io
 
-recon = np.load("/dls/tmp/jjl36382/complicated_data/spheres/spherefilt1.npy")
+recon = np.load("/dls/tmp/jjl36382/complicated_data/spheres/sphere1.npy")
 
-
+print recon.dtype
 # 1435, 1368, 875
 # (616, 470, 676)
 (465, 1043, 976)
@@ -35,10 +35,14 @@ N = recon.shape[2]
 #     pl.imshow(recon[:,:,slice])
 #     pl.gray()
 #     pl.pause(0.001)
-     
-for slice in range(0, N, 10):
-    print slice
-    pl.imshow(recon[:,:,slice])
-    pl.gray()
-    pl.pause(0.001)
+#      
+# for slice in range(0, N, 10):
+#     print slice
+#     pl.imshow(recon[:,:,slice])
+#     pl.gray()
+#     pl.pause(0.001)
 
+pl.imshow(recon[:,:,145])
+pl.gray()
+pl.show()
+        

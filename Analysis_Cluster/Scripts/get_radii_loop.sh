@@ -20,5 +20,5 @@ do
 		holder="-N job01"
 	fi
 	
-	qsub $holder -pe smp 2 -j y -t $startang-$stopang:$stepang -tc 20 $homepath/get_radii.sh $R $spherepath/sphere$i.npy $spherepath/radii$i/radii%03i.npy
+	qsub $holder -pe smp 2 -j y -t $startang-$stopang:$stepang -tc 20 $homepath/get_radii.sh $R $spherepath/spherefilt$i.npy $spherepath/radii$i/radii%03i.npy
 done

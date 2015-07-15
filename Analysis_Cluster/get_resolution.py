@@ -283,8 +283,8 @@ def get_resolution(contact, centres, indices, radii_spheres, index_dict, path):
     
     pl.subplot(2, 3, 2)
     pl.title("Segmented 'blobs' for Phi angle extraction")
-    absolute1 = abs(area1 - np.mean(area1)) + np.mean(area1)
-    gaus1 = gaussian_filter(absolute1, 3, mode = 'wrap')
+    absolute1 = abs(area1 - np.mean(radii_spheres[i1])) + np.mean(radii_spheres[i1])
+    gaus1 = gaussian_filter(absolute1, 2, mode = 'wrap')
     pl.imshow(gaus1.T)
     
     pl.subplot(2, 3, 3)
@@ -295,8 +295,8 @@ def get_resolution(contact, centres, indices, radii_spheres, index_dict, path):
     pl.imshow(area2.T)
      
     pl.subplot(2, 3, 5)
-    absolute2 = abs(area2 - np.mean(area2)) + np.mean(area2)
-    gaus2 = gaussian_filter(absolute2, 3, mode = 'wrap')
+    absolute2 = abs(area2 - np.mean(radii_spheres[i2])) + np.mean(radii_spheres[i2])
+    gaus2 = gaussian_filter(absolute2, 2, mode = 'wrap')
     pl.imshow(gaus2.T)
 # 
     pl.subplot(2, 3, 6)

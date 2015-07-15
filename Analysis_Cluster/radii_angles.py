@@ -34,12 +34,9 @@ def get_radius(image_area, theta, phi, centre, rad_min):
     # Find the radius of the circle
     
     # Calculate discrete difference and find the edge via the extremum
-    points = gaussian_filter1d(np.asarray(points), 12)
-    
-
-    
+    #points = gaussian_filter1d(np.asarray(points), 15)
     dif = np.diff(points)
-
+    
     
     index_edge = np.argwhere(dif == np.min(dif))[0][0]
     
@@ -52,7 +49,7 @@ def plot_radii(image_area, centre, start, stop):
     
     import numpy as np
     import pylab as pl
-    from scipy import interpolate
+    from scipy import interpolate, signal
     from scipy.ndimage import median_filter,gaussian_filter
 
     pl.close('all')
