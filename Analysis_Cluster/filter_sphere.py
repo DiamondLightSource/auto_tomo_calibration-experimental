@@ -31,7 +31,7 @@ if __name__ == '__main__' :
     
     # filter the image for radii detection
     print("Filter image %s" % input_filename)
-    sphere = median_filter(sphere, 3)
+    sphere = median_filter(sphere, 9)
     #sphere = gaussian_filter(sphere,3)
     #sphere = gaussian_filter(sphere, 3)
     

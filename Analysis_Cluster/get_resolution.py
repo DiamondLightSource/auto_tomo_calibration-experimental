@@ -116,7 +116,8 @@ def find_contact(radii_spheres, angles_outliers):
         Dictionary containing sphere indexes and angles indicating
         points of contact
     """
-
+    import numpy as np
+    
     # touching_pts = [ ([theta1], [theta2], [phi1], [phi2]) ]
     touching_pts = {}
     centre_pts = {}
@@ -149,7 +150,6 @@ def find_contact(radii_spheres, angles_outliers):
                     # theta 0:360 phi 0:180
                     i_theta, i_phi = i_angle[0], i_angle[1]
                     j_theta, j_phi = j_angle[0], j_angle[1]
-                    delta_theta = abs(i_theta - j_theta)
                     
                     if approx_diff(i_theta, j_theta, 180, 1)\
                      and approx_sum(i_phi, j_phi, 180, 1):
@@ -162,6 +162,10 @@ def find_contact(radii_spheres, angles_outliers):
                     
                     if approx_diff(i_theta, j_theta, 180, 0)\
                      and approx_sum(i_phi, j_phi, 180, 0):
+#                         if radii_spheres[i][i_theta, i_phi] >= int(1.2 * 128) - 3 and\
+#                             radii_spheres[j][j_theta, j_phi] >= int(1.2 * 128) - 3:
+#                                 print radii_spheres[i][i_theta, i_phi], int(1.2 * 128)
+#                                 print radii_spheres[j][j_theta, j_phi], int(1.2 * 128)
                         centre_i_theta.append(i_theta)
                         centre_j_theta.append(j_theta)
                         centre_i_phi.append(i_phi)

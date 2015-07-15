@@ -1,20 +1,23 @@
 import numpy as np
 import pylab as pl
 from skimage import io
+import harris_edge as harris
+from scipy.ndimage.filters import sobel
+from skimage.filter import denoise_tv_chambolle
 
-recon = np.load("/dls/tmp/jjl36382/complicated_data/spheres/sphere1.npy")
+recon = np.load("/dls/tmp/jjl36382/complicated_data/spheres/sphere1.npy")[:,:,180]
 
-print recon.dtype
-# 1435, 1368, 875
-# (616, 470, 676)
-(465, 1043, 976)
 (465, 1043, 1016)
 X = 465
 Y = 1043
 Z = 1016
 r = int(128 * 1.1)
 
-#Z shoudl be about 1020 for sphere 1
+response = harris.hessian_response(recon, 3)
+ 
+corners = harris.get_harris_points(response, 10, 0.01)
+ 
+harris.plot_harris_points(recon, corners)
 
 # area = np.zeros((2*r+1, 2*r+1, 2*r+1))
 # for i in range(Z - r, Z + r + 1, 4):
@@ -28,21 +31,20 @@ r = int(128 * 1.1)
 
 
 
-N = recon.shape[2]
-# print N
-# for slice in range(0, 50, 1):
-#     print slice
-#     pl.imshow(recon[:,:,slice])
-#     pl.gray()
-#     pl.pause(0.001)
-#      
+
+
+# N = recon.shape[2]
+# 
 # for slice in range(0, N, 10):
 #     print slice
-#     pl.imshow(recon[:,:,slice])
+#     im = denoise_tv_chambolle(recon[:,:,slice], weight=0.01)
+#     mag = np.hypot(sobel(im, 0), sobel(im, 1))  # magnitude
+#     mag *= 255.0 / np.max(mag)  # normalize (Q&D)
+#     pl.imshow(mag)
 #     pl.gray()
 #     pl.pause(0.001)
-
-pl.imshow(recon[:,:,145])
-pl.gray()
-pl.show()
-        
+# 
+# pl.imshow(recon[:,:,145])
+# pl.gray()
+# pl.show()
+#          

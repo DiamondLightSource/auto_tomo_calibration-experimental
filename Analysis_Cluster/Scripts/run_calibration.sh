@@ -40,7 +40,7 @@ holder="-hold_jid job1 -N job2"
 # SHIFT Z COORDS IF NAME STARTS NOT FROM 0 (???)
 # Select areas ------------------------------------------------------------------------------------------------------
 holder="-hold_jid job2 -N job3"
-#qsub $holder -pe smp 2 -j y -t 1 -tc 10 $homepath/selector_loop.sh $spherepath/sphere%i.npy $datapath $start $resultspath $homepath
+#qsub $holder -pe smp 2 -j y -t 1 -tc 10 $homepath/selector_loop.sh $spherepath/spheresobel%i.npy $datapath $start $resultspath $homepath
 
 
 startang=1
@@ -55,6 +55,7 @@ stepang=10
 #read -p "enter step > " stepang
 
 holder="-hold_jid job3 -N job4"
+#change to sphere or spherefilt
 #qsub -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath
 
 

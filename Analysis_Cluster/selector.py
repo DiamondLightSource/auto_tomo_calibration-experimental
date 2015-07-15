@@ -1,6 +1,9 @@
 import os
 from skimage import io
 import numpy as np
+from skimage.filter import denoise_tv_chambolle
+from scipy.ndimage.filters import sobel
+from skimage.filter import threshold_otsu
 
 def save_data(filename, data):
     print("Saving data")
@@ -60,7 +63,16 @@ if __name__ == '__main__' :
         input_file = input_filename % i
         print("Loading image %s" % input_file)
         img = io.imread(input_file)[x - R:x + R + 1, y - R:y + R + 1]
-        area[:, :, i-(z - R)] = img
+        
+        im = denoise_tv_chambolle(img, weight=0.01)
+        
+        mag = np.hypot(sobel(im, 0), sobel(im, 1))  # magnitude
+        mag *= 255.0 / np.max(mag)  # normalize (Q&D)
+        
+        # threshold
+        threshold = threshold_otsu(mag, 2)
+        mag = (mag >= threshold) * 1
+        area[:, :, i-(z - R)] = mag
 
     # save image
     print("Saving image %s" % output_filename)
