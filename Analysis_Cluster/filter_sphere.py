@@ -1,8 +1,8 @@
 import os
-from skimage import io
 import numpy as np
-from scipy.ndimage import median_filter,gaussian_filter
-from skimage.restoration import denoise_tv_chambolle
+import mhd_utils_3d as md
+import subprocess
+
 
 def save_data(filename, data):
     print("Saving data")
@@ -10,31 +10,28 @@ def save_data(filename, data):
     np.save(f, data)
     f.close()
 
-if __name__ == '__main__' :
-    import optparse
-    usage = "%prog [options] input_file_template, output_file_template \n" + \
-        "  input_file_template  = /location/of/file/filename%02i.npy \n" + \
-        "  output_file_template = /location/of/output/filename%02i.dat"
-    parser = optparse.OptionParser(usage=usage)
-    (options, args) = parser.parse_args()
-    print 'test'
-    # get the number of the frame to process
-    task_id = int(os.environ['SGE_TASK_ID'])
+
+if __name__ == '__main__':
     
-    # make the filename
-    input_filename = args[0]
-    output_filename = args[1]
-    
-    # load the sphere
-    print("Loading image %s" % input_filename)
-    sphere = np.load(input_filename)
-    
-    # filter the image for radii detection
-    print("Filter image %s" % input_filename)
-    sphere = median_filter(sphere, 9)
-    #sphere = gaussian_filter(sphere,3)
-    #sphere = gaussian_filter(sphere, 3)
+#     import optparse
+#     
+#     parser = optparse.OptionParser()
+#     (options, args) = parser.parse_args()
+#     
+#     # get the number of the frame to process
+#     task_id = int(os.environ['SGE_TASK_ID'])
+#     
+#     # make the filename
+#     input_filename = args[0]
+#     sphere_path = args[1]
+#     sigma = args[2]
+#     
+#     code_path = sphere_path + "/itk_hes_rca"
+#     
+#     # filter the image for radii detection
+#     print("Filter image %s" % input_filename)
+    subprocess.call(['./itk_hes_rca', "/dls/tmp/jjl36382/complicated_data/spheres/sphere1.mhd", "4"])
     
     # save image
-    print("Saving image %s" % output_filename)
-    save_data(output_filename, sphere)
+    #print("Saving image %s" % output_filename)
+    #save_data(output_filename, sphere)

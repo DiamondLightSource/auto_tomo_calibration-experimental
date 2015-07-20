@@ -1,9 +1,8 @@
 import os
 from skimage import io
 import numpy as np
-from skimage.filter import denoise_tv_chambolle
-from scipy.ndimage.filters import sobel
-from skimage.filter import threshold_otsu
+import mhd_utils_3d as md
+
 
 def save_data(filename, data):
     print("Saving data")
@@ -11,11 +10,13 @@ def save_data(filename, data):
     np.save(f, data)
     f.close()
 
+
 if __name__ == '__main__' :
+
     import optparse
-    usage = "%prog [options] output_file_template \n" + \
-        "  output_file_template = /location/of/output/filename%05i.dat"
-    parser = optparse.OptionParser(usage=usage)
+
+    parser = optparse.OptionParser()
+    
     parser.add_option("-x", "--xpos",
                          dest="x_pos",
                          help="X position of the centre of the sphere of interest",
@@ -50,30 +51,23 @@ if __name__ == '__main__' :
     task_id = int(os.environ['SGE_TASK_ID'])
 
     # make the filename
-    output_filename = args[0] % task_id
+    output_filename = args[0]
     input_filename = args[1]
     
-    # If the image is outside bounds in the z direction
-    # it should not be used
-    
     # load image
-    R = int(1.2*r)
-    area = np.zeros((2*R+1, 2*R+1, 2*R+1))
-    for i in range(z-R, z+R+1):
+    R = int(1.2 * r)
+    area = np.zeros((2*R + 1, 2*R + 1, 2*R + 1))
+    
+    for i in range(z - R, z + R + 1):
+        
         input_file = input_filename % i
         print("Loading image %s" % input_file)
+        
         img = io.imread(input_file)[x - R:x + R + 1, y - R:y + R + 1]
-        
-        im = denoise_tv_chambolle(img, weight=0.01)
-        
-        mag = np.hypot(sobel(im, 0), sobel(im, 1))  # magnitude
-        mag *= 255.0 / np.max(mag)  # normalize (Q&D)
-        
-        # threshold
-        threshold = threshold_otsu(mag, 2)
-        mag = (mag >= threshold) * 1
-        area[:, :, i-(z - R)] = mag
-
-    # save image
+        area[:, :, i - (z - R)] = img
+    
+    np.save(output_filename + '.npy', area)
+    
     print("Saving image %s" % output_filename)
-    save_data(output_filename, area)
+    md.write_mhd_file(output_filename + '.mhd', area, area.shape)
+    

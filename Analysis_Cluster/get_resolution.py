@@ -151,8 +151,8 @@ def find_contact(radii_spheres, angles_outliers):
                     i_theta, i_phi = i_angle[0], i_angle[1]
                     j_theta, j_phi = j_angle[0], j_angle[1]
                     
-                    if approx_diff(i_theta, j_theta, 180, 0)\
-                     and approx_sum(i_phi, j_phi, 180, 0):
+                    if approx_diff(i_theta, j_theta, 180, 1)\
+                     and approx_sum(i_phi, j_phi, 180, 1):
                         touching_i_theta.append(i_theta)
                         touching_j_theta.append(j_theta)
                         touching_i_phi.append(i_phi)

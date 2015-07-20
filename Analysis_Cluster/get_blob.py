@@ -1101,7 +1101,7 @@ image_area3, meta_header = md.load_raw_data_with_mhd("/dls/tmp/jjl36382/complica
 
 # pl.imshow(image_area1[190,:,:])
 # pl.show()
-mtf1 = plot_radii(image_area1[0, :, :], 1)
+mtf1 = plot_radii(image_area1[190, :, :], 1)
 
 # pl.imshow(image_area2[190,:,:])
 # pl.show()

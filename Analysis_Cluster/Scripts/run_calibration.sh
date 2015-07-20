@@ -37,31 +37,31 @@ holder="-hold_jid job1 -N job2"
 #$homepath/analyse.sh $start $stop $step $resultspath/out%05i.dat $resultspath
 
 
-# SHIFT Z COORDS IF NAME STARTS NOT FROM 0 (???)
 # Select areas ------------------------------------------------------------------------------------------------------
+# Takes in original raw data and segments out the spheres given their centres
+# Stores the images in an mhd format, which is then used for processing
 holder="-hold_jid job2 -N job3"
-#qsub $holder -pe smp 2 -j y -t 1 -tc 10 $homepath/selector_loop.sh $spherepath/spheresobel%i.npy $datapath $start $resultspath $homepath
+#qsub $holder -pe smp 2 -j y -t 1 -tc 10 $homepath/selector_loop.sh $spherepath $datapath $start $resultspath $homepath
 
 
-startang=1
-stopang=360
-stepang=10
-# Filter spheres before analysis
-#qsub -pe smp 2 -j y -t 1 $homepath/filter_sphere_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath
+
+# Detects the edges ussing a 3D Hessian filter
+# Takes in mhd files, returns raw data files
+# Sigma 4 works well, though the edges seem a bit blurred
+sigma=1
+holder="-hold_jid selector.sh -N job4"
+#qsub $holder -pe smp 2 -j y -t 1 -tc 20 $homepath/hessian_filter_loop.sh $resultspath $homepath $spherepath $sigma
+
 
 # Get radii ------------------------------------------------------------------------------------------------------
-#read -p "enter starting radii (use 1 if not sure) > " startang
-#read -p "enter final file number (use 360 if not sure) > " finalang
-#read -p "enter step > " stepang
-
-holder="-hold_jid job3 -N job4"
-#change to sphere or spherefilt
-#qsub -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $startang $stopang $stepang $resultspath $homepath $spherepath
-
+# Load up the mhd images and does the usual processing of tracing the line
+# from the centre and locating the radius
+holder="-hold_jid itk_hes_rca -N job5"
+qsub $holder -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $resultspath $homepath $spherepath $sigma
 
 
 # Plot radii ------------------------------------------------------------------------------------------------------
-holder="-hold_jid job4 -N job5"
+holder="-hold_jid job5 -N job6"
 #qsub $holder -pe smp 2 -j y -t 1 $homepath/plot_radii_loop.sh $startang $stopang $stepang $resultspath $spherepath
 
 
@@ -71,7 +71,7 @@ for i in `seq 11`;
 do
 	echo "module load python/ana" > ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 	echo "cd /dls/tmp/jjl36382/logs" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
-	echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py -a $startang -b $stopang -c $stepang $spherepath/radii$i/radii%03i.npy $i $analysispath" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
+	echo "python ~/auto_tomo_calibration-experimental/Analysis_Cluster/plot_radii.py -a 1 -b 360 -c 10 $spherepath/radii$i/radii%03i.npy $i $analysispath $spherepath/radii$i/contact%03i.npy" >> ~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh
 	~/auto_tomo_calibration-experimental/Analysis_Cluster/run_auto_calib.sh 
 done
 

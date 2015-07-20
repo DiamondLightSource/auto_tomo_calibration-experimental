@@ -39,7 +39,6 @@ if __name__ == '__main__':
     input_filename = args[0]
     output_filename = args[1] % task_id
     contact_filename = args[2] % task_id
-    sigma = args[3]
     
     # load the sphere
     print("Loading image %s" % input_filename)
@@ -47,7 +46,7 @@ if __name__ == '__main__':
     sphere, meta_header = md.load_raw_data_with_mhd(input_filename)
     
     # measure radii
-    radii, contact = radii_angles.plot_radii(sphere, (x, y, z), task_id, task_id + 10, sigma = 1)
+    radii, contact = radii_angles.plot_radii(sphere, (x, y, z), task_id, task_id + 10)
 
     # save data
     print("Saving data %s" % output_filename)
