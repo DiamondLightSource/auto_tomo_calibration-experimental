@@ -1,8 +1,9 @@
 import os
 from skimage import io
 import numpy as np
-
+import mhd_utils_3d as md
 import radii_angles
+
 
 def save_data(filename, data):
     print("Saving data")
@@ -10,12 +11,13 @@ def save_data(filename, data):
     np.save(f, data)
     f.close()
 
+
 if __name__ == '__main__':
+    
     import optparse
-    usage = "%prog [options] input_file_template, output_file_template \n" + \
-        "  input_file_template  = /location/of/file/filename%02i.npy \n" + \
-        "  output_file_template = /location/of/output/filename%02i.dat"
-    parser = optparse.OptionParser(usage=usage)
+    
+    parser = optparse.OptionParser()
+    
     parser.add_option("-x", "--xpos", dest="x_pos", help="X position of the centre of the sphere of interest", default=500, type='int')
     parser.add_option("-y", "--ypos", dest="y_pos", help="Y position of the centre of the sphere of interest", default=500, type='int')
     parser.add_option("-z", "--zpos", dest="z_pos", help="Z position of the centre of the sphere of interest", default=500, type='int')
@@ -36,14 +38,20 @@ if __name__ == '__main__':
     # make the filename
     input_filename = args[0]
     output_filename = args[1] % task_id
+    contact_filename = args[2] % task_id
+    sigma = args[3]
     
     # load the sphere
     print("Loading image %s" % input_filename)
-    sphere = np.load(input_filename)
+#     sphere = np.load(input_filename)
+    sphere, meta_header = md.load_raw_data_with_mhd(input_filename)
     
     # measure radii
-    radii = radii_angles.plot_radii(sphere, (x, y, z), task_id, task_id + 10)
+    radii, contact = radii_angles.plot_radii(sphere, (x, y, z), task_id, task_id + 10, sigma = 1)
 
     # save data
     print("Saving data %s" % output_filename)
     save_data(output_filename, radii)
+    
+    print("Saving data %s" % contact_filename)
+    save_data(contact_filename, contact)

@@ -46,63 +46,65 @@ if __name__ == '__main__' :
     radii_filename = args[0]
     index = int(args[1])
     anal_path = args[2]
+    contact_filename = args[3]
     
-    # get the number of the frame to process
-    #task_id = int(os.environ['SGE_TASK_ID'])
-    
-    print start
-    print stop
-    print step
-    print radii_filename
-        
+    # get the radius  
     radii = []
     for i in range(start, stop, step):
         radii.append(np.load(radii_filename % i))
-
+        
     radii_np = np.zeros((stop,180))
     for i in range(stop/step):
         radii_np[i*step:i*step+step,:] = radii[i]
-    
-    
-    
-    # Zero is assigned
-    radii_mean = []
-    for slice in radii_np:
-        temp = [item for item in slice if item != 0]
-        radii_mean.append(np.mean(temp))
-    
-    radius = np.mean(radii_mean)
-    # Dictionary to store the angles and outlier values
-    outliers = {}
-    
-    # Remove the anomalous radii
+            
     radii_mean = np.mean(radii_np)
-    one_std_dev = np.std(radii_np)
-     
-    # Get all radii above the mean
-    #absolute1 = abs(radii_np - radii_mean) + radii_mean
-     
-    # Apply a Gaussian filter
-    #gaus1 = gaussian_filter(absolute1, 1)
-     
-    # Threshold the image
-    area1 = radii_np == 0
-    area1 = area1 * 1
-
-    # Store the angles of the anomalous values
-    for i in range(start,stop):
-        for j in range(0,180):
-            if radii_np[i, j] == 0:
-                angl = (i,j)
-                outliers[angl] = 0
+    radii_std = np.std(radii_np)
+    
+    for i in range(360):
+        for j in range(180):
+            if radii_np[i, j] >= radii_mean:
+               radii_np[i, j] = radii_mean 
                 
-    # save image
-    output_filename = anal_path + "/outliers%02i.dat" % index
-    output_angles = anal_path + "/radii%02i.npy" % index
-    print("Saving data %s" % output_filename)
-    print("Saving data %s" % output_angles)
-    save_data(output_angles, radii_np)
-    save_dict(output_filename, outliers)
+    
+    # get the contact points
+    contact = []
+    for i in range(start, stop, step):
+        contact.append(np.load(contact_filename % i))
+
+    contact_np = np.zeros((stop,180))
+    for i in range(stop/step):
+        contact_np[i*step:i*step+step,:] = contact[i]
+
+    radius = np.mean(radii_np)
+#     # Dictionary to store the angles and outlier values
+#     outliers = {}
+# 
+#     # Threshold the image
+#     area1 = radii_np == 0
+#     area1 = area1 * 1
+# 
+#     # Store the angles of the anomalous values
+#     for i in range(start,stop):
+#         for j in range(0,180):
+#             if radii_np[i, j] == 0:
+#                 angl = (i,j)
+#                 outliers[angl] = 0
+#                 
+#     # save image
+#     output_filename = anal_path + "/outliers%02i.dat" % index
+#     output_angles = anal_path + "/radii%02i.npy" % index
+#     print("Saving data %s" % output_filename)
+#     print("Saving data %s" % output_angles)
+#     save_data(output_angles, radii_np)
+#     save_dict(output_filename, outliers)
+
+    # just contact pts
+#     delete_list = []
+#     for i in range(start,stop):
+#         for j in range(0,180):
+#             if contact_np[i, j] == 0:
+#                 delete_list.append((i, j))
+#     
 
     # Plot
     pl.subplot(2, 1, 1)
@@ -112,12 +114,10 @@ if __name__ == '__main__' :
              fontdict={'fontsize': 16,'verticalalignment': 'bottom','horizontalalignment': 'center'})
     pl.xlabel(r'$\theta$', fontdict={'fontsize': 14,'verticalalignment': 'top','horizontalalignment': 'center'})
     pl.ylabel(r'$\phi$', fontdict={'fontsize': 14,'verticalalignment': 'bottom','horizontalalignment': 'right'}, rotation=0)
-    #pl.xticks(np.arange(0, 360, 10), theta_bord)
-    #pl.yticks(np.arange(0, len(phi_bord)+1, 10), phi_bord)
     pl.colorbar(shrink=0.8)
     
     pl.subplot(2, 1, 2)
-    pl.imshow(area1.T)
+    pl.imshow(contact_np.T)
     pl.xlabel(r'$\theta$', fontdict={'fontsize': 14,'verticalalignment': 'top','horizontalalignment': 'center'})
     pl.ylabel(r'$\phi$', fontdict={'fontsize': 14,'verticalalignment': 'bottom','horizontalalignment': 'right'}, rotation=0)
 
@@ -125,4 +125,4 @@ if __name__ == '__main__' :
 
     pl.savefig(anal_path + "/radii%02i_%f.png" % (index, radius))
 
-    #pl.show()
+    pl.show()
