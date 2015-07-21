@@ -5,15 +5,18 @@ import math
 from math import pi, log
 
 from scipy import optimize
-from scipy.signal import argrelextrema
+from scipy.signal import argrelextrema, find_peaks_cwt
 from scipy.integrate import simps
 from scipy import fft, ifft
 from scipy.optimize import curve_fit, leastsq
 
 
-def gaussian(x, height, center, width, offset=0):
+def gaussian(x, height, center, width, offset):
     return height*np.exp(-(x - center)**2/(2*width**2)) + offset
-    
+
+def gaussian_no_offset(x, height, center, width, offset):
+    return height*np.exp(-(x - center)**2/(2*width**2)) + offset
+        
     
 def two_gaussians(x, h1, c1, w1, h2, c2, w2, offset):
     return (gaussian(x, h1, c1, w1, offset) + 
@@ -752,7 +755,7 @@ def rms_noise_image(image):
     
     # Get values of pixels according to an increasing radius for a same angle
     # Get the radius to be at most half the image since the circle can't be bigger
-    R = image.shape[0] / 4. 
+    R = image.shape[0] / 4.
     
     
     
@@ -789,23 +792,118 @@ def rms_noise_signal(signal):
     return rms_noise
 
 
-def find_contact(points, theta, noiz):
+def find_contact(points, noiz):
     """
     Finds the max intensity along the line
     Compares it with the background intensity
     If it is within the RMS of noise, then
     that point indicates an edge
     """
+    
     max_int = np.max(points)
-    
-    angle = None
-    if max_int <= noiz:
-        print theta  * 180. / math.pi
-        angle = theta  * 180. / math.pi
 
-    return [angle, max_int]
+    if max_int >= np.mean(noiz) + 3 * np.std(noiz):
+        return None
+    else:
+        return 1
 
+
+def fit_gaussian_to_signal(points, sigma, take_abs, rad_pos = 0., height = 0., width_guess = 10.):
+    """
+                     FAIL PROOF DETECOTR (?)
+     if the margins in the selector are changed then
+     change the 1.3 factor
+    """
+    rms_noise5 = rms_noise_signal(points)
+    peaks = peakdetect(points / np.max(points),
+                       lookahead = 15 * sigma, delta = rms_noise5 / np.max(points))
     
+    try:
+        centre_guess1 = peaks[0][0][0]
+    except:
+        centre_guess1 = rad_pos
+    
+    # the initial guesses for the Gaussians
+    # for 1: height, centre, width, offset
+    guess1 = [height, centre_guess1, width_guess, 0.]
+        
+    # make the array into the correct format
+    data = np.array([range(len(points)), points]).T
+    
+    # the functions to be minimized
+    errfunc1 = lambda p, xdata, ydata: (gaussian(xdata, *p) - ydata)
+ 
+    optim1, success2 = optimize.leastsq(errfunc1, guess1[:], args=(data[:,0], data[:,1]))
+    
+    if take_abs:
+        return abs(optim1)
+    else:
+        return optim1
+
+def is_outlier(points, thresh=3):
+    """
+    Returns a boolean array with True if points are outliers and False 
+    otherwise.
+
+    Parameters:
+    -----------
+        points : An numobservations by numdimensions array of observations
+        thresh : The modified z-score to use as a threshold. Observations with
+            a modified z-score (based on the median absolute deviation) greater
+            than this value will be classified as outliers.
+
+    Returns:
+    --------
+        mask : A numobservations-length boolean array.
+
+    References:
+    ----------
+        Boris Iglewicz and David Hoaglin (1993), "Volume 16: How to Detect and
+        Handle Outliers", The ASQC Basic References in Quality Control:
+        Statistical Techniques, Edward F. Mykytka, Ph.D., Editor. 
+    """
+    if len(points.shape) == 1:
+        points = points[:,None]
+    median = np.median(points, axis=0)
+    diff = np.sum((points - median)**2, axis=-1)
+    diff = np.sqrt(diff)
+    med_abs_deviation = np.median(diff)
+
+    modified_z_score = 0.6745 * diff / med_abs_deviation
+    return modified_z_score > thresh
+
+
+def get_touch_point(intensity, sigma):
+    
+    rms_noise5 = rms_noise_signal(intensity)
+    peaks_max, peaks_min = peakdetect(intensity / np.max(intensity),
+                       lookahead = 15 * sigma, delta = rms_noise5 / np.max(intensity))
+    print peaks_min
+    return peaks_min
+#     
+#     outliers = is_outlier(np.asarray(intensity), 5)
+#     
+#     find_true = np.where(outliers == True)[0]
+#     return find_true
+    
+#     band_start = int(touch_pts - band_width * 2)
+#     band_end = int(touch_pts + band_width * 2)
+# 
+#     
+#     pl.plot(theta_bord[band_start:band_end], edge_int[band_start:band_end], '*')
+#     pl.title('Intensity vs angle')
+#     pl.xlabel('angle')
+#     pl.ylabel('intensity')
+#     pl.xlim(0,360)
+#     pl.show()
+#     
+#     ########################################################
+#     # Remove the anomalies
+#     new_stdevs = np.delete(stdevs, range(band_start, band_end + 1))
+#     print "number of deleted elements", len(stdevs) - len(new_stdevs)
+#     print "mean spread from the edge", np.mean(new_stdevs)
+
+
 def get_radius(image, theta, centre, rad_min, sigma):
     """
     Inputs:
@@ -823,6 +921,7 @@ def get_radius(image, theta, centre, rad_min, sigma):
     Then at the point where pixel values suddenly change we can assume that
     we reached the edge and at that point we will get the value of the radius.
     """
+    
     Xc = centre[0]
     Yc = centre[1]
     
@@ -830,7 +929,7 @@ def get_radius(image, theta, centre, rad_min, sigma):
     
     # Get values of pixels according to an increasing radius for a same angle
     # Get the radius to be at most half the image since the circle can't be bigger
-    R = min(image.shape[0] / 2, image.shape[1] / 2) - 1
+    R = min(image.shape[0] / 2, image.shape[1] / 2) - 2
     
     # Simple trig identities
     # R is the max value that we can reach
@@ -844,123 +943,27 @@ def get_radius(image, theta, centre, rad_min, sigma):
             # Xc and Yc are the positions from the center
             # points stores all the points from the center going along the radius
             points.append(image[int(Xc + alpha * delta_x), int(Yc + alpha * delta_y)])
-            
-    # calculate the rms of the noise and use it
-    # to filter the signal
-    rms_noise5 = rms_noise_image(image) * 6
-    peaks = peakdetect(points, lookahead = 15 * sigma, delta = rms_noise5)
-    ayy = find_contact(points, theta, rms_noise5)
-    ################################################################
-    #                 FAIL PROOF DETECOTR (?)
-    # if the margins in the selector are changed then
-    # change the 1.3 factor
-    ################################################################
-    try:
-        centre_guess1 = peaks[0][0][0]
-    except:
-        centre_guess1 = image.shape[1] / 1.3 - rad_min
     
-    try:
-        centre_guess2 = peaks[1][0][0]
-    except:
-        try:
-            # select the values
-            stdev2 = np.std(points) * 2
-            mean_pts = np.mean(points)
-            bin_pts = points >= mean_pts + stdev2
-            dif = np.diff(points[int(centre_guess1):])
-            sep = np.argwhere(bin_pts == 1)
-            
-            centre_guess2 = sep[-1][0]
-            #print "guess2 from first exception"
-        except:
-            centre_guess2 = centre_guess1
-            #print "guess2 from second exception"
+    rad_guess = image.shape[1] / 1.2 - rad_min
     
-    # distance between peaks
-    offset_guess = centre_guess2 - centre_guess1
-    # width of the gaussian
-    width_guess = 10.
-    
-    # the initial guesses for the Gaussians
-    # for 2: height, centre, width, height, centre, width, offset
-    # for 1: height, centre, width, offset
-    guess2 = [0., centre_guess1, width_guess, 0., centre_guess2, width_guess, offset_guess]
-    guess1 = [0., centre_guess1, width_guess, 0]
-        
-    # make the array into the correct format
-    data = np.array([range(len(points)), points]).T
-    
-    # the functions to be minimized
-    errfunc2 = lambda p, xdata, ydata: (two_gaussians(xdata, *p) - ydata)
-    errfunc1 = lambda p, xdata, ydata: (gaussian(xdata, *p) - ydata)
- 
-    # perform the least square minimization
-    optim2, success1 = optimize.leastsq(errfunc2, guess2[:], args=(data[:,0], data[:,1]))
-    optim1, success2 = optimize.leastsq(errfunc1, guess1[:], args=(data[:,0], data[:,1]))
-    
-    # sometimes values are negative for some weird reason
-    optim2 = abs(optim2)
+    optim1 = fit_gaussian_to_signal(points, sigma, True, rad_guess)
     optim1 = abs(optim1)
     
-    if theta >= 290 / 180. * 3.14 :
-        pl.plot(data[:,0], data[:,1], lw=5, c='g', label='measurement')
-        pl.plot(data[:,0], gaussian(data[:,0], *optim1),
-            lw=3, c='b', label='fit of 1 Gaussian')
-        pl.plot(data[:,0], two_gaussians(data[:,0], *optim2),
-            lw=1, c='r', ls='--', label='fit of 2 Gaussians')
-        pl.legend(loc='best')
-        pl.show()
-#         pl.plot(data[optim2[1] - first_width:optim2[1] + first_width, 0],
-#                 data[optim2[1] - first_width:optim2[1] + first_width, 1], lw=5, c='g', label='measurement')
-#         pl.plot(data[optim2[1] - first_width:optim2[1] + first_width, 0],
-#                 gaussian(data[optim2[1] - first_width:optim2[1] + first_width, 0], *optim1), lw=3, c='b', label='fit of 1 Gaussian')
-#         pl.plot(data[optim2[1] - first_width:optim2[1] + first_width, 0],
-#                 two_gaussians(data[optim2[1] - first_width:optim2[1] + first_width, 0], *optim2),lw=1, c='r', ls='--', label='fit of 2 Gaussians')
+#     data = np.array([range(len(points)), points]).T
+#     if theta >= 250 / 180. * 3.14 :
+#         pl.plot(data[:,0], data[:,1], lw=5, c='g', label='measurement')
+#         pl.plot(data[:,0], gaussian(data[:,0], *optim1),
+#             lw=3, c='b', label='fit of 1 Gaussian')
 #         pl.legend(loc='best')
 #         pl.show()
 
-
-    # Parameters from 2 Gaussian plots for the first plot 
-    reshaped_optim2 = [optim2[0], optim2[1], optim2[2], optim2[-1]]
-    
-    # smallest error will give the best result and
-    # two Gaussians always satisfy this condition,
-    # but for edge location I need a perfect fit only on the first peak.
-    # Two Gaussians are always better since there are small bumps in the region,
-    # which, even though negligible, still contribute
-    #
-    # Optim2 gives the first peak always correctly so I can select a region
-    # around the peak within 3 deviations
-    # This will test only the fit on the first peak
-    # which will give the first edge perfectly
-    # and, in turn, the radius
-    #first_width = optim1[2] * 3
-    
-    err2 = np.sqrt((errfunc1(reshaped_optim2, data[:, 0],
-                                     data[:, 1] )) ** 2).sum()
-    err1 = np.sqrt((errfunc1(optim1, data[:, 0],
-                                     data[:, 1] )) ** 2).sum()
-    
     # check which error is smaller and select that fit 
-    if err1 > err2:
-        # 2nd error is smaller take the
-        # centre for the first peakfrom the second 
-        index_edge = optim2[1]
-        line_spread_function = gaussian(data[optim2[1] - optim2[2] * 3:optim2[1] + optim2[2] * 3, 0], *reshaped_optim2)
-    else:
-        # 1st error is smaller take the centre 
-        # for the first peak from the first fit
-        index_edge = optim1[1]
-        line_spread_function = gaussian(data[optim1[1] - optim1[2] * 3:optim1[1] + optim1[2] * 3, 0], *optim1)
-
+    index_edge = optim1[1]
 
     # Calculate the radius
     radius_sphere = index_edge * 0.001 * R + rad_min
-    # the intensity of the edge
-    edge_intensity = points[int(index_edge)]
     
-    return round(radius_sphere, 4), edge_intensity, line_spread_function, ayy
+    return round(radius_sphere, 4), optim1[0], optim1[2]
 
 
 def plot_radii(image, sigma = 3):
@@ -1008,98 +1011,74 @@ def plot_radii(image, sigma = 3):
 #     pl.imshow(new_image)
 #     pl.show()
     
+    centre = (image.shape[0] / 2.0, image.shape[1] / 2.0)
+    
     # Calculate radii for every angle
     radii_circle = []
-    edge_intensity = []
-    line_spread_fns = []
+    edge_int = []
+    stdevs = []
     contact_points = []
     
     theta_bord = np.arange(0, 360, 1)
-    centre = (int(128 * 1.2), int(128 * 1.2))
     
     rad_min = image.shape[1] / 3
     for theta in theta_bord:
         
         theta_pi = (math.pi * theta) / 180.0
-        rad, pixel, gauss, contact = get_radius(image, theta_pi, centre, rad_min, sigma)
-        
+        rad, intensity, width = get_radius(image, theta_pi, centre, rad_min, sigma)
+     
         radii_circle.append(rad)
-        edge_intensity.append(pixel)
-        line_spread_fns.append(gauss)
-        contact_points.append(contact)
-    
-    
-    ###########################################
-    # Plot radius
+        edge_int.append(intensity)
+        stdevs.append(width)
 
     
-    radius = np.mean(radii_circle)
+    # Plot radius
     pl.plot(theta_bord, radii_circle, '*')
     pl.xlabel('angle')
     pl.ylabel('radius')
     pl.xlim(0, 360)
-    #pl.show()
+    pl.show()
+      
+    pl.plot(theta_bord, edge_int, '*')
+    pl.title('Intensity vs angle')
+    pl.xlabel('angle')
+    pl.ylabel('intensity')
+    pl.xlim(0,360)
+    pl.show()
     
-#     print "minimum edge intensity", np.min(edge_intensity), np.argwhere(edge_intensity == np.min(edge_intensity))
-#     # select all the anomalies by thresholding
-#     mean_intensity = np.mean(edge_intensity)
-#     above_mean = abs(edge_intensity - mean_intensity) + mean_intensity
-#     
-#     # take values above three standard deviations
-#     std_intensity = np.std(edge_intensity)
-#     bin_intensity = above_mean >= np.mean(above_mean) + std_intensity * 3
-#     
-#     # select the anomaly indices
-#     indices = np.argwhere(bin_intensity == 1)
-#     
-#     # the gap coordinates in the radius plot
-#     # which describe the point of contact 
-#     begin = indices[0][0]
-#     end = indices[-1][0]
-        
-    contact_points = [item for item in contact_points if item[0] != None]
-    angles = [int(item[0]) for item in contact_points]
-    intensities = [item[1] for item in contact_points]
     
-    begin = angles[0]
-    end = angles[-1]
-    
-    mean_contact = np.mean(angles)
-    
-    # don't include these values from the gap
-    # in radius calculations
-    delete_elements = range(begin, end + 1)
-    radii_circle = np.delete(radii_circle, delete_elements)
-    line_spread_fns = np.delete(line_spread_fns, delete_elements)
-    # Calculate the mtf after removing the badly detected elements
-    mtf = modulation_transfer_function(line_spread_fns)
-    
-    pl.close('all')
-    
-#     pl.plot(theta_bord, edge_intensity, '*')
+    ########################################################
+    # dont include points of contact for the qualiy assesment
+#     pl.plot(new_theta_bord, new_edge_int, '*')
 #     pl.title('Intensity vs angle')
 #     pl.xlabel('angle')
 #     pl.ylabel('intensity')
 #     pl.xlim(0,360)
 #     pl.show()
-    
-#     pl.plot(theta_bord[begin:end], edge_intensity[begin:end])
-    pl.plot(angles, intensities)
-    pl.title('Intensity vs angle')
-    pl.xlabel('angle')
-    pl.ylabel('intensity')
-    pl.show()
 
-    return (True, np.mean(radii_circle), mtf)
+    touch_pts = get_touch_point(edge_int, sigma)
+    
+    if touch_pts != []:
+        new_edge_int = np.delete(edge_int, touch_pts)
+        new_theta_bord = np.delete(theta_bord, touch_pts)
+        new_stdevs = np.delete(stdevs, touch_pts)
+        print np.mean(stdevs)
+        print np.mean(new_stdevs)
+        return (True, np.mean(radii_circle), np.mean(new_stdevs))
+    else:
+        print "No touch points"
+        return (True, np.mean(radii_circle), np.mean(stdevs))
+    
 
 
 import mhd_utils_3d as md
 
 image_area1, meta_header = md.load_raw_data_with_mhd("/dls/tmp/jjl36382/complicated_data/spheres/sphere_hessian1/gradientgauss.mhd")
-image_area2, meta_header = md.load_raw_data_with_mhd("/dls/tmp/jjl36382/complicated_data/spheres/spheres_for_testing/sigma3.mhd")
-image_area3, meta_header = md.load_raw_data_with_mhd("/dls/tmp/jjl36382/complicated_data/spheres/spheres_for_testing/sigma6.mhd")
+# image_area2, meta_header = md.load_raw_data_with_mhd("/dls/tmp/jjl36382/complicated_data/spheres/spheres_for_testing/sigma3.mhd")
+# image_area3, meta_header = md.load_raw_data_with_mhd("/dls/tmp/jjl36382/complicated_data/spheres/spheres_for_testing/sigma6.mhd")
 
-# pl.imshow(image_area1[190,:,:])
+# pl.imshow(image_area1[190, :, :])
+# pl.gray()
 # pl.show()
 mtf1 = plot_radii(image_area1[190, :, :], 1)
 
@@ -1110,5 +1089,3 @@ mtf2 = plot_radii(image_area2[190, :, :], 3)
 # pl.imshow(image_area3[190,:,:])
 # pl.show()
 mtf3 = plot_radii(image_area3[190, :, :], 6)
-
-print mtf1, mtf2, mtf3

@@ -7,6 +7,7 @@ stepang=10
 resultspath=$1
 homepath=$2
 spherepath=$3
+sigma=$4
 
 nb_spheres=`cat $resultspath/nb_spheres.txt`
 for i in `seq $nb_spheres`;
@@ -21,5 +22,5 @@ do
 		holder="-N job01"
 	fi
 	
-	qsub $holder -pe smp 2 -j y -t $startang-$stopang:$stepang -tc 20 $homepath/get_radii.sh $R $spherepath/sphere_hessian$i/gradientgauss.mhd $spherepath/radii$i/radii%03i.npy $spherepath/radii$i/contact%03i.npy
+	qsub $holder -pe smp 2 -j y -t $startang-$stopang:$stepang -tc 20 $homepath/get_radii.sh $R $spherepath/sphere_hessian$i/gradientgauss.mhd $spherepath/radii$i/radii%03i.npy $spherepath/radii$i/contact%03i.npy $spherepath/radii$i/width%03i.npy $sigma
 done
