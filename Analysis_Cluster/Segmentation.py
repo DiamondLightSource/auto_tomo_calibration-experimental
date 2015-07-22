@@ -216,13 +216,15 @@ def find_contact(centroids, radius, tol = 1):
                 
     return touch_pts
 
-def crop_box(image, touch_pt):
+def crop_box(image, touch_pt, size = 30):
     """
     Crop a region around the touch point
     and perform Siemens star resolution
     analysis
     """
-    
+    crop = image[int(touch_pt[0][0]) - size:int(touch_pt[0][0]) + size, int(touch_pt[0][1]) - size:int(touch_pt[0][1]) + size]
+    pl.imshow(crop)
+    pl.show()
     
     return
                 
@@ -233,7 +235,5 @@ centroids, areas, bords, radius, radius2 = centres_of_mass_2D(labels)
 
 # leastsq_circle_fit(areas, centroids, bords, radius)
 # leastsq_whole(image, centroids)
-find_contact(centroids, radius2)
-pl.imshow(image.T)
-pl.gray()
-pl.show()
+touch = find_contact(centroids, radius2)
+crop_box(image, touch) 
