@@ -57,7 +57,7 @@ holder="-hold_jid selector.sh -N job4"
 # Load up the mhd images and does the usual processing of tracing the line
 # from the centre and locating the radius
 holder="-hold_jid itk_hes_rca -N job5"
-qsub $holder -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $resultspath $homepath $spherepath $sigma
+#qsub $holder -pe smp 2 -j y -t 1 $homepath/get_radii_loop.sh $resultspath $homepath $spherepath $sigma
 
 
 # Plot radii ------------------------------------------------------------------------------------------------------
