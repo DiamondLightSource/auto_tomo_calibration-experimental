@@ -4,25 +4,37 @@ import matplotlib.pyplot as plt
 from scipy import ndimage as ndi
 from scipy.ndimage import measurements
 from scipy import optimize
+import EqnLine as line
 
 from skimage import io
 from skimage import measure, color
 from skimage.morphology import watershed
 from skimage.feature import peak_local_max
-from skimage.filter import threshold_otsu
+from skimage.filter import threshold_otsu, sobel
 from skimage.filter import denoise_tv_chambolle
 from skimage.util import img_as_ubyte
+from scipy.ndimage.filters import median_filter
+
+import pickle
 
 
+def save_data(filename, data):
+    import pickle
+    print("Saving data")
+    f = open(filename, 'w')
+    pickle.dump(data, f)
+    f.close()
+    
+    
 def watershed_segmentation(image):
 
     
     #threshold
-    image = denoise_tv_chambolle(image, weight=0.002)
+    image = median_filter(image, 5)
 
     filter = threshold_otsu(image)
-    image = (image >= filter) * 1
-    
+    image = (image > filter) * 1
+     
     # Now we want to separate the two objects in image
     # Generate the markers as local maxima of the distance to the background
     distance = ndi.distance_transform_edt(image)
@@ -63,24 +75,22 @@ def centres_of_mass_2D(image):
     bords = []
     areas = []
     radius = []
-    diameter = []
 
     for info in measure.regionprops(image, ['Centroid', 'BoundingBox', 'equivalent_diameter']): 
         
         centre = info['Centroid']
         minr, minc, maxr, maxc = info['BoundingBox']
         D = info['equivalent_diameter']
-        
+    
         
         margin = 0
         
-        diameter.append((D / 2.0))
+        radius.append((D / 2.0))
         bords.append((minr-margin, minc-margin, maxr+margin, maxc+margin))
         areas.append(image[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())
         centroids.append(centre)
-        radius.append((maxr - minr) / 2.0)
         
-    return centroids, areas, bords, radius, diameter
+    return centroids, areas, bords, radius
 
 
 
@@ -136,11 +146,12 @@ def leastsq_circle_fit(image, centres, bords, radius):
         plt.ylabel('y')   
         # plot data
         plt.plot(x, y, 'r-.', label='data', mew=1)
-     
+      
         plt.legend(loc='best',labelspacing=0.1 )
         plt.grid()
         plt.title('Least Squares Circle')
         plt.show()
+
 
 def leastsq_whole(image, centres):
 
@@ -194,7 +205,7 @@ def find_contact(centroids, radius, tol = 1):
     or not
     """
     touch_pts = []
-    
+    centres = []
     N = len(centroids)
     for i in range(N - 1):
         for j in range(i + 1, N):
@@ -213,27 +224,174 @@ def find_contact(centroids, radius, tol = 1):
                 print c1, " ", c2, "are in contact"
                 print touch_pt
                 touch_pts.append(touch_pt)
+                centres.append((c1, c2))
                 
-    return touch_pts
+    return touch_pts, centres
 
-def crop_box(image, touch_pt, size = 30):
+
+def crop_box(image, touch_pt, centres, size = 30):
     """
     Crop a region around the touch point
     and perform Siemens star resolution
     analysis
     """
-    crop = image[int(touch_pt[0][0]) - size:int(touch_pt[0][0]) + size, int(touch_pt[0][1]) - size:int(touch_pt[0][1]) + size]
-    pl.imshow(crop)
+    crops = []
+    slopes = []
+    for i in range(len(touch_pt)):
+        
+        c1 = centres[i][0]
+        c2 = centres[i][1]
+        m = line.slope(c1, c2)
+        crop = image[int(touch_pt[i][0]) - size:int(touch_pt[i][0]) + size, int(touch_pt[i][1]) - size:int(touch_pt[i][1]) + size]
+        
+        crops.append(crop)
+        slopes.append(m)
+
+    return crops, slopes
+
+
+def watershed_3d(sphere):
+    """
+    Markers should be int8
+    Image should be uint8
+    """
+   
+    sphere = median_filter(sphere, 3)
+    thresh = threshold_otsu(sphere)
+    sphere = (sphere >= thresh) * 1
+    sphere = sobel(sphere)
+    
+    size = (sphere.shape[0], sphere.shape[1], sphere.shape[2])
+    
+    marker = np.zeros(size, dtype=np.int16)
+    pl.imshow(sphere[:,:,50])
+    pl.show()
+    # mark everything outside as background
+    marker[5, :, :] = -1
+    marker[size[0] - 5, :, :] = -1
+    marker[:, :, 5] = -1
+    marker[:, :, size[2] - 5] = -1
+    marker[:, 5, :] = -1
+    marker[:, size[1] - 5, :] = -1
+    marker[:,0,0] = -1
+    # mark everything inside as a sphere
+    marker[size[0] / 2., size[1] / 2., size[2] / 2.] = 5
+
+    result = measurements.watershed_ift(sphere.astype(dtype=np.uint16), marker)
+    pl.imshow(result[:,:,50])
     pl.show()
     
-    return
-                
-image = io.imread("test_slice.tif")
+    return result
 
-labels = watershed_segmentation(image)
-centroids, areas, bords, radius, radius2 = centres_of_mass_2D(labels)
 
-# leastsq_circle_fit(areas, centroids, bords, radius)
-# leastsq_whole(image, centroids)
-touch = find_contact(centroids, radius2)
-crop_box(image, touch) 
+def watershed_slicing(image):
+    """
+    Does the watershed algorithm slice by slice
+    """
+    
+    
+    N = len(image)
+    slice_centroids = []
+    slice_radius = []
+    
+    for i in range(N):
+        
+        slice = image[:, :, i]
+        
+        labels_slice = watershed_segmentation(slice)
+        centroids, areas, bords, radius = centres_of_mass_2D(labels_slice)
+        
+        slice_centroids.append(centroids)
+        slice_radius.append(radius)
+#         if i > 49:
+#             print centroids
+#             pl.imshow(labels_slice)
+#             pl.show()
+        
+    return slice_centroids, slice_radius
+
+
+def draw_sphere():
+    
+    import numpy as np
+    
+    sphere = np.zeros((100, 100 ,100))
+    N = 100
+    radius1 = 20
+    radius2 = 21
+    centre1 = (30, 30, 50)
+    centre2 = (30, 70, 50)
+
+    Xc1 = centre1[0]
+    Yc1 = centre1[1]
+    Zc1 = centre1[2]
+    
+    Xc2 = centre2[0]
+    Yc2 = centre2[1]
+    Zc2 = centre2[2]
+    
+    Y, X, Z = np.meshgrid(np.arange(N), np.arange(N), np.arange(N))
+    mask1 = (((X - Xc1)**2 + (Y - Yc1)**2 + (Z - Zc1)**2) < radius1**2)
+    mask2 = (((X - Xc2)**2 + (Y - Yc2)**2 + (Z - Zc2)**2) < radius2**2)
+    sphere[mask1] = 1
+    sphere[mask2] = 1
+    
+    return sphere
+
+
+def fitfunc(p, x, y, z):
+    x0, y0, z0, R = p
+    return np.sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2)
+
+
+
+def leastsq_sphere(sphere, centre, radius):
+    """
+    Fit a sphere
+    """
+    # Guess initial parameters
+    coords = []
+    for x in range(len(sphere)):
+        for y in range(len(sphere)):
+            for z in range(len(sphere)):
+                coords.append([x, y, z])
+    print x.T
+    print y
+    p0 = [centre[0], centre[1], centre[2], radius]
+    
+    errfunc = lambda p, x, y, z: fitfunc(p, x, y, z) - p[3]
+    
+    p1, flag = optimize.leastsq(errfunc, p0, args=(x, y, z))
+    
+    print p1
+    
+    return p1
+
+
+
+
+
+sphere = draw_sphere()
+
+#np.save("test_sphere.npy", sphere)
+
+#image = io.imread("test_slice.tif")
+sphere = np.load('sphere1.npy')
+# centroids, radii = watershed_slicing(sphere)
+# save_data("test_analysis/centroids.dat", centroids)
+# save_data("test_analysis/radii.dat", radii)
+
+
+labels = watershed_3d(sphere)
+print measurements.center_of_mass(sphere, labels, 5)
+# labels = watershed_segmentation(image)
+#
+# centroids, areas, bords, radius, radius2 = centres_of_mass_2D(labels)
+# 
+# # leastsq_circle_fit(areas, centroids, bords, radius)
+# # leastsq_whole(image, centroids)
+# touch, centres = find_contact(centroids, radius2)
+# 
+# crop_img, slopes = crop_box(image, touch, centres)
+# 
+# line.eqn_line(crop_img[0], slopes[0]) 
