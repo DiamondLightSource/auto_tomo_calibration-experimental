@@ -194,7 +194,7 @@ def draw_sphere():
     radius1 = 20
     radius2 = 20
     centre1 = (30, 30, 50)
-    centre2 = (30, 70, 70)
+    centre2 = (30, 69, 50)
 
     Xc1 = centre1[0]
     Yc1 = centre1[1]
@@ -227,6 +227,7 @@ from test_analysis import test_analyse
 
 sphere = draw_sphere()
 sphere = add_noise(sphere, 0.3)
+#sphere = gaussian_filter(sphere, 3)
 
 centroids, radii = watershed_slicing(sphere)
 rad, cent = test_analyse.analyse(radii, centroids)
@@ -236,8 +237,6 @@ touch_pt, centres = line.find_contact_3D(cent, rad, tol = 2)
 
 pt1 = cent[0]
 pt2 = cent[1]
-sphere = gaussian_filter(sphere, 3)
-
 
 line.touch_lines_3D(pt1, pt2, sphere)
 

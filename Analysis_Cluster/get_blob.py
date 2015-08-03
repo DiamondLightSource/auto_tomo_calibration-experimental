@@ -332,13 +332,7 @@ def get_radius(image, theta, centre, rad_min, sigma):
     optim1 = fit_gaussian_to_signal(points, sigma, True, rad_guess)
     optim1 = abs(optim1)
     
-    data = np.array([range(len(points)), points]).T
-    if theta >= 280 / 180. * 3.14 :
-        pl.plot(data[:,0], data[:,1], lw=5, c='g', label='measurement')
-        pl.plot(data[:,0], gaussian(data[:,0], *optim1),
-            lw=3, c='b', label='fit of 1 Gaussian')
-        pl.legend(loc='best')
-        pl.show()
+
 
     if points[int(optim1[1])] >= (np.mean(points) + np.std(points) * 3):
         index_edge = optim1[1]
@@ -425,12 +419,12 @@ def plot_radii(image, sigma = 3):
     
     rad_min = image.shape[1] / 3
     for theta in theta_bord:
-        
+         
         theta_pi = (math.pi * theta) / 180.0
         rad, intensity, width = get_radius(image, theta_pi, centre, rad_min, sigma)
-        
+         
         rad = close_to_Hough(rad, image.shape[1] / 1.2 / 2., 10)
-
+ 
         radii_circle.append(rad)
         edge_int.append(intensity)
         stdevs.append(width)

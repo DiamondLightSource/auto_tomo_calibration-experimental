@@ -254,7 +254,7 @@ def get_radius(image, theta, phi, centre, rad_min, sigma):
     optim1 = abs(optim1)
     
 #     data = np.array([range(len(points)), points]).T
-#     if theta >= 150 / 180. * 3.14 :
+#     if theta >= 300 / 180. * 3.14 :
 #         pl.plot(data[:,0], data[:,1], lw=5, c='g', label='measurement')
 #         pl.plot(data[:,0], gaussian(data[:,0], *optim1),
 #             lw=3, c='b', label='fit of 1 Gaussian')
@@ -290,7 +290,7 @@ def plot_radii(image_area, centre, start, stop, step, sigma = 1):
     from skimage.filter import threshold_otsu
     
     filter = threshold_otsu(image_area)
-    image = (image_area >= filter) * 1
+    image_area = (image_area >= filter) * 1
     
     rad_min = image_area.shape[2] / 3
     rad_Hough = image_area.shape[1] / 2. / 1.2
@@ -318,39 +318,37 @@ def plot_radii(image_area, centre, start, stop, step, sigma = 1):
             rad, height, width = get_radius(image_area, theta_rad, phi_rad, centre, rad_min, sigma)
             
            
-            if height != 0:
+            if height == 0:
+                contact_pts[angle1, angle2] = 1
+                radii_sphere[angle1, angle2] = rad_Hough
+            else:
                 radii_sphere[angle1, angle2] = rad
                 lsf_height[angle1, angle2] = height
                 lsf_width[angle1, angle2] = width
-            else:
-                radii_sphere[angle1, angle2] = rad_Hough
-                lsf_height[angle1, angle2] = height
-                lsf_width[angle1, angle2] = width
-                contact_pts[angle1, angle2] = 1
                 
 #     pl.plot(phi_bord, radii_sphere.T, '*')
 #     pl.xlabel('angle')
 #     pl.ylabel('radius')
 #     pl.show()
-#     
+#      
     return radii_sphere, contact_pts, lsf_width
- 
- 
- 
+#  
+#  
+#  
 # import mhd_utils_3d as md
-#         
+#          
 # image_area, meta_header = md.load_raw_data_with_mhd("/dls/tmp/jjl36382/complicated_data/spheres/sphere_hessian1/gradientgauss.mhd")
 # # pl.imshow(image_area)
 # # pl.show()
-#         
-#         
+#          
+#          
 # print image_area.shape[0]
 # print image_area.shape[1]
 # print image_area.shape[2]
-#               
+#                
 # centre = (int(128 * 1.2), int(128 * 1.2), int(128 * 1.2))
 # start = 250.
 # stop = 251.
 # step = 1
-#              
+#               
 # plot_radii(image_area, centre, start, stop, step, 1)

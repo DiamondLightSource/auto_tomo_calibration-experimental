@@ -1,49 +1,11 @@
 import numpy as np
 import pylab as pl
 from scipy import optimize
-from scipy.stats import signaltonoise
-from scipy.ndimage import filters
-from scipy.signal import cwt, ricker
-from peak_detect import *
 from math import isnan
 
 
-
 def distance_3D(c1, c2):
-    return np.sqrt( (c1[0] - c2[0])**2 + (c1[1] - c2[1])**2 + (c1[2] - c2[2])**2)
-
-
-def find_contact_3D(centroids, radius, tol = 1):
-    """
-    Check all centre pairs and determine,
-    based on their radii, if they are in contact
-    or not
-    """
-    touch_pts = []
-    centres = []
-    N = len(centroids)
-    for i in range(N - 1):
-        for j in range(i + 1, N):
-            
-            c1 = centroids[i]
-            c2 = centroids[j]
-            r1 = radius[i]
-            r2 = radius[j]
-            
-            D = r1 + r2
-            L = distance_3D(c1, c2)
-            
-#             if np.allclose(D, L, 0, 2):
-            if abs(D - L) <= tol:
-                # TODO: Get the touch point - not midpoint
-                
-                touch_pt = ((c1[0] + c2[0]) / 2., (c1[1] + c2[1]) / 2., (c1[2] + c2[2]) / 2.) 
-                print c1, " ", c2, "are in contact"
-                print "touch point is ", touch_pt
-                touch_pts.append(touch_pt)
-                centres.append((c1, c2))
-                
-    return touch_pts, centres
+    return np.sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2)
 
 
 def vector_3D(pt1, pt2, t):
@@ -57,7 +19,7 @@ def vector_3D(pt1, pt2, t):
     x1, y1, z1 = pt1
     x2, y2, z2 = pt2
     
-    modulus = np.sqrt((x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2)
+    modulus = np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
     
     x = x1 - (x1 - x2) / modulus * t
     y = y1 - (y1 - y2) / modulus * t
@@ -85,7 +47,6 @@ def vector_perpendicular_3D(pt1, pt2, which, Z, Sx):
     except:
         slope = 0
         
-        
     if which == 1:
         Sy = Sx * slope + pt1[1]
         Sx = Sx + pt1[0]
@@ -99,13 +60,8 @@ def vector_perpendicular_3D(pt1, pt2, which, Z, Sx):
     return [int(Sx), int(Sy), int(Sz + Z)]
 
 
-
-    
-################### FITTING FN ################################
-
 def gaussian(x, height, center, width, offset):
     return height*np.exp(-(x - center)**2/(2*width**2)) + offset
-
 
 
 def fit_gaussian_to_signal(points):
@@ -113,29 +69,20 @@ def fit_gaussian_to_signal(points):
     Detects peaks
     First guess for the Gaussian is the firs maxima in the signa;
     """
-
-    # Find the global minima
-    # Smooth heavily to leave only one minima
-    #points = filters.median_filter(points, 9)
             
     # make the array into the correct format
     data = np.array([range(len(points)), points]).T
     
     # find the initial guesses
-    prob = data[:,1] / data[:,1].sum() #probabilities
-    mu = prob.dot(data[:,0]) # mean or location param.
-    sigma = np.sqrt(prob.dot(data[:,0]**2) - mu**2)
-    
-    
-#     print "mu ", mu, "sigma", sigma
-
+    prob = data[:, 1] / data[:, 1].sum()  # probabilities
+    mu = prob.dot(data[:, 0])  # mean or location param.
+    sigma = np.sqrt(prob.dot(data[:, 0] ** 2) - mu ** 2)
     
     if isnan(sigma):
+        
         print "fitting failed - stop"
         return False, False
-    
     else:
-            
         try:
             centre_guess = mu
         except:
@@ -196,7 +143,6 @@ def thresh_MAD(signal):
     return clean_signal
             
 
-
 def touch_lines_3D(pt1, pt2, image):
     """
     Goes along lines in the region between
@@ -209,7 +155,6 @@ def touch_lines_3D(pt1, pt2, image):
     Zrange = range(-centre_dist, centre_dist)
 
     
-    min_width = 1000
     min_widths = []
     mean_widths = []
     median_widths = []
@@ -218,7 +163,6 @@ def touch_lines_3D(pt1, pt2, image):
     for Z in Zrange:
 
         widths = []
-        signal_to_noise = []
         
         for X in Xrange:
             
@@ -250,24 +194,10 @@ def touch_lines_3D(pt1, pt2, image):
 
                     widths.append(abs(parameters[2]))
                     total_widths.append(abs(parameters[2]))
-                    
-                    if abs(min_width) > abs(parameters[2]):
-                        min_width = abs(parameters[2])
-                        
-#                         data = np.array([range(len(line)), line]).T
-#                         pl.plot(data[:,0], data[:,1], lw=5, c='g', label='measurement')
-#                         pl.plot(data[:,0], gaussian(data[:,0], *parameters),
-#                             lw=3, c='b', label='fit of 1 Gaussian')
-#                         pl.legend(loc='best')
-#                         pl.show()
 
         # clean all the outliers
-#         print "MAD", MAD(widths)
-#         print "Widths after MAD", thresh_MAD(widths)
         cleaned_widths = thresh_MAD(thresh_MAD(widths))
         cleaned_total = thresh_MAD(thresh_MAD(total_widths))
-#         print "Widths after second MAD", cleaned_widths
-#         print ""
         
         # get the minimum, mean and the median width
         # for each slice
@@ -311,4 +241,4 @@ def touch_lines_3D(pt1, pt2, image):
     print ""
 
 
-    return
+    return np.mean(cleaned_total)

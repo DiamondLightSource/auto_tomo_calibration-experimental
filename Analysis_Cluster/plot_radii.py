@@ -57,14 +57,6 @@ if __name__ == '__main__' :
     for i in range(stop/step):
         radii_np[i*step:i*step+step,:] = radii[i]
             
-    radii_mean = np.mean(radii_np)
-    radii_std = np.std(radii_np)
-    
-    for i in range(360):
-        for j in range(180):
-            if radii_np[i, j] >= radii_mean:
-               radii_np[i, j] = radii_mean 
-                
     
     # get the contact points
     contact = []
