@@ -2,8 +2,9 @@ import pickle
 import pylab as pl
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
+import optparse
 
-
+# TODO: THE TOLERANCE VALUES ARE NOT ROBUST
 
 def not_within_range(element, list):
     for item in list:
@@ -13,12 +14,55 @@ def not_within_range(element, list):
     return True
 
 
-def analyse(radii_circles, centroids_sphere):
+def save_data(filename, data):
+    print("Saving data")
+    f = open(filename, 'w')
+    pickle.dump(data, f)
+    f.close()
+    
+    
+if __name__ == '__main__' :
     """
     Loads all of the detected parameters of segmented circles
     in a slice and appends them to a list.
     """
+    parser = optparse.OptionParser()
+      
+    (options, args) = parser.parse_args()
 
+    start = int(args[0]) - 1
+    stop = int(args[1]) - 1
+    step = int(args[2])
+    input_filename = args[3]
+    results_folder = args[4]
+
+    """
+    Loads all of the detected parameters of segmented circles
+    in a slice and appends them to a list.
+    """
+    data = []
+    for i in range(start, stop, step):
+        f = open(input_filename % i, 'r')
+        data.append(pickle.load(f))
+        f.close()
+    
+    N = len(data)
+    
+    bord_circles = []
+    centroids_sphere = []
+    radii_circles = []
+    perimeters = []
+    
+    """
+    Store the borders, centroids, radii and perimeters
+    """
+    for i in range(N):
+        bord_circles.append(data[i][0])
+        centroids_sphere.append(data[i][1])
+        radii_circles.append(data[i][2])
+        perimeters.append(data[i][3])
+
+    
     N = len(centroids_sphere)
     # Calculate centres according to the whole image
     """
@@ -36,13 +80,16 @@ def analyse(radii_circles, centroids_sphere):
         pair = []
         r = []
         for i in range(len(centroids_sphere[slice])):
-            cx = centroids_sphere[slice][i][0] 
-            cy = centroids_sphere[slice][i][1]
+#             # TODO: THIS WAS USED USING WATERSHED SLICING
+#             cx = centroids_sphere[slice][i][0] 
+#             cy = centroids_sphere[slice][i][1]
+            cx = centroids_sphere[slice][i][0] + bord_circles[slice][i][0]
+            cy = centroids_sphere[slice][i][1] + bord_circles[slice][i][2]
             rad = radii_circles[slice][i]
             # IF THERE ARE SAME CENTRES IN THE SAME SLICE THEN
             # WE WILL GET ERRORS - REMOVE THEM
-            cxcy[:] = [item for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, 5)]
-            r[:] = [rad for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, 5)]
+            cxcy[:] = [item for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, 15)]
+            r[:] = [rad for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, 15)]
             # MODIFY THE RADIUS ACCORDINGLY
             r.append((rad))
             cxcy.append((cx,cy))
@@ -189,7 +236,7 @@ def analyse(radii_circles, centroids_sphere):
         slice_start = centroids[key][0]
         slice_end = centroids[key][1]
         z = (slice_end + slice_start) / 2.0
-        centroids[key] = int(z) 
+        centroids[key] = int(z  * step) + start
     
     # make a list with x,y,z coordinates
     centres_list = []
@@ -206,5 +253,21 @@ def analyse(radii_circles, centroids_sphere):
     print "radii", radii_list
     nb_spheres = len(centres_list)
     
+#     # Store data
+#     f = open(results_folder + '/nb_spheres.txt', 'w')
+#     f.write(repr(nb_spheres))
+#     f.close()
+# 
+#     f = open(results_folder + '/centres.txt', 'w')
+#     for i in range(nb_spheres):
+#         f.write(repr(centres_list[i]) + '\n')
+#     f.close()
+#     
+#     f = open(results_folder + '/radii.txt', 'w')
+#     for i in range(nb_spheres):
+#         f.write(repr(int(radii_list[i])) + '\n')
+#     f.close()
     
-    return radii_list, centres_list
+    save_data(results_folder + '/centres.npy', centres_list)
+    save_data(results_folder + '/radii.npy', radii_list)
+    save_data(results_folder + '/spheres_nb.npy', nb_spheres)

@@ -141,7 +141,39 @@ def thresh_MAD(signal):
             clean_signal.append(i)
     
     return clean_signal
+
+
+def find_contact_3D(centroids, radius, tol = 1):
+    """
+    Check all centre pairs and determine,
+    based on their radii, if they are in contact
+    or not
+    """
+    touch_pts = []
+    centres = []
+    N = len(centroids)
+    for i in range(N - 1):
+        for j in range(i + 1, N):
             
+            c1 = centroids[i]
+            c2 = centroids[j]
+            r1 = radius[i]
+            r2 = radius[j]
+            
+            D = r1 + r2
+            L = distance_3D(c1, c2)
+            
+            if abs(D - L) <= tol:
+                # TODO: Get the touch point - not midpoint
+                
+                #touch_pt = ((c1[0] + c2[0]) / 2., (c1[1] + c2[1]) / 2., (c1[2] + c2[2]) / 2.) 
+                print c1, " ", c2, "are in contact"
+                #print "touch point is ", touch_pt
+                #touch_pts.append(touch_pt)
+                centres.append((c1, c2))
+                
+    return centres   
+
 
 def touch_lines_3D(pt1, pt2, image):
     """

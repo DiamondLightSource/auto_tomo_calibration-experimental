@@ -3,15 +3,16 @@ import numpy as np
 from scipy import ndimage as ndi
 import find_resolution as find_res
 import sort_centres as sort_cent
+import mhd_utils_3d as md
+
 
 from skimage import measure
 from skimage.morphology import watershed
 from skimage.feature import peak_local_max
 from skimage.filter import threshold_otsu
 from scipy.ndimage.filters import median_filter
-from peak_detect import *
-
-import pickle
+import optparse
+import cPickle as pickle
 
 
 def save_data(filename, data):
@@ -92,14 +93,39 @@ def watershed_slicing(image):
     return slice_centroids, slice_radius
 
 
-def get_resolution(image):
+if __name__ == '__main__' :
+    """
+    Loads all of the detected parameters of segmented circles
+    in a slice and appends them to a list.
+    """
+    parser = optparse.OptionParser()
+
+    (options, args) = parser.parse_args()
+    
+    data_folder = args[0]
+    tolerance = args[1]
+    
+    centroids = pickle.load( open( data_folder + '/centres.npy', "rb" ) )
+    print centroids
+    radii = pickle.load( open( data_folder + '/radii.npy', "rb" ) )
+    print radii
+    image, meta_header = md.load_raw_data_with_mhd(data_folder + '/image.mhd')
+    print image.shape
+    
     """
     Use the written functions to get the resolution
     """
-    centroids, radii = watershed_slicing(image)
-    rad, cent = sort_cent.analyse(radii, centroids)
+    contacts = find_res.find_contact_3D(centroids, radii, tolerance)
     
-    pt1 = cent[0]
-    pt2 = cent[1]
-    
-    find_res.touch_lines_3D(pt1, pt2, image)
+    mean_widths = []
+    # TODO: load image
+    # TOFO: check analyse function
+    for pair in contacts:
+        pt1 = pair[0]
+        pt2 = pair[1] 
+        
+        width = find_res.touch_lines_3D(pt1, pt2, image)
+        mean_widths.append(width)
+        
+    save_data(data_folder + '/widths.txt', mean_widths)
+    save_data(data_folder + '/widths.npy', mean_widths)
