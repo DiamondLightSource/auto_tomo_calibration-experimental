@@ -1,7 +1,7 @@
 import numpy as np
 import pylab as pl
-from scipy import fft, ifft
-
+from scipy.fftpack import fftshift, fft, ifftshift, ifft2
+from scipy.ndimage.interpolation import rotate
 
 
 def add_noise(np_image, amount):
@@ -24,7 +24,58 @@ def line_eqn(x, theta, t, xC, yC):
         return y
     else:
         return t
+
+
+def get_projections_2D(image):
+    """
+    Obtain the Radon transform
+    """
+    
+    # Project the sinogram
+    sinogram = np.array([
+            # Sum along one axis
+            np.sum(
+                # Rotate image
+                rotate(image, theta, order=1, reshape=False, mode='constant', cval=0.0)
+                ,axis=1) for theta in xrange(360)])
+    
+    pl.imshow(sinogram)
+    pl.gray()
+    pl.show()
+    
+    from PIL import Image # Import the library
+    im = Image.fromarray(image) # Convert 2D array to image object
+    im.save("sinogram.tif") # Save the image object as tif format
+    
+    # Fourier transform the rows of the sinogram
+    sinogram_fft_rows = fftshift(
+                                 fft(
+                                    ifftshift(sinogram, axes=1
+                                    )
+                                 ), axes=1)
+    
+    pl.imshow(np.real(sinogram_fft_rows),vmin=-100,vmax=100)
+    pl.gray()
+    pl.show()
+    
+#     # Interpolate the 2D Fourier space grid from the transformed sinogram rows
+#     fft2 = griddata( (srcy,srcx),
+#     sinogram_fft_rows.flatten(),
+#     (dsty,dstx),
+#     method='cubic',
+#     fill_value=0.0
+#     ).reshape((S,S))
+#     
+#     recon = np.real(
+#                     fftshift(
+#                              ifft2(
+#                                    ifftshift(fft2)
+#                                    )
+#                              )
+#                     )
         
+    return
+
 
 def get_projections(image):
     """
@@ -37,49 +88,21 @@ def get_projections(image):
     print xC
     print yC
     
-    diag = int(np.sqrt(xdim**2 + ydim**2) / 2.)
-    diag = np.min((xC, yC))
-    print diag
-
-    for z in range(50, 51):
+    for z in range(zdim):
         slice = image[:, :, z]
-        projections = []
         
-        for theta in range(0, 180):
-            radon = []
-
-            angle = np.radians(theta)
-            for t in range(-diag, diag):
-                line_t = []
-                
-                for x in range(-diag, diag):
-                    
-                    try:
-                        y = line_eqn(x, angle, t, xC, yC) + yC
-                        x = x + xC
-                        # store pixel values along a line at t
-                        pixel = slice[x, y]
-                        line_t.append(pixel)
-                    except:
-                        continue
-                        
-#                     pl.plot(line_t)
-#                     pl.show()
-                    # store all lines along one angle
-                
-                sum = np.sum(line_t)
-                if sum != 0:
-                    radon.append(sum)
-
-            # store lines obtained over all angles
-            # at one slice
-            projections.append(np.fft.fftshift(np.fft.fft(radon)))
-            
-            pl.plot(np.fft.fftshift(np.fft.fft(radon)))
-            #pl.ylim(-100, 100)
-            pl.gray()
-            pl.show()
-            # TODO: store the lines at one slice over all slices
+        # Project the sinogram
+        sinogram = np.array([
+                # Sum along one axis
+                np.sum(
+                    # Rotate image
+                    rotate(slice, theta, order=1, reshape=False, mode='constant', cval=0.0)
+                    ,axis=1) for theta in xrange(360)])
+        
+        pl.imshow(sinogram)
+        pl.gray()
+        pl.show()
+        
     return
  
 
@@ -119,17 +142,12 @@ def elipse2(A1, B1, C1, A2, B2, C2, size):
     return image
 
 
-def sphere(R1, R2, size, centre1, centre2):
+def sphere(R1, R2, C1, C2, size):
     
     sphere = np.zeros((size, size, size))
 
-    Xc1 = centre1[0]
-    Yc1 = centre1[1]
-    Zc1 = centre1[2]
-    
-    Xc2 = centre2[0]
-    Yc2 = centre2[1]
-    Zc2 = centre2[2]
+    Xc1, Yc1, Zc1 = C1
+    Xc2, Yc2, Zc2 = C2
     
     step = 1. / (size / 2.)
     Y, X, Z = np.meshgrid(np.arange(-1, 1, step), np.arange(-1, 1, step), np.arange(-1, 1, step))
@@ -137,32 +155,17 @@ def sphere(R1, R2, size, centre1, centre2):
     mask2 = (((X - Xc2)**2 + (Y - Yc2)**2 + (Z - Zc2)**2) < R2**2)
     
     sphere[mask1] = 1
-    sphere[mask2] = 2
-    
-#     from PIL import Image # Import the library
-#     im = Image.fromarray(image) # Convert 2D array to image object
-#     im.save("projection.tif") # Save the image object as tif format
+    sphere[mask2] = 1
     
     return sphere
 
 
 def alpha(A, B, theta):
     return ((A**2) * (np.cos(theta))**2 + (B**2) * (np.sin(theta))**2)
-       
-       
-def projection_elipse(A, B, theta, value, t):
-    """
-    Analytical projections for an elliptical phantom
-    """
-    alph = alpha(A, B, theta)
-    
-    if abs(t) <= alph:
-        return (2 * value * A * B / (alph**2) * np.sqrt(alph**2 - t**2))
-    else:
-        return 0
+
     
 
-def projection_shifted(A, B, C, theta, value, t, rotated):
+def projection_shifted(A, B, C, theta, value, t):
     """
     Analytical projections for an elliptical phantom
     """
@@ -185,7 +188,7 @@ def projection_shifted(A, B, C, theta, value, t, rotated):
         return 0
     
   
-def loop(A, B, C, value, size, rotated):
+def loop(A, B, C, value, size):
     """
     Get projections at every angle
     """
@@ -204,7 +207,7 @@ def loop(A, B, C, value, size, rotated):
         #for t in np.arange(-1., 1., 0.5 / size):
             
             if counter < size:
-                proj = projection_shifted(A, B, C, angle, value, t, rotated)
+                proj = projection_shifted(A, B, C, angle, value, t)
                 projection.append(proj)
                 counter += 1
 
@@ -217,51 +220,62 @@ def loop(A, B, C, value, size, rotated):
      
     return sinogram
 
+# A1 = 0.3
+# B1 = 0.5
+# C1 = [0, 0]
+# A2 = 0.5
+# B2 = 0.2
+# C2 = [0.2, 0.2]
+# 
+# scale = 255
+# image = elipse2(A1, B1, C1, A2, B2, C2, scale)
+# # pl.imshow(image)
+# # pl.gray()
+# # pl.show()
+# 
+# sino = loop(A1, B1, C1, 1., scale)
+# # pl.imshow(sino)
+# # pl.gray()
+# # pl.show()
+# 
+# sino2 = loop(A2, B2, C2, 3., scale)
+# # pl.imshow(sino2)
+# # pl.gray()
+# # pl.show()
+# 
+# print sino.shape
+# print sino2.shape
+# 
+# angle, dim = sino.shape
+# sino_plus = np.empty([360, dim])
+# 
+# for theta in range(360):
+#     pixel1 = sino[theta, :]
+#     pixel2 = sino2[theta, :]
+#     
+#     sino_plus[theta, :] = pixel1 + pixel2
+#     
+# pl.imshow(sino_plus)
+# pl.gray()
+# pl.show()
+
+R1 = 0.2
+R2 = 0.2
+C1 = [-0.3, -0.3, 0]
+C2 = [0.3, 0.3, 0]
+#sphere = sphere(R1, R2, C1, C2, 255)
+#get_projections(sphere)
+
 A1 = 0.3
 B1 = 0.5
 C1 = [0, 0]
 A2 = 0.5
 B2 = 0.2
 C2 = [0.2, 0.2]
-
+ 
 scale = 255
 image = elipse2(A1, B1, C1, A2, B2, C2, scale)
-# pl.imshow(image)
-# pl.gray()
-# pl.show()
-
-sino = loop(A1, B1, C1, 1., scale, 1)
-# pl.imshow(sino)
-# pl.gray()
-# pl.show()
-
-sino2 = loop(A2, B2, C2, 3., scale, 1)
-# pl.imshow(sino2)
-# pl.gray()
-# pl.show()
-
-print sino.shape
-print sino2.shape
-
-angle, dim = sino.shape
-sino_plus = np.empty([360, dim])
-
-for theta in range(360):
-    pixel1 = sino[theta, :]
-    pixel2 = sino2[theta, :]
-    
-    sino_plus[theta, :] = pixel1 + pixel2
-    
-pl.imshow(sino_plus)
-pl.gray()
-pl.show()
-
-    
-    
-    
-    
-    
-    
+get_projections_2D(image)
     
     
     
