@@ -169,10 +169,6 @@ np.save('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/radi
 # radius = np.load('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/radius.npy')
 
 N = len(centres)
-
-print "centres at the beginning"
-for i in range(N):
-    print "I: ", i, " ", centres[i]
     
 dict = {}
 dict_for_averaging = {}
