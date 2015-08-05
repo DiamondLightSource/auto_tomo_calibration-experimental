@@ -38,7 +38,7 @@ if __name__ == '__main__' :
     
     for i in range(0, z):
         
-        input_file = input_filename % (i + start) 
+        input_file = input_filename % (i + start)
         print("Loading image %s" % input_file)
         
         img = io.imread(input_file)

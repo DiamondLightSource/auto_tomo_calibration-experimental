@@ -253,21 +253,21 @@ if __name__ == '__main__' :
     print "radii", radii_list
     nb_spheres = len(centres_list)
     
-#     # Store data
-#     f = open(results_folder + '/nb_spheres.txt', 'w')
-#     f.write(repr(nb_spheres))
-#     f.close()
-# 
-#     f = open(results_folder + '/centres.txt', 'w')
-#     for i in range(nb_spheres):
-#         f.write(repr(centres_list[i]) + '\n')
-#     f.close()
-#     
-#     f = open(results_folder + '/radii.txt', 'w')
-#     for i in range(nb_spheres):
-#         f.write(repr(int(radii_list[i])) + '\n')
-#     f.close()
-    
-    save_data(results_folder + '/centres.npy', centres_list)
-    save_data(results_folder + '/radii.npy', radii_list)
-    save_data(results_folder + '/spheres_nb.npy', nb_spheres)
+    # Store data
+    f = open(results_folder + '/nb_spheres.txt', 'w')
+    f.write(repr(nb_spheres))
+    f.close()
+ 
+    f = open(results_folder + '/centres.txt', 'w')
+    for i in range(nb_spheres):
+        f.write(repr(centres_list[i]) + '\n')
+    f.close()
+     
+    f = open(results_folder + '/radii.txt', 'w')
+    for i in range(nb_spheres):
+        f.write(repr(int(radii_list[i])) + '\n')
+    f.close()
+     
+#     save_data(results_folder + '/centres.npy', centres_list)
+#     save_data(results_folder + '/radii.npy', radii_list)
+#     save_data(results_folder + '/spheres_nb.npy', nb_spheres)

@@ -105,9 +105,9 @@ if __name__ == '__main__' :
     data_folder = args[0]
     tolerance = args[1]
     
-    centroids = pickle.load( open( data_folder + '/centres.npy', "rb" ) )
+    centroids = pickle.load( open( data_folder + '/centres.txt', "rb" ) )
     print centroids
-    radii = pickle.load( open( data_folder + '/radii.npy', "rb" ) )
+    radii = pickle.load( open( data_folder + '/radii.txt', "rb" ) )
     print radii
     image, meta_header = md.load_raw_data_with_mhd(data_folder + '/image.mhd')
     print image.shape

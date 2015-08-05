@@ -1,54 +1,4 @@
-def draw_areas(np_image, areas, bord):
-    
-    import numpy as np
-    import pylab as pl
-    from skimage.morphology import rectangle
-    
-    # Convert the image in RGB
-    
-    if (np_image.dtype=='float_' or np_image.dtype=='float16' or np_image.dtype=='float32') and not(np.array_equal(np.absolute(np_image)>1, np.zeros(np_image.shape, dtype=bool))):
-        np_image_norm = np_image/np.linalg.norm(np_image)
-    else:
-        np_image_norm = np_image.copy()
-    
-    # Draw the areas on the whole image
-    
-    for i in range(len(areas)):
-        lineX = np.arange(areas[i].shape[0])
-        lineY = np.arange(areas[i].shape[1])
-        
-        np_image_norm[lineX + bord[i][0], bord[i][2]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0], lineY + bord[i][2]] = np.max(np_image_norm)
-        # To thicken the line
-        np_image_norm[lineX + bord[i][0]+1, bord[i][2]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0], lineY + bord[i][2]+1] = np.max(np_image_norm)
-        np_image_norm[lineX + bord[i][0]-1, bord[i][2]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0], lineY + bord[i][2]-1] = np.max(np_image_norm)
-        
-        np_image_norm[lineX + bord[i][0], bord[i][2] + areas[i].shape[1]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + areas[i].shape[0], lineY + bord[i][2]] = np.max(np_image_norm)
-        # To thicken the line
-        np_image_norm[lineX + bord[i][0]+1, bord[i][2] + areas[i].shape[1]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + areas[i].shape[0], lineY + bord[i][2]+1] = np.max(np_image_norm)
-        np_image_norm[lineX + bord[i][0]-1, bord[i][2] + areas[i].shape[1]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + areas[i].shape[0], lineY + bord[i][2]-1] = np.max(np_image_norm)
-        
-        # Plot the centre
-        np_image_norm[bord[i][0] + int(areas[i].shape[0] / 2), bord[i][2] + int(areas[i].shape[1] / 2)] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + int(areas[i].shape[0] / 2) + 1, bord[i][2] + int(areas[i].shape[1] / 2)] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + int(areas[i].shape[0] / 2) - 1, bord[i][2] + int(areas[i].shape[1] / 2)] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + int(areas[i].shape[0] / 2), bord[i][2] + int(areas[i].shape[1] / 2) + 1] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + int(areas[i].shape[0] / 2), bord[i][2] + int(areas[i].shape[1] / 2) - 1] = np.max(np_image_norm)
-        
-        #print 'Area ' + repr(i+1) + ' : ' + repr(bord[i][2]-bord[i][0]) + ' x ' + repr(bord[i][3]-bord[i][1])
-    
-    pl.imshow(np_image_norm, cmap=pl.cm.YlOrRd)
-    pl.colorbar()
-    pl.show()
-    
-    return
-
-def select_area_for_detector(np_image):
+def select_area_for_detector(image):
     
     import numpy as np
     import pylab as pl
@@ -57,19 +7,27 @@ def select_area_for_detector(np_image):
     from skimage.morphology import label
     from skimage.measure import regionprops
     from skimage.filter import denoise_tv_chambolle
-    
+    from skimage.morphology import watershed
+    from skimage.feature import peak_local_max
+    from scipy import ndimage as ndi
+
     pl.close('all')
     
     # Find regions
     
-    image_filtered = denoise_tv_chambolle(np_image, weight=0.002)
-    edges = sobel(image_filtered)
+    image = denoise_tv_chambolle(image, weight=0.002)
     
     nbins = 50
-    threshold = threshold_otsu(edges, nbins)
-    edges_bin = edges >= threshold
-    
-    label_image = label(edges_bin)
+    thresh = threshold_otsu(image, nbins)
+    image = (image > thresh) * 1
+     
+    # Now we want to separate the two objects in image
+    # Generate the markers as local maxima of the distance to the background
+    distance = ndi.distance_transform_edt(image)
+    local_maxi = peak_local_max(distance, indices=False, footprint=np.ones((3, 3)),
+                                labels=image)
+    markers = ndi.label(local_maxi)[0]
+    label_image = watershed(-distance, markers, mask=image)
     
     areas = []
     areas_full = []
@@ -90,10 +48,10 @@ def select_area_for_detector(np_image):
         
         # Extract the coordinates of regions
         minr, minc, maxr, maxc = region['BoundingBox']
-        margin = len(np_image) / 100
+        margin = len(image) / 100
         bord.append((minr-margin, maxr+margin, minc-margin, maxc+margin))
-        areas.append(edges_bin[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())
-        areas_full.append(np_image[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())
+        areas.append(image[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())
+        areas_full.append(image[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())
     
     return areas, areas_full, bord
 
@@ -178,31 +136,5 @@ def detect_circles(np_image):
             R.append(radius)
             cx, cy = circle_perimeter(center_y, center_x, radius)
             circles.append((cy, cx))
-        
-    """
-    If the circle is an odd number of pixels wide, then that will displace the center by one pixel and give
-    an uncertainty in the radius, producing the sine wave shape.
-    
-    THERE IS NO CLEAR WAY WHETHER TO SUBTRACT OR TO ADD THE HALF RADIUS
-    
-    C_cp = C
-    C = []
-    
-    for i in range(len(areas)):
-        try:
-            circle_widthY = bord[i][2] - bord[i][0]
-            circle_widthX = bord[i][3] - bord[i][1]
 
-        except IndexError:
-            return 0
-        
-        if circle_widthX % 2 != 0 and circle_widthY % 2 != 0:
-            C.append((C_cp[i][0] + 0.5, C_cp[i][1] + 0.5))
-        elif circle_widthX % 2 != 0:
-            C.append((C_cp[i][0] + 0.5, C_cp[i][1]))
-        elif circle_widthY % 2 != 0:
-            C.append((C_cp[i][0], C_cp[i][1] + 0.5))
-        else:
-            C.append((C_cp[i][0], C_cp[i][1]))
-    """
     return [bord, C, R, circles]
