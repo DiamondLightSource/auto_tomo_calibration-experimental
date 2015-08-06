@@ -7,12 +7,10 @@ from skimage import measure
 from skimage.morphology import watershed
 from skimage.feature import peak_local_max
 from skimage.filter import threshold_otsu
-from skimage.restoration import denoise_tv_chambolle
 from skimage.segmentation import random_walker
-from skimage import img_as_ubyte, dtype_limits
 
 
-def preprocessing(image):
+def preprocessing(image, smooth_size, min_r):
     """
     'The image low contrast and under segmentation
     problem is not yet addressed by most of the researchers'
@@ -23,59 +21,56 @@ def preprocessing(image):
     image segmentation approach based 
     on level set and mathematical morphology' 
     """
+    from skimage.filter import threshold_otsu, threshold_adaptive, rank
+    from skimage.morphology import label
+    from skimage.measure import regionprops
+    from skimage.feature import peak_local_max
+    from scipy import ndimage
+    from skimage.morphology import disk, watershed
+    from scipy.ndimage.morphology import binary_opening, binary_closing
     
-    # imhist is the frequencies and bins are the pixel vlaues
-    imhist, bins = np.histogram(image.flatten(), 256)
-    
-    max_freq = np.argwhere(max(imhist) == imhist)[0][0]
-    min_freq = np.argwhere(min(imhist) == imhist)
-    print min(bins)
-    
-    # determine markers of the two phases from the
-    # extreme tails of the histogram of gray values
-    markers = np.zeros(image.shape, dtype=np.uint)
-    markers[image < bins[min(min_freq.T[0])]] = 1
-    markers[image > bins[max_freq]] = 2
-    
-    pl.imshow(markers)
-    pl.gray()
-    pl.show()
-    
-    
-    # Run random walker algorithm
-    labels = random_walker(image, markers, beta=10, mode='bf')
-    #abels = image - labels
-    pl.imshow(labels, interpolation='nearest')
-    pl.show()
-    
-    return image
-
-def watershed_segmentation(image, do):
-    
-#     image = denoise_tv_chambolle(image)
-    image = ndi.filters.gaussian_filter(image, 3)
-    if do == 1:
-        pl.imshow(image)
-        pl.gray()
-        pl.show()
     
     thresh = threshold_otsu(image)
-    image = (image > thresh) * 1
     
-#     pl.imshow(image)
-#     pl.show()
+    smoothed = rank.median(image, disk(smooth_size))
+    smoothed = rank.enhance_contrast(smoothed, disk(smooth_size))
     
-    distance = ndi.distance_transform_edt(image)
-    local_maxi = peak_local_max(distance, indices=False, footprint=np.ones((3, 3)),labels=image)
-    markers = measure.label(local_maxi)
-    labels = watershed(-distance, markers, mask=image)
+    im_max = smoothed.max()
     
-    if do == 1:
-        pl.imshow(labels)
-        pl.gray()
+    if im_max < thresh:
+        labeled = np.zeros(smoothed.shape, dtype=np.int32)
+    else:
+        binary = smoothed > thresh
+        bin_open = binary_opening(binary)
+        bin_close = binary_opening(bin_open)
+        binary = bin_close
+        pl.imshow(binary, interpolation='nearest')
         pl.show()
-#     pl.imshow(labels)
-#     pl.show()
+        pl.imshow(bin_open, interpolation='nearest')
+        pl.show()
+        pl.imshow(bin_close, interpolation='nearest')
+        pl.show()
+        
+        distance = ndimage.distance_transform_edt(bin_close)
+        local_maxi = peak_local_max(distance,
+                                    indices=False, labels=bin_close)
+        
+        markers = ndimage.label(local_maxi)[0]
+        
+        labeled = watershed(-distance, markers, mask=bin_close)
+#         labels_rw = random_walker(bin_close, markers, mode='cg_mg')
+#         
+#         pl.imshow(labels_rw, interpolation='nearest')
+#         pl.show()
+        
+    pl.imshow(labeled, interpolation='nearest')
+    pl.show()
+    
+    return labeled
+
+def watershed_segmentation(image, do, smooth_size, min_r):
+    
+    labels = preprocessing(image, smooth_size, min_r)
     
     centroids, radius = centres_of_mass_2D(labels)
     
@@ -109,8 +104,10 @@ def centres_of_mass_2D(image):
             centre = info['Centroid']
             D = info['equivalent_diameter']
             
-            radius.append((D / 2.0))
-            centroids.append(centre)
+            radius.append(round(D / 2.0, 3))
+            centroids.append(
+                             (round(centre[0], 3),round(centre[1], 3))
+                             )
 
     return [centroids, radius]
 
@@ -126,13 +123,13 @@ def add_noise(np_image, amount):
     return np_image
 
 
-img = io.imread("./data/analytical128.tif")
-img = add_noise(img, 0.3)
-# pl.imshow(img)
-# pl.gray()
-# pl.show()
+#img = io.imread("./data/analytical128.tif")
+img = io.imread("test_slice.tif")
+#img = add_noise(img, 0.5)
+pl.imshow(img)
+pl.gray()
+pl.show()
 
-preprocessing(img)
-a, b = watershed_segmentation(img)
+a, b = watershed_segmentation(img, 0, 5, 4)
   
 print a, b
