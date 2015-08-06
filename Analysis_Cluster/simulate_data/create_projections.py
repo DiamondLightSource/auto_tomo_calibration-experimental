@@ -103,7 +103,14 @@ def projection_shifted(A, B, C, theta, value, t):
         
     s = np.sqrt(xc**2 + yc**2)
     
-    correction = t - s * np.cos(gamma - theta)
+    # first quadrant
+    if yc > 0 and xc > 0:
+        correction = t - s * np.cos(gamma - theta)
+    # 4th quadrant
+    elif xc < 0 and yc > 0:
+        correction = t - s * np.cos(gamma - theta)
+    else:
+        correction = t + s * np.cos(gamma - theta)
     
     if abs(correction) <= alph:
         return ((2 * value * A * B) / (alph**2) * np.sqrt(alph**2 - correction**2))
@@ -144,28 +151,31 @@ def analytical(A1, B1, C1, value1, A2, B2, C2, value2, size):
     return sinogram
 
 
-def analytical_3D(R1, C1, value1, R2, C2, value2, size):
+def analytical_3D(R1, C1, value1, R2, C2, value2, size, sampling, name):
     """
     Get projections at every angle
     """
-    
+    angles = np.linspace(1, 180, sampling)
+    indices = range(sampling)
     step = 1. / (size / 2.)
-    for z in np.arange(-1.0, 1.0 + step, step):
+    
+    for z in np.arange(-1.0, 1.0, step):
                 
-        sinogram = np.empty([180, size])
+        sinogram = np.empty([sampling, size])
         
         h1 = abs(z - abs(C1[2]))
         new_r1 = np.sqrt(R1**2 - h1**2)
         h2 = abs(z - abs(C2[2]))
         new_r2 = np.sqrt(R2**2 - h2**2)
         
-        for theta in range(180):
+        for i in indices:
         
+            theta = angles[i]
             angle = np.radians(theta)
             projection = []
             counter = 0
-            
-            for t in np.arange(-1.0, 1.0 + step, step):
+#             print theta
+            for t in np.arange(-1.0, 1.0, step):
                 
                 if counter < size:
                     
@@ -173,62 +183,32 @@ def analytical_3D(R1, C1, value1, R2, C2, value2, size):
                     proj2 = 0
                     
                     if R1 >= h1:
-                        proj1 = projection_shifted(new_r1, new_r1, (C1[0], C1[1]), angle, value1, t)
+                        proj1 = projection_shifted(new_r1, new_r1, (C1[1], C1[0]), angle, value1, t)
                         
                     if R2 >= h2:
-                        proj2 = projection_shifted(new_r2, new_r2, (C2[0], C2[1]), angle, value2, t)
+                        proj2 = projection_shifted(new_r2, new_r2, (C2[1], C2[0]), angle, value2, t)
                         
                     proj = proj1 + proj2
                     projection.append(proj)
                     counter += 1
     
-            sinogram[theta, :] = projection
+            sinogram[i, :] = projection
             
         from PIL import Image # Import the library
-        recon = reconstruct(sinogram)
+        recon = reconstruct(sinogram, angles)
         im = Image.fromarray(recon) # Convert 2D array to image object
-        im.save("analytical%i.tif" % ((z+1)/step)) # Save the image object as tif format    
+        
+        print int((z+1)/step)
+
+        im.save(name % ((z+1)/step)) # Save the image object as tif format    
      
     return sinogram
 
 
-def reconstruct(sinogram):
+def reconstruct(sinogram, angles):
     
     from skimage.transform import iradon
     sinogram = sinogram.T
-    reconstruction_fbp = iradon(sinogram)#, circle=True)
+    reconstruction_fbp = iradon(sinogram,theta=angles, circle=True)
     return reconstruction_fbp
-    
-# These are diameters
-A1 = 0.3
-B1 = 0.3
-C1 = (0., 0.)
-A2 = 0.3
-B2 = 0.3
-C2 = (0., 0.6)
-  
-scale = 100
-# image = elipse2(A1, B1, C1, 2., A2, B2, C2, -1, scale)
-# fig = pl.figure()
-# pl.imshow(image)
-# pl.gray()
-# pl.show()
-#  
-# sino = analytical(A1, B1, C1, 2., A2, B2, C2, -1, scale)
-# pl.imshow(sino)
-# pl.gray()
-# pl.show()
-#   
-# numer = get_projections_2D(image)
-# 
-# reconstruct(sino)
-# reconstruct(numer)
 
-
-# ### Sphere analytical ###
-R1 = 0.2
-R2 = 0.2
-C1 = (0., 0., 0.)
-C2 = (0., 0.4, 0.)
-size = 256
-analytical_3D(R1, C1, 1., R2, C2, 1.5, size)
