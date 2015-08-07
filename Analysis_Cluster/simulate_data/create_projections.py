@@ -2,17 +2,7 @@ import numpy as np
 import pylab as pl
 from scipy.fftpack import fftshift, fft, ifftshift, ifft2
 from scipy.ndimage.interpolation import rotate
-
-
-def add_noise(np_image, amount):
-    """
-    Adds random noise to the image
-    """
-    noise = np.random.randn(np_image.shape[0],np_image.shape[1],np_image.shape[2])
-    norm_noise = noise/np.max(noise)
-    np_image = np_image + norm_noise*np.max(np_image)*amount
-    
-    return np_image
+from PIL import Image # Import the library
 
 
 def get_projections_2D(image):
@@ -155,52 +145,57 @@ def analytical_3D(R1, C1, value1, R2, C2, value2, size, sampling, name):
     """
     Get projections at every angle
     """
+    ztop = max(C1[2], C2[2]) + max(R1, R2)
+    zbot = min(C1[2], C2[2]) - max(R1, R2)
     angles = np.linspace(1, 180, sampling)
     indices = range(sampling)
     step = 1. / (size / 2.)
     
     for z in np.arange(-1.0, 1.0, step):
                 
-        sinogram = np.empty([sampling, size])
+        sinogram = np.zeros([sampling, size])
         
         h1 = abs(z - abs(C1[2]))
         new_r1 = np.sqrt(R1**2 - h1**2)
         h2 = abs(z - abs(C2[2]))
         new_r2 = np.sqrt(R2**2 - h2**2)
         
-        for i in indices:
-        
-            theta = angles[i]
-            angle = np.radians(theta)
-            projection = []
-            counter = 0
-#             print theta
-            for t in np.arange(-1.0, 1.0, step):
-                
-                if counter < size:
-                    
-                    proj1 = 0
-                    proj2 = 0
-                    
-                    if R1 >= h1:
-                        proj1 = projection_shifted(new_r1, new_r1, (C1[1], C1[0]), angle, value1, t)
-                        
-                    if R2 >= h2:
-                        proj2 = projection_shifted(new_r2, new_r2, (C2[1], C2[0]), angle, value2, t)
-                        
-                    proj = proj1 + proj2
-                    projection.append(proj)
-                    counter += 1
-    
-            sinogram[i, :] = projection
+        if z >= zbot and ztop >= z:  # optimize
+            print z
+            for i in indices:
             
-        from PIL import Image # Import the library
-        recon = reconstruct(sinogram, angles)
-        im = Image.fromarray(recon) # Convert 2D array to image object
+                theta = angles[i]
+                angle = np.radians(theta)
+                projection = []
+                counter = 0
+                
+                for t in np.arange(-1.0, 1.0, step):
+                    
+                    if counter < size:
+                        
+                        proj1 = 0
+                        proj2 = 0
+                        
+                        if R1 >= h1:
+                            proj1 = projection_shifted(new_r1, new_r1, (C1[1], C1[0]), angle, value1, t)
+                            
+                        if R2 >= h2:
+                            proj2 = projection_shifted(new_r2, new_r2, (C2[1], C2[0]), angle, value2, t)
+                            
+                        proj = proj1 + proj2
+                        projection.append(proj)
+                        counter += 1
         
+                sinogram[i, :] = projection
+            
+            recon = reconstruct(sinogram, angles)
+            im = Image.fromarray(recon) # Convert 2D array to image object
+            im.save(name % ((z+1)/step)) # Save the image object as tif format 
+        else:
+            im = Image.fromarray(sinogram) # Convert 2D array to image object
+            im.save(name % ((z+1)/step)) # Save the image object as tif format
+             
         print int((z+1)/step)
-
-        im.save(name % ((z+1)/step)) # Save the image object as tif format    
      
     return sinogram
 

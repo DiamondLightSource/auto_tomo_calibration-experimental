@@ -4,7 +4,12 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import optparse
 
-
+    
+def create_dir(directory):
+    import os
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        
 def not_within_range(element, list):
     for item in list:
         if np.allclose(element, item, 0, 5):
@@ -21,7 +26,7 @@ def save_data(filename, data):
     
     
 
-def analyse(size, results):
+def analyse(size, results,sorted):
     
     data = []
     for i in range(size):
@@ -244,15 +249,15 @@ def analyse(size, results):
     nb_spheres = len(centres_list)
     print "nb_spheres", nb_spheres
     
-    results_folder = "./sorted"
-    
-    save_data(results_folder + '/nb_spheres.npy', nb_spheres)
-    f = open(results_folder + '/nb_spheres.txt', 'w')
+    create_dir(sorted)
+
+    save_data(sorted + '/nb_spheres.npy', nb_spheres)
+    f = open(sorted + '/nb_spheres.txt', 'w')
     f.write(repr(nb_spheres))
     f.close()
     
-    save_data(results_folder + '/centres.npy', centres_list)
-    f = open(results_folder + '/centres.txt', 'w')
+    save_data(sorted + '/centres.npy', centres_list)
+    f = open(sorted + '/centres.txt', 'w')
     for i in range(nb_spheres):
         f.write(repr(centres_list[i]) + '\n')
     f.close()
@@ -261,8 +266,9 @@ def analyse(size, results):
     max_radii = []
     for i in range(nb_spheres):
         max_radii.append(np.max(radii_list[i]))
-        
-    f = open(results_folder + '/radii.txt', 'w')
+
+
+    save_data(sorted + '/radii.npy', max_radii)
+    f = open(sorted + '/radii.txt', 'w')
     f.write(repr(max_radii) + '\n')
     f.close()
-    save_data(results_folder + '/radii.npy', max_radii)

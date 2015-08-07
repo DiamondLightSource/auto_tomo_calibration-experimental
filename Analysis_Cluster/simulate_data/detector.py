@@ -2,6 +2,7 @@ from skimage import io
 import detector_watershed
 import numpy as np
 import pylab as pl
+from PIL import Image # Import the library
 
 def save_data(filename, data):
     import pickle
@@ -25,12 +26,17 @@ def add_noise(np_image, amount):
 def detect(size, name, results, median):
     for i in range(size):
         
+        print i
         input_filename = name % i
         
+        # Open tiffs, add noise and save them
         image = io.imread(input_filename)
         image = add_noise(image, 0.3)
 
         result = detector_watershed.watershed_segmentation(image, median)
+        
+        im = Image.fromarray(image)
+        im.save(name % i) # Save the image object as tif format
         
         output_filename = results % i
         save_data(output_filename, result)

@@ -4,32 +4,30 @@ from scipy import optimize
 from math import isnan
 from scipy.ndimage.filters import gaussian_filter
 from skimage import io
+import os
 
 #################################### Fitting fns ############################
 
-def gaussian(x, height, center, width, offset):
-    return height*np.exp(-(x - center)**2/(2*width**2)) + offset
 
-def gaussian_no(x, height, center, width):
-    return height*np.exp(-(x - center)**2/(2*width**2))
-
-
-def fit_gaussian_to_signal(points, P1, P2, X):
-    """
-    Detects peaks
-    First guess for the Gaussian is the firs maxima in the signa;
-    """
-            
-    # make the array into the correct format
-    data = np.array([range(len(points)), points]).T
+def param_est(points):
+    from lmfit import Model
     
-    # find the initial guesses
+    points = gaussian_filter(points, 1)
+    data = np.array([range(len(points)), points]).T
+
+    x = data[:, 0]
+    y = data[:, 1]
+    
+    gmod = Model(gaussian)
+        # find the initial guesses
     prob = data[:, 1] / data[:, 1].sum()  # probabilities
     mu = prob.dot(data[:, 0])  # mean or location param.
     sigma = np.sqrt(prob.dot(data[:, 0] ** 2) - mu ** 2)
+#     mu = sum(data[:, 0]*data[:, 1])/sum(data[:, 1])
+#     sigma = np.sqrt(abs(sum((data[:, 0]-mu)**2*data[:, 1])/sum(data[:, 1])))
     
     if isnan(sigma):
-        print "fitting failed - stop", P1, P2, X
+        print "fitting failed"
         return False, False
     else:
         try:
@@ -38,28 +36,102 @@ def fit_gaussian_to_signal(points, P1, P2, X):
             centre_guess = len(points) / 2.
         
         try:
-            height_guess = np.argwhere(points == np.min(points))[0][0]
+            height_guess = data[:,1][centre_guess]#np.argwhere(points == np.min(points))[0][0]
         except:
             height_guess = 1.
                 
-        sigma_guess = sigma
-        height_guess = np.argwhere(points == np.min(points))[0][0]
-        
+        sigma_guess = sigma        
         # the initial guesses for the Gaussians
         guess1 = [-abs(height_guess), centre_guess, sigma_guess, abs(height_guess)]
+        
+    height_guess, centre_guess, sigma_guess, ayy = guess1
     
+    result = gmod.fit(y, x=x, height=height_guess, center=centre_guess, width=sigma_guess, offset=ayy)
+    
+    #print(result.fit_report())
+
+    pl.subplot(1, 3, 2)
+    pl.plot(x, y)
+    pl.plot(x, result.best_fit, 'r-', label = "gaussian filter")
+    pl.legend()
+    
+#     pl.subplot(1, 2, 2)
+#     pl.plot(data[:,0], data[:,1], label="true data")
+#     pl.plot(data[:,0], gaussianz(data[:,0], *p), label="fitted gaussian")
+#     #pl.title("gaussian width %f" % abs(p[2]))
+#     pl.legend()
+    
+    return
+
+def gaussianz(x, amp, cen, wid):
+    "1-d gaussian: gaussian(x, amp, cen, wid)"
+    return (amp/(np.sqrt(2*np.pi)*wid)) * np.exp(-(x-cen)**2 /(2*wid**2))
+
+
+def gaussian(x, height, center, width, offset):
+    return height*np.exp(-(x - center)**2/(2*width**2)) + offset
+
+
+def create_dir(directory):
+    
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
+def fit_gaussian_to_signal(points, touch_pt):
+    """
+    Detects peaks
+    First guess for the Gaussian is the firs maxima in the signa;
+    """
+    
+    import pywt
+    param_est(points)
+    
+    # perform discrete wavelet transform
+    points, cD = pywt.dwt(points, 'db1')#, 'sp1')
+    
+    # make the array into the correct format
+    data = np.array([range(len(points)), points]).T
+    
+    # find the initial guesses
+    prob = data[:, 1] / data[:, 1].sum()  # probabilities
+    mu = prob.dot(data[:, 0])  # mean or location param.
+    sigma = np.sqrt(prob.dot(data[:, 0] ** 2) - mu ** 2)
+#     mu = sum(data[:, 0]*data[:, 1])/sum(data[:, 1])
+#     sigma = np.sqrt(abs(sum((data[:, 0]-mu)**2*data[:, 1])/sum(data[:, 1])))
+    
+    if isnan(sigma):
+        print "fitting failed"
+        return False, False
+    else:
+        try:
+            centre_guess = mu
+        except:
+            centre_guess = len(points) / 2.
+        
+        try:
+            height_guess = data[:,1][centre_guess]#np.argwhere(points == np.min(points))[0][0]
+        except:
+            height_guess = 1.
+                
+        sigma_guess = sigma        
+        # the initial guesses for the Gaussians
+        guess1 = [-abs(height_guess), centre_guess, sigma_guess, abs(height_guess)]
+
         
         # the functions to be minimized
         errfunc1 = lambda p, xdata, ydata: (gaussian(xdata, *p) - ydata)
      
-        p, success = optimize.leastsq(errfunc1, guess1[:],
+        # TODO: PCOV SQRT GIVES THE ERRORS FOR THE STDEV
+        p, pcov = optimize.leastsq(errfunc1, guess1[:],
                                     args=(data[:,0], data[:,1]))
         
         
-        
-        pl.subplot(1, 2, 2)
+        ######################## Plot the fit #############################
+        pl.subplot(1, 3, 3)
         pl.plot(data[:,0], data[:,1], label="true data")
-        pl.plot(data[:,0], gaussian(data[:,0], *p), label="fitted gaussian")
+        pl.plot(data[:,0], gaussian(data[:,0], *p), label="cwt filter")
+        pl.title("gaussian width %f" % abs(p[2]))
         pl.legend()
         
         
@@ -207,17 +279,19 @@ def find_contact_3D(centroids, radius, tol = 1.):
 def crop_area(C1, C2, R1, size, name):
     """
     Get touch point
-    Generate a pixel map of the box to be copped
+    Generate a pixel map of the box to be cropped
     Check at which pixels the line between centres starts and ends
     Start and end points will be used to loop through the box
     """
     touch_pt = vector_3D(C1, C2, R1)
     x, y, z = touch_pt
-    
-    dim = size*2
+    x, y, z = (int(round(x,0)), int(round(y,0)), int(round(z,0)))
+    dim = size * 2
+    dim += 1
+
     area = np.zeros((dim, dim, dim))
     
-    for i in np.arange(-size, size):
+    for i in np.arange(-size, size+1):
         
         # which slice to take
         zdim = z + i
@@ -225,9 +299,21 @@ def crop_area(C1, C2, R1, size, name):
         img = io.imread(input_file)
         
         # crop the slice and store
-        area[:,:,i+size] = img[x - size:x + size, y - size: y + size]
+        area[:,:,i+size] = img[x - size:x + size + 1, y - size: y + size + 1]
     
     return area
+
+
+def plot_images():
+    """
+    If centres and contact point lie in the same
+    z plane then a slice of the image will show the situation.
+    
+    If they are at an angle the slicing is not trivial anymore
+    """
+    
+    
+    return 
 
 
 def centres_shifted_to_box(C1, C2, size):
@@ -237,7 +323,6 @@ def centres_shifted_to_box(C1, C2, size):
     
     These are needed for looping through that box
     """
-    size -= 1
     xv = C1[0] - C2[0]
     yv = C1[1] - C2[1]
     zv = C1[2] - C2[2]
@@ -281,19 +366,18 @@ def plot_line(image, pt):
     
 
 
-def touch_lines_3D(pt1, pt2, image, sampling):
+def touch_lines_3D(pt1, pt2, image, sampling, touch_pt, plots):
     """
     Goes along lines in the region between
     two points.
     Used for obtaining the widths of the gaussian fitted
     to the gap between spheres
-    """
-    centre_dist = int(round(distance_3D(pt1, pt2) / 2.0, 0))
+    """    
+    centre_dist = round(distance_3D(pt1, pt2) / 2.0, 0)
     
-    Xrange = range(-centre_dist, centre_dist + 1)
-    # Check just the centre
-    Zrange = np.arange(1.,2.)#-centre_dist, centre_dist + 1)
-
+    Xrange = np.arange(-centre_dist, centre_dist + 1)
+#     Zrange = np.linspace(-centre_dist, centre_dist + 1)
+    Zrange = np.arange(0.,1.)  # Take only the centre
     
     min_widths = []
     mean_widths = []
@@ -315,15 +399,25 @@ def touch_lines_3D(pt1, pt2, image, sampling):
             line = []
             length = distance_3D(P1, P2)
             
+            # Create an array to store the slanted image slices
+            # used for plotting
+            plot_image = np.zeros_like((length, length))
+
             # go along that line
             for time in np.linspace(0., length + 1, length*sampling):
                 try:
+                    # line coordinates going through the gap
                     x, y, z = vector_3D(P1, P2, time)
-                    line.append(image[int(round(x,0)), int(round(y,0)), int(round(z,0))])
+                    x, y, z = (int(round(x,0)), int(round(y,0)), int(round(z,0)))
                     
+                    pixel_value = image[x, y, z]
+                    line.append(pixel_value)
+                     
                     ######################## Visualizing the line plotting ######################
-#                     print int(round(x,0)), round(y,0), int(round(z,0))
-                    plot_img[int(round(x,0)), int(round(y,0)), int(round(z,0))] = max(image.flatten())
+                    #print "coordinates?", int(round(X + touch_pt,0)), int(round(time,0))
+                    plot_image[int(round(X + touch_pt,0)), int(round(time,0))] = pixel_value
+                    plot_img[x, y, z] = max(image.flatten())
+                    plot_img[touch_pt, touch_pt, int(round(z,0))] = 0.
 #                     pl.imshow(plot_img[:,:,int(round(z,0))])
 #                     pl.gray()
 #                     pl.pause(0.001)
@@ -331,20 +425,24 @@ def touch_lines_3D(pt1, pt2, image, sampling):
                     
                 except:
                     continue
-            
+            pl.imshow(plot_image)
+            pl.show()
             # if it is not empty
             if line:
 
                 # Best Gaussian fit
-                parameters, sigma = fit_gaussian_to_signal(line, P1, P2, X)
+                parameters, sigma = fit_gaussian_to_signal(line, touch_pt)
                 
                 ###### PLOT GAUSSIAN + ITS LINE ON THE IMAGE ###########
-                pl.subplot(1, 2, 1)
+                pl.subplot(1, 3, 1)
                 pl.imshow(plot_img[:,:,int(round(z,0))])
                 pl.gray()
-                pl.savefig('./gauss_vs_line/plots%i_%i.png' % (int(round(x,0)), int(round(y,0))))
+                
+                # Create a folder
+                folder_name = plots + "gauss_vs_line_%i/" % (Z + touch_pt)
+                create_dir(folder_name)
+                pl.savefig(folder_name + 'plots_%i.png' % (X + touch_pt))
                 pl.close('all')
-                #pl.show()
                 
                 ##########################################################
                 

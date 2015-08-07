@@ -20,19 +20,28 @@ def preprocessing(image, smooth_size):
     image segmentation approach based 
     on level set and mathematical morphology' 
     """
-    
+    dim = int(image.shape[0] / 50.)
     smoothed = rank.median(image, disk(smooth_size))
     smoothed = rank.enhance_contrast(smoothed, disk(smooth_size))
     
-    # TODO: check this
-    thresh = threshold_otsu(smoothed)
-    im_max = smoothed.max()
+    # If after smoothing the "dot" disappears
+    # use the image value
+    try:
+        im_max = smoothed.max()
+        thresh = threshold_otsu(image)
+    except:
+        im_max = image.max()
+        thresh = threshold_otsu(image)
+
+    
     if im_max < thresh:
         labeled = np.zeros(smoothed.shape, dtype=np.int32)
         
     else:
         binary = smoothed > thresh
-        bin_open = binary_opening(binary, np.ones((5,5)), iterations=5)
+        
+        # TODO: this array size is the fault of errors
+        bin_open = binary_opening(binary, np.ones((dim, dim)), iterations=5)
 #         bin_close = binary_closing(bin_open, np.ones((5,5)), iterations=5)
         
 #         pl.imshow(binary, interpolation='nearest')
@@ -53,7 +62,7 @@ def preprocessing(image, smooth_size):
 #         
 #         pl.imshow(labels_rw, interpolation='nearest')
 #         pl.show()
-        
+#         
 #     pl.imshow(labeled, interpolation='nearest')
 #     pl.show()
     
@@ -117,13 +126,12 @@ def add_noise(np_image, amount):
     return np_image
 
 
-# img = io.imread("./data/analytical128.tif")
-# img = io.imread("test_slice.tif")
-# img = add_noise(img, 1)
+# img = io.imread("./data_difgray/analytical100.tif")
+# # img = io.imread("test_slice.tif")
 # pl.imshow(img)
 # pl.gray()
 # pl.show()
-#  
+#      
 # a, b = watershed_segmentation(img, 4)
-#    
+#        
 # print a, b

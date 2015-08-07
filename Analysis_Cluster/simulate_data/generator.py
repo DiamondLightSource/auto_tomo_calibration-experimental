@@ -4,22 +4,35 @@ import sort_watershed as sort
 import find_resolution as resolution
 import pylab as pl
 import pickle
+import os
+
+
+def create_dir(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 ################## PARAMETERS #########################
 
-R1 = 0.2
-R2 = 0.2
+R1 = 0.3
+R2 = 0.3
 C1 = (0., 0., 0.)
-C2 = (0., -0.4, 0.)
-size = 256
-sampling = 360
+C2 = (0., -0.6, 0.)
+size = 300
+sampling = 180
 median = 5
-name = "./data/analytical%i.tif"
-results = "./results/result%i.txt"
+
+# just change then ends of the folders for different data sets
+name = "./data_highdif/analytical%i.tif"
+results = "./results_highdif/result%i.txt"
+sorted = "./sorted_highdif/"
+plots = "./plots_highdif/"
+
+create_dir("./data_highdif/")
+create_dir("./results_highdif/")
 
 ############## GENERATE A SPHERE ######################
 
-# projections.analytical_3D(R1, C1, 1., R2, C2, 1.5, size, sampling, name)
+#projections.analytical_3D(R1, C1, 1., R2, C2, 5., size, sampling, name)
 
 ############### DETECT CIRCLES #########################
 
@@ -27,48 +40,40 @@ results = "./results/result%i.txt"
 
 ############### SORT CENTRES ###########################
 
-#sort.analyse(size, results)
+#sort.analyse(size, results, sorted)
 
 ############### FIND RESOLUTION ########################
 
-f = open("./sorted/centres.npy", 'r')
+f = open(sorted + "centres.npy", 'r')
 centroids = pickle.load(f)
 f.close()
-
-f = open("./sorted/radii.npy", 'r')
+f = open(sorted +"radii.npy", 'r')
 radius = pickle.load(f)
 f.close()
 
-print centroids
-print radius
+print "centres of spheres", centroids
+print "radii of spheres", radius
 touch_c, touch_pt, radii = resolution.find_contact_3D(centroids, radius, tol = 3.)
 
-# define crop size
-sample = 2
+# define sampling size
+sample = 1
 
 for i in range(len(touch_c)):
     c1 = touch_c[i][0]
     c2 = touch_c[i][1]
     r1 = radii[i][0]
     r2 = radii[i][1]
-    crop_size = max(int(r1),int(r2)) - 1
-    crop_size = int(crop_size / 2.)
+    
+    # Cropsize is the size away from the point of contact
+    # in one and another direction
+    crop_size = max(int(r1),int(r2))
+    crop_size = int(crop_size / 2.)    
     
     crop = resolution.crop_area(c1, c2, r1, crop_size, name)
 #     crop = gaussian_filter(crop, 1)
-    print crop_size
-    
-#     for slice in range(crop_size*2):
-#         pl.imshow(crop[:,:, slice])
-#         pl.gray()
-#         pl.pause(0.05)
-    
-#     pl.imshow(crop[:,:, crop_size])
-#     pl.gray()
-#     pl.show()
 
     mod_c1, mod_c2 = resolution.centres_shifted_to_box(c1, c2, crop_size)
     
-    print mod_c1, mod_c2
+    print "shape", crop.shape
     
-    resolution.touch_lines_3D(mod_c1, mod_c2, crop, sample)
+    resolution.touch_lines_3D(mod_c1, mod_c2, crop, sample, crop_size, plots)
