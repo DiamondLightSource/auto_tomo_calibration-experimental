@@ -29,9 +29,6 @@ def fit_gaussian_to_signal(points, P1, P2, X):
     sigma = np.sqrt(prob.dot(data[:, 0] ** 2) - mu ** 2)
     
     if isnan(sigma):
-#         pl.plot(points)
-#         pl.pause(0.1)
-#         pl.close('all')
         print "fitting failed - stop", P1, P2, X
         return False, False
     else:
@@ -60,11 +57,10 @@ def fit_gaussian_to_signal(points, P1, P2, X):
         
         
         
-#         pl.close('all')
-#         pl.plot(data[:,0], data[:,1], label="true data")
-#         pl.plot(data[:,0], gaussian(data[:,0], *p), label="fitted gaussian")
-#         pl.legend()
-#         pl.pause(0.5)
+        pl.subplot(1, 2, 2)
+        pl.plot(data[:,0], data[:,1], label="true data")
+        pl.plot(data[:,0], gaussian(data[:,0], *p), label="fitted gaussian")
+        pl.legend()
         
         
         return p, sigma
@@ -275,6 +271,16 @@ def centres_shifted_to_box(C1, C2, size):
     return [mod_C1, tuple(mod_C2)]
 
 
+def plot_line(image, pt):
+    """
+    pt is the point to be marked in the image
+    """
+    pl.imshow()
+    pl.gray()
+    pl.show()
+    
+
+
 def touch_lines_3D(pt1, pt2, image, sampling):
     """
     Goes along lines in the region between
@@ -282,10 +288,11 @@ def touch_lines_3D(pt1, pt2, image, sampling):
     Used for obtaining the widths of the gaussian fitted
     to the gap between spheres
     """
-    centre_dist = int(distance_3D(pt1, pt2) / 2.0)
+    centre_dist = int(round(distance_3D(pt1, pt2) / 2.0, 0))
     
     Xrange = range(-centre_dist, centre_dist + 1)
-    Zrange = range(0,1)#-centre_dist, centre_dist + 1)
+    # Check just the centre
+    Zrange = np.arange(1.,2.)#-centre_dist, centre_dist + 1)
 
     
     min_widths = []
@@ -298,20 +305,29 @@ def touch_lines_3D(pt1, pt2, image, sampling):
         
         for X in Xrange:
             
-            
+            # plot line on the image copy
+            plot_img = image.copy()
             # Draw a line parallel to the one through the 
             # point of contact at height Z
             P1 = vector_perpendicular_3D(pt1, pt2, 1, Z, X)
             P2 = vector_perpendicular_3D(pt1, pt2, 2, Z, X)
-            #print P1, P2
+            
             line = []
-            length = int(distance_3D(P1, P2))
+            length = distance_3D(P1, P2)
             
             # go along that line
-            for time in np.linspace(0, length + 1, length*sampling):
+            for time in np.linspace(0., length + 1, length*sampling):
                 try:
                     x, y, z = vector_3D(P1, P2, time)
-                    line.append(image[int(x), int(y), int(z)])
+                    line.append(image[int(round(x,0)), int(round(y,0)), int(round(z,0))])
+                    
+                    ######################## Visualizing the line plotting ######################
+#                     print int(round(x,0)), round(y,0), int(round(z,0))
+                    plot_img[int(round(x,0)), int(round(y,0)), int(round(z,0))] = max(image.flatten())
+#                     pl.imshow(plot_img[:,:,int(round(z,0))])
+#                     pl.gray()
+#                     pl.pause(0.001)
+                    #############################################################################
                     
                 except:
                     continue
@@ -321,6 +337,16 @@ def touch_lines_3D(pt1, pt2, image, sampling):
 
                 # Best Gaussian fit
                 parameters, sigma = fit_gaussian_to_signal(line, P1, P2, X)
+                
+                ###### PLOT GAUSSIAN + ITS LINE ON THE IMAGE ###########
+                pl.subplot(1, 2, 1)
+                pl.imshow(plot_img[:,:,int(round(z,0))])
+                pl.gray()
+                pl.savefig('./gauss_vs_line/plots%i_%i.png' % (int(round(x,0)), int(round(y,0))))
+                pl.close('all')
+                #pl.show()
+                
+                ##########################################################
                 
                 # find the smallest standard deviation
                 # Should be at near the touch point

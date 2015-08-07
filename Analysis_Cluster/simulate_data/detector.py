@@ -22,19 +22,15 @@ def add_noise(np_image, amount):
     return np_image
 
 
-def detect(size, name, results):
+def detect(size, name, results, median):
     for i in range(size):
         
         input_filename = name % i
         
         image = io.imread(input_filename)
         image = add_noise(image, 0.3)
-        
-        do = 0 
-        if i == int(size / 2.):
-            do = 1
-            
-        result = detector_watershed.watershed_segmentation(image, do)
+
+        result = detector_watershed.watershed_segmentation(image, median)
         
         output_filename = results % i
         save_data(output_filename, result)

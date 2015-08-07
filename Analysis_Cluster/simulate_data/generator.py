@@ -13,6 +13,7 @@ C1 = (0., 0., 0.)
 C2 = (0., -0.4, 0.)
 size = 256
 sampling = 360
+median = 5
 name = "./data/analytical%i.tif"
 results = "./results/result%i.txt"
 
@@ -22,11 +23,11 @@ results = "./results/result%i.txt"
 
 ############### DETECT CIRCLES #########################
 
-detect.detect(size, name, results)
+#detect.detect(size, name, results, median)
 
 ############### SORT CENTRES ###########################
 
-sort.analyse(size, results)
+#sort.analyse(size, results)
 
 ############### FIND RESOLUTION ########################
 
@@ -43,7 +44,7 @@ print radius
 touch_c, touch_pt, radii = resolution.find_contact_3D(centroids, radius, tol = 3.)
 
 # define crop size
-sample = 1
+sample = 2
 
 for i in range(len(touch_c)):
     c1 = touch_c[i][0]
@@ -51,20 +52,21 @@ for i in range(len(touch_c)):
     r1 = radii[i][0]
     r2 = radii[i][1]
     crop_size = max(int(r1),int(r2)) - 1
+    crop_size = int(crop_size / 2.)
     
     crop = resolution.crop_area(c1, c2, r1, crop_size, name)
 #     crop = gaussian_filter(crop, 1)
-    print crop.shape
+    print crop_size
     
 #     for slice in range(crop_size*2):
 #         pl.imshow(crop[:,:, slice])
 #         pl.gray()
 #         pl.pause(0.05)
     
-    pl.imshow(crop[:,:, crop_size])
-    pl.gray()
-    pl.show()
-    
+#     pl.imshow(crop[:,:, crop_size])
+#     pl.gray()
+#     pl.show()
+
     mod_c1, mod_c2 = resolution.centres_shifted_to_box(c1, c2, crop_size)
     
     print mod_c1, mod_c2
