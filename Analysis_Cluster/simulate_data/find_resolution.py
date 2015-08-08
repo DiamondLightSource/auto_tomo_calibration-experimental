@@ -9,67 +9,52 @@ import os
 #################################### Fitting fns ############################
 
 
-def param_est(points):
-    from lmfit import Model
+def fit_gauss_perfect_guess(points, touch_pt, weight, which):
+    """
+    Detects peaks
+    First guess for the Gaussian is the firs maxima in the signal
+    """
+    # TODO: min before filtering
+    height_guess = np.argwhere(min(points) == points).T[0][0]
+    #print np.argwhere(min(points) == points).T
+    # TODO: shift the other side of the peak if they are not on the same level
+    filtered = use_filter(points, weight, which)
+    # make the array into the correct format
+    if which == 2:
+        points = points[:(-weight+1)]
+        
+    data = np.array([range(len(filtered)), filtered]).T
     
-    points = gaussian_filter(points, 1)
-    data = np.array([range(len(points)), points]).T
-
-    x = data[:, 0]
-    y = data[:, 1]
-    
-    gmod = Model(gaussian)
-        # find the initial guesses
+    # find the initial guesses
     prob = data[:, 1] / data[:, 1].sum()  # probabilities
     mu = prob.dot(data[:, 0])  # mean or location param.
     sigma = np.sqrt(prob.dot(data[:, 0] ** 2) - mu ** 2)
-#     mu = sum(data[:, 0]*data[:, 1])/sum(data[:, 1])
-#     sigma = np.sqrt(abs(sum((data[:, 0]-mu)**2*data[:, 1])/sum(data[:, 1])))
     
     if isnan(sigma):
         print "fitting failed"
-        return False, False
+        return 0, 0, 0
     else:
-        try:
-            centre_guess = mu
-        except:
-            centre_guess = len(points) / 2.
+        # [height, centre, sigma, offset]
+        #height_guess = data[:,1][touch_pt]
+        #height_guess = np.argwhere(min(data[:,1]) == data[:,1]).T[0][0]
+        guess1 = [-abs(height_guess), touch_pt, sigma, abs(height_guess)]
         
-        try:
-            height_guess = data[:,1][centre_guess]#np.argwhere(points == np.min(points))[0][0]
-        except:
-            height_guess = 1.
-                
-        sigma_guess = sigma        
-        # the initial guesses for the Gaussians
-        guess1 = [-abs(height_guess), centre_guess, sigma_guess, abs(height_guess)]
+        # the functions to be minimized
+        errfunc1 = lambda p, xdata, ydata: (gaussian(xdata, *p) - ydata)
+     
+        # TODO: PCOV SQRT GIVES THE ERRORS FOR THE STDEV
+        p, pcov = optimize.leastsq(errfunc1, guess1[:],
+                                    args=(data[:,0], data[:,1]))
         
-    height_guess, centre_guess, sigma_guess, ayy = guess1
-    
-    result = gmod.fit(y, x=x, height=height_guess, center=centre_guess, width=sigma_guess, offset=ayy)
-    
-    #print(result.fit_report())
+        return p, sigma, data
 
-    pl.subplot(1, 3, 2)
-    pl.plot(x, y)
-    pl.plot(x, result.best_fit, 'r-', label = "gaussian filter")
-    pl.legend()
-    
-#     pl.subplot(1, 2, 2)
-#     pl.plot(data[:,0], data[:,1], label="true data")
-#     pl.plot(data[:,0], gaussianz(data[:,0], *p), label="fitted gaussian")
-#     #pl.title("gaussian width %f" % abs(p[2]))
-#     pl.legend()
-    
-    return
 
 def gaussianz(x, amp, cen, wid):
     "1-d gaussian: gaussian(x, amp, cen, wid)"
     return (amp/(np.sqrt(2*np.pi)*wid)) * np.exp(-(x-cen)**2 /(2*wid**2))
 
-
 def gaussian(x, height, center, width, offset):
-    return height*np.exp(-(x - center)**2/(2*width**2)) + offset
+    return (height/np.sqrt(2*np.pi)*width) * np.exp(-(x - center)**2/(2*width**2)) + offset
 
 
 def create_dir(directory):
@@ -78,31 +63,24 @@ def create_dir(directory):
         os.makedirs(directory)
 
 
-def fit_gaussian_to_signal(points, touch_pt):
+def fit_gaussian_to_signal(points, touch_pt, weight, which):
     """
     Detects peaks
     First guess for the Gaussian is the firs maxima in the signa;
     """
-    
-    import pywt
-    param_est(points)
-    
-    # perform discrete wavelet transform
-    points, cD = pywt.dwt(points, 'db1')#, 'sp1')
-    
+    filtered = use_filter(points, weight, which)
+
     # make the array into the correct format
-    data = np.array([range(len(points)), points]).T
+    data = np.array([range(len(filtered)), filtered]).T
     
     # find the initial guesses
     prob = data[:, 1] / data[:, 1].sum()  # probabilities
     mu = prob.dot(data[:, 0])  # mean or location param.
     sigma = np.sqrt(prob.dot(data[:, 0] ** 2) - mu ** 2)
-#     mu = sum(data[:, 0]*data[:, 1])/sum(data[:, 1])
-#     sigma = np.sqrt(abs(sum((data[:, 0]-mu)**2*data[:, 1])/sum(data[:, 1])))
     
     if isnan(sigma):
         print "fitting failed"
-        return False, False
+        return 0, 0, 0
     else:
         try:
             centre_guess = mu
@@ -110,7 +88,7 @@ def fit_gaussian_to_signal(points, touch_pt):
             centre_guess = len(points) / 2.
         
         try:
-            height_guess = data[:,1][centre_guess]#np.argwhere(points == np.min(points))[0][0]
+            height_guess = data[:,1][centre_guess]
         except:
             height_guess = 1.
                 
@@ -126,17 +104,96 @@ def fit_gaussian_to_signal(points, touch_pt):
         p, pcov = optimize.leastsq(errfunc1, guess1[:],
                                     args=(data[:,0], data[:,1]))
         
-        
-        ######################## Plot the fit #############################
-        pl.subplot(1, 3, 3)
-        pl.plot(data[:,0], data[:,1], label="true data")
-        pl.plot(data[:,0], gaussian(data[:,0], *p), label="cwt filter")
-        pl.title("gaussian width %f" % abs(p[2]))
-        pl.legend()
-        
-        
-        return p, sigma
+        return p, sigma, data
 
+
+def fit_and_visualize(image, signals, coords, folder_name, touch_pt):
+    """
+    Take in an array containing all of the lines
+    Take in the image along the slanted plane
+    Take in the coordinates for each pixel
+    
+    Loop through the lines array and plot that line
+    onto the image
+    At the same time fit a gaussian for each line
+    
+    Plot each subplot and store it
+    
+    Do this for every Z value
+    """
+    import scipy
+
+    max_int = np.max(image)
+        
+    for i in range(len(coords)):
+        coord = coords[i]
+        signal = signals[i]
+        img_copy = image.copy()
+        
+        for j in range(len(coord)):
+            x, y = coord[j]
+            
+            img_copy[x, y] = max_int
+        #scipy.misc.imsave('outfile.jpg', img_copy)
+        if signal:
+            
+            # PLOT THE IMAGE WITH THE LINE ON IT
+            pl.subplot(2, 3, 1)        
+            pl.imshow(img_copy)
+            pl.gray()
+            #pl.plot(touch_pt, touch_pt, 'bo')
+       
+            # DETERMINE Y LIMIT
+            ymax = np.max(img_copy)
+            ymin = np.min((img_copy))
+            weight = 4
+            tol = 4 # MAD median distance higher the better - gap is a super anomally
+            data = np.array([range(len(signal)), signal]).T
+            
+            # NORMAL FIT + ORIGINAL
+            pl.subplot(2, 3, 2)  
+            param, sigma, c = fit_gauss_perfect_guess(signal, touch_pt, weight, 0)      
+            pl.plot(data[:,0], data[:,1], label="true data")
+            pl.plot(data[:,0], gaussian(data[:,0], *param))
+            pl.title("No filter / STD {0}".format(abs(round(param[2], 2))))
+            pl.ylim(ymin,ymax)
+
+            # MOVING AVERAGE FIT + ORIGINAL
+            pl.subplot(2, 3, 3)  
+            param, sigma, dat = fit_gauss_perfect_guess(signal, touch_pt, weight, 2)      
+            pl.plot(data[:,0], data[:,1], label="true data")
+            pl.plot(data[:,0], gaussian(data[:,0], *param))
+            pl.title("Moving average / STD {0}".format(abs(round(param[2], 2))))
+            pl.ylim(ymin,ymax)
+            
+            # MAD FILTER DATA
+            pl.subplot(2, 3, 4) 
+            mad_sig = thresh_MAD(signal, tol)
+            c = np.array([range(len(mad_sig)), mad_sig]).T       
+            pl.plot(c[:,0], c[:,1])
+            pl.title("MAD data")
+            pl.ylim(ymin,ymax)
+            
+            # MAD - SIGNAL DATA
+            pl.subplot(2, 3, 5)
+            mov_avg = moving_average(signal, weight)
+            mad_sig = np.subtract(thres_MAD_pos(mov_avg, tol), thresh_MAD(mov_avg, tol))
+            c = np.array([range(len(mad_sig)), mad_sig]).T
+            pl.plot(c[:,0], c[:,1])
+            pl.title("mov_avg - MAD")
+            pl.ylim(ymin,ymax)
+            
+            # MOVING AVERAGE FILTERED SIGNAL
+            pl.subplot(2, 3, 6)
+            mad_sig = np.subtract(thres_MAD_pos(signal, tol), thresh_MAD(signal, tol))
+            c = np.array([range(len(mad_sig)), mad_sig]).T
+            pl.plot(c[:,0], c[:,1])
+            pl.title("signal - MAD")
+            pl.ylim(ymin,ymax)
+            
+            pl.savefig(folder_name + 'result%i.png' % i)
+            pl.close('all')
+    return
 
 ######################## Signal analysis #########################
 
@@ -155,23 +212,79 @@ def MAD(signal):
     return mad
 
 
-def thresh_MAD(signal):
+def thresh_MAD(signal, tol):
     """
     Remove outliers using MAD
     """
     mad = MAD(signal)
     M = np.median(np.sort(signal))
-    up_thresh = M + mad
-    bot_thresh = M - mad
+    up_thresh = M + mad * tol
+    bot_thresh = M - mad * tol
     
     clean_signal = []
     
     for i in signal:
         if i <= up_thresh and i >= bot_thresh:
             clean_signal.append(i)
+        else:
+            clean_signal.append(0)
     
     return clean_signal
 
+def thres_MAD_pos(signal, tol):
+    """
+    Remove outliers using MAD
+    """
+    mad = MAD(signal)
+    M = np.median(np.sort(signal))
+    up_thresh = M + mad * tol
+    bot_thresh = M - mad * tol
+    
+    clean_signal = []
+    
+    for i in signal:
+        if i <= up_thresh and i >= bot_thresh:
+            clean_signal.append(i)
+        else:
+            clean_signal.append(1)
+    
+    return clean_signal
+
+
+def moving_average(a, n=3) :
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1:] / float(n)
+
+def use_filter(signal, weight, which):
+    """
+    1 = gaussian
+    2 = moving average
+    3 = MAD
+    4 = exp mov avg
+    
+    NOTES:
+    gaussian is not the worst
+    moving average seems to be really good!
+    MAD destroys the main peak - bad! (try subtracting noise from signal???)
+    wavelets dont even return a filtered signal
+
+    """
+    import pywt
+
+    if which == 1:
+        filtered = gaussian_filter(signal, weight)
+        return filtered
+    elif which == 2:
+        filtered = moving_average(signal, weight)
+        return filtered
+    elif which == 3:
+        filtered = thresh_MAD(signal)
+        return filtered
+    else:
+        return signal
+    
+    
 
 ##################################################################
 
@@ -353,20 +466,10 @@ def centres_shifted_to_box(C1, C2, size):
     
     mod_C2 = vector_3D(mod_C1, (size, size, size), dist)
     
-    return [mod_C1, tuple(mod_C2)]
+    return [mod_C1, tuple(mod_C2)]    
 
 
-def plot_line(image, pt):
-    """
-    pt is the point to be marked in the image
-    """
-    pl.imshow()
-    pl.gray()
-    pl.show()
-    
-
-
-def touch_lines_3D(pt1, pt2, image, sampling, touch_pt, plots):
+def touch_lines_3D(pt1, pt2, image, sampling, touch_pt, folder_name):
     """
     Goes along lines in the region between
     two points.
@@ -379,29 +482,22 @@ def touch_lines_3D(pt1, pt2, image, sampling, touch_pt, plots):
 #     Zrange = np.linspace(-centre_dist, centre_dist + 1)
     Zrange = np.arange(0.,1.)  # Take only the centre
     
-    min_widths = []
-    mean_widths = []
-    median_widths = []
-    total_widths = []
-    
     for Z in Zrange:
-        widths = []
+        # Create an array to store the slanted image slices
+        # used for plotting
+        plot_image = np.zeros((int(distance_3D(pt1, pt2)), int(distance_3D(pt1, pt2))), dtype=image.dtype)
+        lines = []
+        coords = []
         
         for X in Xrange:
-            
-            # plot line on the image copy
-            plot_img = image.copy()
             # Draw a line parallel to the one through the 
             # point of contact at height Z
             P1 = vector_perpendicular_3D(pt1, pt2, 1, Z, X)
             P2 = vector_perpendicular_3D(pt1, pt2, 2, Z, X)
             
             line = []
+            coord = []
             length = distance_3D(P1, P2)
-            
-            # Create an array to store the slanted image slices
-            # used for plotting
-            plot_image = np.zeros_like((length, length))
 
             # go along that line
             for time in np.linspace(0., length + 1, length*sampling):
@@ -411,95 +507,19 @@ def touch_lines_3D(pt1, pt2, image, sampling, touch_pt, plots):
                     x, y, z = (int(round(x,0)), int(round(y,0)), int(round(z,0)))
                     
                     pixel_value = image[x, y, z]
-                    line.append(pixel_value)
-                     
-                    ######################## Visualizing the line plotting ######################
-                    #print "coordinates?", int(round(X + touch_pt,0)), int(round(time,0))
                     plot_image[int(round(X + touch_pt,0)), int(round(time,0))] = pixel_value
-                    plot_img[x, y, z] = max(image.flatten())
-                    plot_img[touch_pt, touch_pt, int(round(z,0))] = 0.
-#                     pl.imshow(plot_img[:,:,int(round(z,0))])
-#                     pl.gray()
-#                     pl.pause(0.001)
-                    #############################################################################
                     
+                    line.append(pixel_value)
+                    coord.append((int(round(X + touch_pt,0)), int(round(time,0))))
                 except:
                     continue
-            pl.imshow(plot_image)
-            pl.show()
-            # if it is not empty
-            if line:
-
-                # Best Gaussian fit
-                parameters, sigma = fit_gaussian_to_signal(line, touch_pt)
-                
-                ###### PLOT GAUSSIAN + ITS LINE ON THE IMAGE ###########
-                pl.subplot(1, 3, 1)
-                pl.imshow(plot_img[:,:,int(round(z,0))])
-                pl.gray()
-                
-                # Create a folder
-                folder_name = plots + "gauss_vs_line_%i/" % (Z + touch_pt)
-                create_dir(folder_name)
-                pl.savefig(folder_name + 'plots_%i.png' % (X + touch_pt))
-                pl.close('all')
-                
-                ##########################################################
-                
-                # find the smallest standard deviation
-                # Should be at near the touch point
-                if sigma != False:
-
-                    widths.append(abs(parameters[2])/sampling)
-                    total_widths.append(abs(parameters[2])/sampling)
-                else:
-                    print x, y, z
-
-        if widths:
-            # clean all the outliers (very large widths)
-            cleaned_widths = thresh_MAD(thresh_MAD(widths))
-            cleaned_total = thresh_MAD(thresh_MAD(total_widths))
             
-            # get the minimum, mean and the median width
-            # for each slice
-            min_widths.append(np.min(cleaned_widths))
-            mean_widths.append(np.mean(cleaned_widths))
-            median_widths.append(np.median(np.sort(cleaned_widths)))
-    
-    print ""
-    print "GETS A SIGNAL ALONG A LINE AROUND THE POINT OF CONTACT"
-    print "STORES THE GAUSSIAN WIDTH OF THAT SIGNAL"
-    print "DOES THIS FOR THE WHOLE PLANE"
-    print "AND THEN TAKES MINIMUM / MEAN / MEDIAN WIDTH OF THE WHOLE SLICE"
-    print "THIS IS REPEATED FOR DIFFERENT HEIGHTS AND AN ARRAY OF"
-    print "MINIMUM / MEAN / MEDIAN WIDTHS IS CREATED"
-    print ""
-    print "ARRAY WITH MIN WIDTHS OF EACH SLICE"
-    print "min", np.min(min_widths)
-    print "mean", np.mean(min_widths)
-    print "median", np.median(np.sort(min_widths))
-    print ""
-    
-    print "ARRAY WITH MEAN WIDTHS OF EACH SLICE"
-    print "min sigma", np.min(mean_widths)
-    print "mean sigma", np.mean(mean_widths)
-    print "median sigma", np.median(np.sort(mean_widths))
-    print ""
-    
-    print "ARRAY WITH MEDIAN WIDTHS OF EACH SLICE"
-    print "min sigma", np.min(median_widths)
-    print "mean sigma", np.mean(median_widths)
-    print "median sigma", np.median(np.sort(median_widths))
-    print ""
+            lines.append(line)
+            coords.append(coord)
+        
+        folder_name = folder_name + "perfect_guess_%i/" % (Z + touch_pt)
+        create_dir(folder_name)
+        fit_and_visualize(plot_image, lines, coords, folder_name, touch_pt)
 
-    print "THESE ARE ALL OF THE WIDTHS OF ALL THE SIGNALS"
-    print "AT EVERY HEIGHT"
-    print ""
-    print "ARRAY WITH WIDTHS OF ALL THE AREA"
-    print "min sigma", np.min(cleaned_total)
-    print "mean sigma", np.mean(cleaned_total)
-    print "median sigma", np.median(np.sort(cleaned_total))
-    print ""
-
-
-    return np.mean(cleaned_total)
+        
+    return
