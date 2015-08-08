@@ -3,13 +3,13 @@ import pylab as pl
 
 from skimage import io
 from skimage import measure
-from scipy import ndimage
+from scipy import ndimage, misc
 from skimage.morphology import watershed, disk
 from skimage.feature import peak_local_max
 from skimage.filter import threshold_otsu, rank
 from scipy.ndimage.morphology import binary_opening, binary_closing
 
-def preprocessing(image, smooth_size):
+def preprocessing(image, smooth_size, folder):
     """
     'The image low contrast and under segmentation
     problem is not yet addressed by most of the researchers'
@@ -58,6 +58,7 @@ def preprocessing(image, smooth_size):
         markers = ndimage.label(local_maxi)[0]
         
         labeled = watershed(-distance, markers, mask=bin_open)
+        misc.imsave(folder, labeled)
 #         labels_rw = random_walker(bin_close, markers, mode='cg_mg')
 #         
 #         pl.imshow(labels_rw, interpolation='nearest')
@@ -69,12 +70,12 @@ def preprocessing(image, smooth_size):
     return labeled
 
 
-def watershed_segmentation(image, smooth_size):
+def watershed_segmentation(image, smooth_size, folder):
     
     if np.unique(image)[0] == 0.:
         return [[], []]
     
-    labels = preprocessing(image, smooth_size)
+    labels = preprocessing(image, smooth_size, folder)
     
     centroids, radius = centres_of_mass_2D(labels)
     

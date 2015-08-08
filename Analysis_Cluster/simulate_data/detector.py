@@ -23,17 +23,18 @@ def add_noise(np_image, amount):
     return np_image
 
 
-def detect(size, name, results, median):
+def detect(size, name, results, median, label_name):
     for i in range(size):
         
         print i
         input_filename = name % i
+        folder = label_name % i
         
         # Open tiffs, add noise and save them
         image = io.imread(input_filename)
         image = add_noise(image, 0.3)
 
-        result = detector_watershed.watershed_segmentation(image, median)
+        result = detector_watershed.watershed_segmentation(image, median, folder)
         
         im = Image.fromarray(image)
         im.save(name % i) # Save the image object as tif format

@@ -5,7 +5,11 @@ import find_resolution as resolution
 import pylab as pl
 import pickle
 import os
-
+"""
+Sum over slices of segmented images and see which
+slice has the highest sum across the whole image.
+The one with the highest number is the centre image
+"""
 
 def create_dir(directory):
     if not os.path.exists(directory):
@@ -13,34 +17,38 @@ def create_dir(directory):
 
 ################## PARAMETERS #########################
 
-R1 = 0.3
-R2 = 0.3
+# dim/2 * to get true values
+R1 = 0.4
+R2 = 0.4
 C1 = (0., 0., 0.)
-C2 = (0., -0.6, 0.)
-size = 300
-sampling = 180
-median = 5
+C2 = (0., -0.4, 0.4)
+size = 100 # total image dimensions
+sampling = 360
+median = 3
 
 # just change then ends of the folders for different data sets
-name = "./data_samegray/analytical%i.tif"
-results = "./results_samegray/result%i.txt"
-sorted = "./sorted_samegray/"
-plots = "./plots_samegray_gaussianfilt/"
+folder_start = "./shifted_"
+name = folder_start + "data/analytical%i.tif"
+label_name = folder_start + "label/analytical%i.png"
+results = folder_start + "results/result%i.txt"
+sorted = folder_start + "sorted/"
+plots = folder_start + "plots/"
 
-create_dir("./data_samegray/")
-create_dir("./results_samegray/")
+create_dir(folder_start + "data/")
+create_dir(folder_start + "results/")
+create_dir(folder_start + "label/")
 
 ############## GENERATE A SPHERE ######################
 
-#projections.analytical_3D(R1, C1, 1., R2, C2, 5., size, sampling, name)
+projections.analytical_3D(R1, C1, 1., R2, C2, 1., size, sampling, name)
 
 ############### DETECT CIRCLES #########################
 
-#detect.detect(size, name, results, median)
+detect.detect(size, name, results, median, label_name)
 
 ############### SORT CENTRES ###########################
 
-#sort.analyse(size, results, sorted)
+sort.analyse(size, results, sorted)
 
 ############### FIND RESOLUTION ########################
 

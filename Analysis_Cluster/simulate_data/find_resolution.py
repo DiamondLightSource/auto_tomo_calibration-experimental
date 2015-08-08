@@ -9,49 +9,27 @@ import os
 #################################### Fitting fns ############################
 
 
-def fit_gauss_perfect_guess(points, touch_pt, weight, which):
+
+def fit_gaussian(points, guess, weight, which):
     """
     Detects peaks
     First guess for the Gaussian is the firs maxima in the signal
     """
-    # TODO: min before filtering
-    height_guess = np.argwhere(min(points) == points).T[0][0]
-    #print np.argwhere(min(points) == points).T
     # TODO: shift the other side of the peak if they are not on the same level
     filtered = use_filter(points, weight, which)
-    # make the array into the correct format
-    if which == 2:
-        points = points[:(-weight+1)]
-        
     data = np.array([range(len(filtered)), filtered]).T
-    
-    # find the initial guesses
-    prob = data[:, 1] / data[:, 1].sum()  # probabilities
-    mu = prob.dot(data[:, 0])  # mean or location param.
-    sigma = np.sqrt(prob.dot(data[:, 0] ** 2) - mu ** 2)
-    
-    if isnan(sigma):
-        print "fitting failed"
-        return 0, 0, 0
+    if guess == False:
+        return [[0,0,0,0], data]
     else:
-        # [height, centre, sigma, offset]
-        #height_guess = data[:,1][touch_pt]
-        #height_guess = np.argwhere(min(data[:,1]) == data[:,1]).T[0][0]
-        guess1 = [-abs(height_guess), touch_pt, sigma, abs(height_guess)]
-        
         # the functions to be minimized
         errfunc1 = lambda p, xdata, ydata: (gaussian(xdata, *p) - ydata)
      
         # TODO: PCOV SQRT GIVES THE ERRORS FOR THE STDEV
-        p, pcov = optimize.leastsq(errfunc1, guess1[:],
+        p, pcov = optimize.leastsq(errfunc1, guess[:],
                                     args=(data[:,0], data[:,1]))
-        
-        return p, sigma, data
+            
+        return p, data
 
-
-def gaussianz(x, amp, cen, wid):
-    "1-d gaussian: gaussian(x, amp, cen, wid)"
-    return (amp/(np.sqrt(2*np.pi)*wid)) * np.exp(-(x-cen)**2 /(2*wid**2))
 
 def gaussian(x, height, center, width, offset):
     return (height/np.sqrt(2*np.pi)*width) * np.exp(-(x - center)**2/(2*width**2)) + offset
@@ -63,48 +41,51 @@ def create_dir(directory):
         os.makedirs(directory)
 
 
-def fit_gaussian_to_signal(points, touch_pt, weight, which):
+def parameter_estimates_stats(points):
     """
-    Detects peaks
-    First guess for the Gaussian is the firs maxima in the signa;
+    Obtain guesses from simple analysis
     """
-    filtered = use_filter(points, weight, which)
+    try:
+        data = np.array([range(len(points)), points]).T
+        centre_guess = np.argwhere(min(points) == points).T[0][0]
+        height_guess = np.max(points) - abs(np.min(points)) 
+        
+        guess = [round(-abs(height_guess), 3), centre_guess, 10., round(abs(height_guess), 3)]
+        return guess
+    except:
+        print "Not resolved"
+        return False
+    
+    
 
-    # make the array into the correct format
-    data = np.array([range(len(filtered)), filtered]).T
+def parameter_estimates_mad(signal, tol, value):
+    """
+    Apply MAD to extract the peak
+    Take a small region around it and estimate the width
+    centre, height etc.
     
-    # find the initial guesses
-    prob = data[:, 1] / data[:, 1].sum()  # probabilities
-    mu = prob.dot(data[:, 0])  # mean or location param.
-    sigma = np.sqrt(prob.dot(data[:, 0] ** 2) - mu ** 2)
+    Then use this on the original image to fit
+    and obtained a proper statistical measurement
+    of resolution
     
-    if isnan(sigma):
-        print "fitting failed"
-        return 0, 0, 0
+    Also.. noise can be estimated by doing MAD, but
+    not replacing outliers with 0
+    """
+    # Region of the Gaussian peak
+    peak, indices = get_peak(signal, tol, value)
+    
+    if indices:
+        sigma = len(indices)
+        #print "indices", indices
+        centre = np.median(indices) 
+        height = np.max(signal) - abs(signal[int(centre)])
+        
+        guess = [round(-abs(height),3), centre, sigma, round(abs(height),3)]
+        return guess
     else:
-        try:
-            centre_guess = mu
-        except:
-            centre_guess = len(points) / 2.
-        
-        try:
-            height_guess = data[:,1][centre_guess]
-        except:
-            height_guess = 1.
-                
-        sigma_guess = sigma        
-        # the initial guesses for the Gaussians
-        guess1 = [-abs(height_guess), centre_guess, sigma_guess, abs(height_guess)]
-
-        
-        # the functions to be minimized
-        errfunc1 = lambda p, xdata, ydata: (gaussian(xdata, *p) - ydata)
-     
-        # TODO: PCOV SQRT GIVES THE ERRORS FOR THE STDEV
-        p, pcov = optimize.leastsq(errfunc1, guess1[:],
-                                    args=(data[:,0], data[:,1]))
-        
-        return p, sigma, data
+        print "Not resolved"
+        return False
+    
 
 
 def fit_and_visualize(image, signals, coords, folder_name, touch_pt):
@@ -150,49 +131,53 @@ def fit_and_visualize(image, signals, coords, folder_name, touch_pt):
             tol = 4 # MAD median distance higher the better - gap is a super anomally
             data = np.array([range(len(signal)), signal]).T
             
-            # NORMAL FIT + ORIGINAL
-            pl.subplot(2, 3, 2)  
-            param, sigma, c = fit_gauss_perfect_guess(signal, touch_pt, weight, 0)      
-            pl.plot(data[:,0], data[:,1], label="true data")
+            # No filter, bad guess
+            pl.subplot(2, 3, 2)
+            guess = parameter_estimates_stats(signal)
+            print "Stats guess", guess
+            param, unused = fit_gaussian(signal, guess, weight, 0)      
+            pl.plot(data[:,0], data[:,1])
             pl.plot(data[:,0], gaussian(data[:,0], *param))
-            pl.title("No filter / STD {0}".format(abs(round(param[2], 2))))
+            pl.title("Stats guess / STD {0}".format(abs(round(param[2], 2))))
             pl.ylim(ymin,ymax)
 
-            # MOVING AVERAGE FIT + ORIGINAL
+            # No filter, MAD guess
             pl.subplot(2, 3, 3)  
-            param, sigma, dat = fit_gauss_perfect_guess(signal, touch_pt, weight, 2)      
-            pl.plot(data[:,0], data[:,1], label="true data")
+            guess = parameter_estimates_mad(signal, 4, 1)
+            print "MAD guess", guess
+            param, unused = fit_gaussian(signal, guess, weight, 0)      
+            pl.plot(data[:,0], data[:,1])
             pl.plot(data[:,0], gaussian(data[:,0], *param))
-            pl.title("Moving average / STD {0}".format(abs(round(param[2], 2))))
+            pl.title("MAD guess / STD {0}".format(abs(round(param[2], 2))))
             pl.ylim(ymin,ymax)
             
             # MAD FILTER DATA
             pl.subplot(2, 3, 4) 
-            mad_sig = thresh_MAD(signal, tol)
+            mad_sig = noise_MAD(signal, tol)
             c = np.array([range(len(mad_sig)), mad_sig]).T       
             pl.plot(c[:,0], c[:,1])
-            pl.title("MAD data")
+            pl.title("Noise")
             pl.ylim(ymin,ymax)
             
             # MAD - SIGNAL DATA
             pl.subplot(2, 3, 5)
-            mov_avg = moving_average(signal, weight)
-            mad_sig = np.subtract(thres_MAD_pos(mov_avg, tol), thresh_MAD(mov_avg, tol))
-            c = np.array([range(len(mad_sig)), mad_sig]).T
+            peak, indices = get_peak(signal, tol, 10)
+            c = np.array([range(len(peak)), peak]).T
             pl.plot(c[:,0], c[:,1])
-            pl.title("mov_avg - MAD")
-            pl.ylim(ymin,ymax)
+            pl.title("Extracted peak")
+            #pl.ylim(ymin,ymax)
             
             # MOVING AVERAGE FILTERED SIGNAL
             pl.subplot(2, 3, 6)
-            mad_sig = np.subtract(thres_MAD_pos(signal, tol), thresh_MAD(signal, tol))
+            mad_sig = thresh_MAD(signal, tol, 0)
             c = np.array([range(len(mad_sig)), mad_sig]).T
             pl.plot(c[:,0], c[:,1])
-            pl.title("signal - MAD")
+            pl.title("MAD")
             pl.ylim(ymin,ymax)
             
             pl.savefig(folder_name + 'result%i.png' % i)
             pl.close('all')
+            
     return
 
 ######################## Signal analysis #########################
@@ -212,26 +197,44 @@ def MAD(signal):
     return mad
 
 
-def thresh_MAD(signal, tol):
-    """
-    Remove outliers using MAD
-    """
+def get_peak(signal, tol, value):
     mad = MAD(signal)
     M = np.median(np.sort(signal))
     up_thresh = M + mad * tol
     bot_thresh = M - mad * tol
     
-    clean_signal = []
+    only_peak = []
     
     for i in signal:
         if i <= up_thresh and i >= bot_thresh:
-            clean_signal.append(i)
+            only_peak.append(0)
         else:
-            clean_signal.append(0)
-    
-    return clean_signal
+#             peak_indices.append(np.argwhere(i == signal))
+            only_peak.append(value)
+  
+    peak_indices = [index for index, item in enumerate(only_peak) if item == 1]  
+    return only_peak, peak_indices
 
-def thres_MAD_pos(signal, tol):
+
+def noise_MAD(signal, tol):
+    """
+    Remove outliers using MAD
+    """
+    mad = MAD(signal)
+    M = np.median(np.sort(signal))
+    up_thresh = M + mad * tol
+    bot_thresh = M - mad * tol
+    
+    clean_signal = []
+    
+    for i in signal:
+        if i <= up_thresh and i >= bot_thresh:
+            clean_signal.append(i)
+    
+    return clean_signal    
+
+
+def thresh_MAD(signal, tol, value):
     """
     Remove outliers using MAD
     """
@@ -246,8 +249,8 @@ def thres_MAD_pos(signal, tol):
         if i <= up_thresh and i >= bot_thresh:
             clean_signal.append(i)
         else:
-            clean_signal.append(1)
-    
+            clean_signal.append(value)
+            
     return clean_signal
 
 
@@ -374,7 +377,8 @@ def find_contact_3D(centroids, radius, tol = 1.):
             
             D = r1 + r2
             L = distance_3D(c1, c2)
-            
+            print "distance between pts", L
+            print "radii sum", D
             if abs(D - L) <= tol:
                 
                 touch_pt = vector_3D(c1, c2, r1)
@@ -517,7 +521,7 @@ def touch_lines_3D(pt1, pt2, image, sampling, touch_pt, folder_name):
             lines.append(line)
             coords.append(coord)
         
-        folder_name = folder_name + "perfect_guess_%i/" % (Z + touch_pt)
+        folder_name = folder_name + "plots_%i/" % (Z + touch_pt)
         create_dir(folder_name)
         fit_and_visualize(plot_image, lines, coords, folder_name, touch_pt)
 
