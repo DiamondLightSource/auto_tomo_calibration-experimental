@@ -2,9 +2,11 @@ import numpy as np
 import pylab as pl
 from scipy import optimize
 from math import isnan
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage.filters import gaussian_filter, median_filter,\
+    gaussian_filter1d
 from skimage import io
 import os
+from skimage.filter import denoise_tv_chambolle
 
 #################################### Fitting fns ############################
 
@@ -107,19 +109,22 @@ def fit_and_visualize(image, signals, coords, folder_name):
     import scipy
 
     max_int = np.max(image)
-        
+    
+    
     for i in range(len(coords)):
         coord = coords[i]
         signal = signals[i]
         img_copy = image.copy()
+        new_signal = []
         
         for j in range(len(coord)):
             x, y = coord[j]
-            
+            new_signal.append(image[x, y])
             img_copy[x, y] = max_int
+            
         #scipy.misc.imsave('outfile.jpg', img_copy)
         if signal:
-            
+            signal = new_signal
             # PLOT THE IMAGE WITH THE LINE ON IT
             pl.subplot(2, 3, 1)        
             pl.imshow(img_copy)
@@ -131,6 +136,8 @@ def fit_and_visualize(image, signals, coords, folder_name):
             ymin = np.min((img_copy))
             weight = 4
             tol = 4 # MAD median distance higher the better - gap is a super anomally
+            # TODO: for poor contrast increase the tolerance
+            tol = 5
             data = np.array([range(len(signal)), signal]).T
             
             # No filter, bad guess
@@ -141,8 +148,10 @@ def fit_and_visualize(image, signals, coords, folder_name):
             pl.plot(data[:,0], data[:,1])
             pl.plot(data[:,0], gaussian(data[:,0], *param))
             pl.title("Stats guess / STD {0}".format(abs(round(param[2], 2))))
-            pl.ylim(ymin,ymax)
-
+            #pl.ylim(ymin,ymax)
+            pl.ylim(0, 1.2)
+            
+            
             # No filter, MAD guess
             pl.subplot(2, 3, 3)  
             guess = parameter_estimates_mad(signal, 4, 1)
@@ -151,7 +160,8 @@ def fit_and_visualize(image, signals, coords, folder_name):
             pl.plot(data[:,0], data[:,1])
             pl.plot(data[:,0], gaussian(data[:,0], *param))
             pl.title("MAD guess / STD {0}".format(abs(round(param[2], 2))))
-            pl.ylim(ymin,ymax)
+            #pl.ylim(ymin,ymax)
+            pl.ylim(0, 1.2)
             
             # MAD FILTER DATA
             pl.subplot(2, 3, 4) 
@@ -160,6 +170,7 @@ def fit_and_visualize(image, signals, coords, folder_name):
             pl.plot(c[:,0], c[:,1])
             pl.title("Noise")
             pl.ylim(ymin,ymax)
+            pl.ylim(0, 1.2)
             
             # MAD - SIGNAL DATA
             pl.subplot(2, 3, 5)
@@ -168,6 +179,7 @@ def fit_and_visualize(image, signals, coords, folder_name):
             pl.plot(c[:,0], c[:,1])
             pl.title("Extracted peak")
             #pl.ylim(ymin,ymax)
+            pl.ylim(0, 1.2)
             
             # MOVING AVERAGE FILTERED SIGNAL
             pl.subplot(2, 3, 6)
@@ -175,7 +187,8 @@ def fit_and_visualize(image, signals, coords, folder_name):
             c = np.array([range(len(mad_sig)), mad_sig]).T
             pl.plot(c[:,0], c[:,1])
             pl.title("MAD")
-            pl.ylim(ymin,ymax)
+            #pl.ylim(ymin,ymax)
+            pl.ylim(0, 1.2)
             
             pl.savefig(folder_name + 'result%i.png' % i)
             pl.close('all')
@@ -260,6 +273,25 @@ def moving_average(a, n=3) :
     ret = np.cumsum(a, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / float(n)
+
+
+def equalize(im,nbr_bins=256):
+    """histogram equalization function
+    it increases contrast and makes
+    all pixel values to occur
+    as comonly as other pixel values do"""
+    
+    #returns the frequency of all the 
+    imhist,bins = np.histogram(im.flatten(), nbr_bins)#,density=True)
+    #cdf of the histogram
+    cdf = imhist.cumsum()
+    #cdf[-1] gives the largest sum from the cdf i.e. largest probability. 
+    #dividing by it produces probabilitie from 0 to 1
+    #multiplying by 255 gives cdf from 0 to 255
+    cdf = cdf / cdf[-1]
+    im2 = np.interp(im.flatten(),bins[:-1],cdf)
+    
+    return im2.reshape(im.shape), bins   
 
 
 def use_filter(signal, weight, which):
@@ -397,6 +429,8 @@ def get_slices(P1, P2, name):
     for h in range(zstart, zend + 1):
         input_file = name % (h)    
         img = io.imread(input_file)
+        #eql = denoise_tv_chambolle(img, weight = 0.02)
+        
         slices[h] = img
     
     return slices
@@ -445,12 +479,19 @@ def touch_lines_3D(pt1, pt2, sampling, folder_name, name):
                     coord.append((X + centre_dist / 3., time))
                 except:
                     continue
-                
+            
             lines.append(line)
             coords.append(coord)
         
         folder_name = folder_name + "plots_%i/" % Z
         create_dir(folder_name)
+        
+        plot_image = median_filter(plot_image, 3)
+        #plot_image, bins = equalize(plot_image, 2)
+        #plot_image, bins = equalize(plot_image, 2)
+        
+        # bins hold [background, sphere1, sphere2]
+        
         fit_and_visualize(plot_image, lines, coords, folder_name)
 
     return

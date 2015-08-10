@@ -40,9 +40,11 @@ def preprocessing(image, smooth_size, folder):
     pl.gray()
     # If after smoothing the "dot" disappears
     # use the image value
+    
+    # TODO: wat do with thresh?
     try:
         im_max = smoothed.max()
-        thresh = threshold_otsu(smoothed)
+        thresh = threshold_otsu(image)
     except:
         im_max = image.max()
         thresh = threshold_otsu(image)
