@@ -53,7 +53,7 @@ def analyse(size, results,sorted):
         print i
         
     N = len(centroids_sphere)
-    tol = 1
+    tol = 5
     # Calculate centres according to the whole image
     """
     An element of centres array is an array of tuples

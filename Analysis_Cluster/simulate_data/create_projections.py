@@ -5,26 +5,26 @@ from scipy.ndimage.interpolation import rotate
 from PIL import Image # Import the library
 
 
-def get_projections_2D(image):
+def get_projections_3D(image, size, name, sampling):
     """
     Obtain the Radon transform
     """
     
-    # Project the sinogram
-    sinogram = np.array([
-            # Sum along one axis
-            np.sum(
-                # Rotate image
-                rotate(image, theta, order=3, reshape=False, mode='constant', cval=0.0)
-                ,axis=0) for theta in xrange(180)])
+    for i in range(size):
+        # Project the sinogram
+        sinogram = np.array([
+                # Sum along one axis
+                np.sum(
+                    # Rotate image
+                    rotate(image[:,:,i], theta, order=3, reshape=False, mode='constant', cval=0.0)
+                    ,axis=0) for theta in np.linspace(1, 180, sampling)])
+        
+        print i
     
-    pl.imshow(sinogram)
-    pl.gray()
-    pl.show()
-    
-    from PIL import Image # Import the library
-    im = Image.fromarray(image) # Convert 2D array to image object
-    im.save("numerical.tif") # Save the image object as tif format
+        from PIL import Image # Import the library
+        recon = reconstruct(sinogram, range(angle))
+        im = Image.fromarray(recon) # Convert 2D array to image object
+        im.save(name % i) # Save the image object as tif format
 
     return sinogram
 
@@ -181,7 +181,7 @@ def analytical_3D(R1, C1, value1, R2, C2, value2, size, sampling, name):
                             
                         if R2 >= h2:
                             proj2 = projection_shifted(new_r2, new_r2, (C2[1], C2[0]), angle, value2, t)
-                            
+
                         proj = proj1 + proj2
                         projection.append(proj)
                         counter += 1
@@ -192,6 +192,7 @@ def analytical_3D(R1, C1, value1, R2, C2, value2, size, sampling, name):
             im = Image.fromarray(recon) # Convert 2D array to image object
             im.save(name % ((z+1)/step)) # Save the image object as tif format 
         else:
+            sinogram = np.zeros((size, size))
             im = Image.fromarray(sinogram) # Convert 2D array to image object
             im.save(name % ((z+1)/step)) # Save the image object as tif format
              

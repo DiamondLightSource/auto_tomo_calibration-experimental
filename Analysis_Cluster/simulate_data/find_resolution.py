@@ -25,9 +25,11 @@ def fit_gaussian(points, guess, weight, which):
         errfunc1 = lambda p, xdata, ydata: (gaussian(xdata, *p) - ydata)
      
         # TODO: PCOV SQRT GIVES THE ERRORS FOR THE STDEV
-        p, pcov = optimize.leastsq(errfunc1, guess[:],
+        try:
+            p, pcov = optimize.leastsq(errfunc1, guess[:],
                                     args=(data[:,0], data[:,1]))
-            
+        except:
+            p, pcov = [[0,0,0,0],0]
         return p, data
 
 
@@ -88,7 +90,7 @@ def parameter_estimates_mad(signal, tol, value):
     
 
 
-def fit_and_visualize(image, signals, coords, folder_name, touch_pt):
+def fit_and_visualize(image, signals, coords, folder_name):
     """
     Take in an array containing all of the lines
     Take in the image along the slanted plane
@@ -259,6 +261,7 @@ def moving_average(a, n=3) :
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / float(n)
 
+
 def use_filter(signal, weight, which):
     """
     1 = gaussian
@@ -326,29 +329,18 @@ def vector_perpendicular_3D(pt1, pt2, which, Z, Sx):
     at height Z
     """
 
-    x1, y1, z1 = pt1
-    x2, y2, z2 = pt2
-    
-    # L is a vector between pt1 and pt2
-    Lx = x1 - x2
-    Ly = y1 - y2
-    
-    try:
-        slope = -np.float(Lx) / Ly
-    except:
-        slope = 0
-        
+    v = ((pt2[0] - pt1[0]), (pt2[1] - pt1[1]), (pt2[2] - pt1[2]))
+    #v =  project_onto_plane(v, (0,0,1))
     if which == 1:
-        Sy = Sx * slope + pt1[1]
-        Sx = Sx + pt1[0]
+        Sx, Sy = (pt1[0] - v[1]/ np.sqrt(v[0]**2 + v[1]**2) * Sx, pt1[1] + v[0]/ np.sqrt(v[0]**2 + v[1]**2) * Sx)
         Sz = pt1[2]
-        
     elif which == 2:
-        Sy = Sx * slope + pt2[1]
-        Sx = Sx + pt2[0]
+        Sx, Sy = (pt2[0] - v[1]/ np.sqrt(v[0]**2 + v[1]**2) * Sx, pt2[1] + v[0]/ np.sqrt(v[0]**2 + v[1]**2) * Sx)
         Sz = pt2[2]
         
+
     return [Sx, Sy, Sz + Z]
+
 
 
 ################## Points of contact ###############################
@@ -391,139 +383,74 @@ def find_contact_3D(centroids, radius, tol = 1.):
     return centres, touch_pts, radii   
 
 
-########################### Crop the area #####################################
-
-def crop_area(C1, C2, R1, size, name):
+def get_slices(P1, P2, name):
     """
-    Get touch point
-    Generate a pixel map of the box to be cropped
-    Check at which pixels the line between centres starts and ends
-    Start and end points will be used to loop through the box
+    Get slices for analysis
     """
-    touch_pt = vector_3D(C1, C2, R1)
-    x, y, z = touch_pt
-    x, y, z = (int(round(x,0)), int(round(y,0)), int(round(z,0)))
-    dim = size * 2
-    dim += 1
-
-    area = np.zeros((dim, dim, dim))
+    zstart = np.min([P1[2], P2[2]])
+    zend  = np.max([P1[2], P2[2]])
     
-    for i in np.arange(-size, size+1):
-        
-        # which slice to take
-        zdim = z + i
-        input_file = name % (zdim)    
+    height = zend - zstart
+    
+    slices = {}
+    
+    for h in range(zstart, zend + 1):
+        input_file = name % (h)    
         img = io.imread(input_file)
-        
-        # crop the slice and store
-        area[:,:,i+size] = img[x - size:x + size + 1, y - size: y + size + 1]
+        slices[h] = img
     
-    return area
+    return slices
 
-
-def plot_images():
-    """
-    If centres and contact point lie in the same
-    z plane then a slice of the image will show the situation.
-    
-    If they are at an angle the slicing is not trivial anymore
-    """
-    
-    
-    return 
-
-
-def centres_shifted_to_box(C1, C2, size):
-    """
-    Find the projections of the centres on the box
-    Also scale to the dimensions of the box
-    
-    These are needed for looping through that box
-    """
-    xv = C1[0] - C2[0]
-    yv = C1[1] - C2[1]
-    zv = C1[2] - C2[2]
-    mod = modulus((xv, yv, zv))
-    
-    # vector pointing away from the touch point
-    v = (xv/mod, yv/mod, zv/mod)
-    
-    # max distance within box
-    possible_centres = []
-    for t in range(4*size):
-        C = (size - v[0] * t, size - v[1] * t, size - v[2] * t)
-        possible_centres.append(C)
-        if C[0] < 0 or C[1] < 0 or C[2] < 0:
-            mod_C1 = possible_centres[-2]
-            break
-    else:
-        for t in range(4*size):
-            C = (size + v[0] * t, size + v[1] * t, size + v[2] * t)
-            possible_centres.append(C)
-            if C[0] < 0 or C[1] < 0 or C[2] < 0:
-                mod_C1 = possible_centres[-2]
-                break
-    
-    # Once one centre is know from trig get another
-    # find distance between new centre and touch pt
-    dist = distance_3D(mod_C1, (size, size , size)) * 2
-    
-    mod_C2 = vector_3D(mod_C1, (size, size, size), dist)
-    
-    return [mod_C1, tuple(mod_C2)]    
-
-
-def touch_lines_3D(pt1, pt2, image, sampling, touch_pt, folder_name):
+def touch_lines_3D(pt1, pt2, sampling, folder_name, name):
     """
     Goes along lines in the region between
     two points.
     Used for obtaining the widths of the gaussian fitted
     to the gap between spheres
     """    
-    centre_dist = round(distance_3D(pt1, pt2) / 2.0, 0)
     
-    Xrange = np.arange(-centre_dist, centre_dist + 1)
+    centre_dist = round(distance_3D(pt1, pt2), 0)
+    Xrange = np.arange(-centre_dist / 3., centre_dist / 3. + 1)
 #     Zrange = np.linspace(-centre_dist, centre_dist + 1)
     Zrange = np.arange(0.,1.)  # Take only the centre
     
     for Z in Zrange:
         # Create an array to store the slanted image slices
         # used for plotting
-        plot_image = np.zeros((int(distance_3D(pt1, pt2)), int(distance_3D(pt1, pt2))), dtype=image.dtype)
+        plot_image = np.zeros((centre_dist * 2. / 3., centre_dist))
         lines = []
         coords = []
+        slices = get_slices(pt1, pt2, name)
         
         for X in Xrange:
             # Draw a line parallel to the one through the 
             # point of contact at height Z
             P1 = vector_perpendicular_3D(pt1, pt2, 1, Z, X)
             P2 = vector_perpendicular_3D(pt1, pt2, 2, Z, X)
-            
             line = []
             coord = []
             length = distance_3D(P1, P2)
-
+            
             # go along that line
-            for time in np.linspace(0., length + 1, length*sampling):
+            for time in np.linspace(0, length + 1, length*sampling):
                 try:
                     # line coordinates going through the gap
                     x, y, z = vector_3D(P1, P2, time)
                     x, y, z = (int(round(x,0)), int(round(y,0)), int(round(z,0)))
                     
-                    pixel_value = image[x, y, z]
-                    plot_image[int(round(X + touch_pt,0)), int(round(time,0))] = pixel_value
+                    pixel_value = slices[z][x,y]
+                    plot_image[X + centre_dist / 3., time] = pixel_value
                     
                     line.append(pixel_value)
-                    coord.append((int(round(X + touch_pt,0)), int(round(time,0))))
+                    coord.append((X + centre_dist / 3., time))
                 except:
                     continue
-            
+                
             lines.append(line)
             coords.append(coord)
         
-        folder_name = folder_name + "plots_%i/" % (Z + touch_pt)
+        folder_name = folder_name + "plots_%i/" % Z
         create_dir(folder_name)
-        fit_and_visualize(plot_image, lines, coords, folder_name, touch_pt)
+        fit_and_visualize(plot_image, lines, coords, folder_name)
 
-        
     return

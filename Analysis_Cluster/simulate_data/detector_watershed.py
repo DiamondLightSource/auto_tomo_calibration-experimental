@@ -18,17 +18,31 @@ def preprocessing(image, smooth_size, folder):
     remedy the problem of watershed.  Li, El-
     moataz, Fadili, and Ruan, S. (2003) proposed an improved
     image segmentation approach based 
-    on level set and mathematical morphology' 
+    on level set and mathematical morphology'
+    
+    THE SPHERES MUST BE ALMOST ALONG THE SAME PLANES IN Z DIRECTION
+    IF THEY ARE TOUCHING AND OVERLAP, WHILE BEING ALMOST MERGED
+    IT IS IMPOSSIBLE TO RESOLVE THEM
+    
+    ONE IDEA MIGHT BE TO DETECT CENTRES ALONG ONE AXIS AND THEN ANOTHER
+    AFTER ALL THE CENTRES WERE FOUND COMBINE THEM SOMEHOW... 
     """
+    from skimage.restoration import denoise_tv_chambolle
+    
     dim = int(image.shape[0] / 50.)
     smoothed = rank.median(image, disk(smooth_size))
+    #smoothed = denoise_tv_chambolle(image, weight=0.002)
     smoothed = rank.enhance_contrast(smoothed, disk(smooth_size))
     
+    pl.subplot(2, 3, 1)
+    pl.title("after median")
+    pl.imshow(smoothed)
+    pl.gray()
     # If after smoothing the "dot" disappears
     # use the image value
     try:
         im_max = smoothed.max()
-        thresh = threshold_otsu(image)
+        thresh = threshold_otsu(smoothed)
     except:
         im_max = image.max()
         thresh = threshold_otsu(image)
@@ -42,14 +56,17 @@ def preprocessing(image, smooth_size, folder):
         
         # TODO: this array size is the fault of errors
         bin_open = binary_opening(binary, np.ones((dim, dim)), iterations=5)
-#         bin_close = binary_closing(bin_open, np.ones((5,5)), iterations=5)
+        bin_close = binary_closing(bin_open, np.ones((5,5)), iterations=5)
         
-#         pl.imshow(binary, interpolation='nearest')
-#         pl.show()
-#         pl.imshow(bin_open, interpolation='nearest')
-#         pl.show()
-#         pl.imshow(bin_close, interpolation='nearest')
-#         pl.show()
+        pl.subplot(2, 3, 2)
+        pl.title("threshold")
+        pl.imshow(binary, interpolation='nearest')
+        pl.subplot(2, 3, 3)
+        pl.title("opening")
+        pl.imshow(bin_open, interpolation='nearest')
+        pl.subplot(2, 3, 4)
+        pl.title("closing")
+        pl.imshow(bin_close, interpolation='nearest')
         
         distance = ndimage.distance_transform_edt(bin_open)
         local_maxi = peak_local_max(distance,
@@ -58,15 +75,19 @@ def preprocessing(image, smooth_size, folder):
         markers = ndimage.label(local_maxi)[0]
         
         labeled = watershed(-distance, markers, mask=bin_open)
-        misc.imsave(folder, labeled)
+        pl.subplot(2, 3, 5)
+        pl.title("label")
+        pl.imshow(labeled)
+        #pl.show()
+        pl.savefig(folder)
+        pl.close('all')
+
+        #misc.imsave(folder, labeled)
 #         labels_rw = random_walker(bin_close, markers, mode='cg_mg')
-#         
+#          
 #         pl.imshow(labels_rw, interpolation='nearest')
 #         pl.show()
-#         
-#     pl.imshow(labeled, interpolation='nearest')
-#     pl.show()
-    
+
     return labeled
 
 
@@ -108,10 +129,15 @@ def centres_of_mass_2D(image):
             centre = info['Centroid']
             D = info['equivalent_diameter']
             
+            #min_row, min_col, max_row, max_col = info['BoundingBox']
+            #a1 = int((max_row - min_row) / 2.)
+            #a2 = int((max_col - min_col) / 2.)
+            
+            #box_cent = (a1 + min_row, a2 + min_col)
+            
             radius.append(round(D / 2.0, 3))
-            centroids.append(
-                             (round(centre[0], 3),round(centre[1], 3))
-                             )
+            centroids.append( (round(centre[0], 3),round(centre[1], 3)) )
+            #bords.append(box_cent)
 
     return [centroids, radius]
 
@@ -125,14 +151,16 @@ def add_noise(np_image, amount):
     np_image = np_image + norm_noise*np.max(np_image)*amount
     
     return np_image
-
-
-# img = io.imread("./data_difgray/analytical100.tif")
+# 
+# 
+# img = io.imread("./shifted_data/sino_00100.tif")
 # # img = io.imread("test_slice.tif")
+# pl.subplot(2, 3, 6)
+# pl.title("original")
 # pl.imshow(img)
 # pl.gray()
-# pl.show()
-#      
-# a, b = watershed_segmentation(img, 4)
-#        
-# print a, b
+#   
+#         
+# a, b, c = watershed_segmentation(img, 4, "ayy")
+#           
+# print a, b, c
