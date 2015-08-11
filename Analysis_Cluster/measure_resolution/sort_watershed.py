@@ -46,33 +46,19 @@ if __name__ == '__main__' :
         f.close()
     
     N = len(data)
-    
-    bord_circles = []
+
     centroids_sphere = []
     radii_circles = []
-    perimeters = []
+    
     
     """
     Store the borders, centroids, radii and perimeters
     """
     for i in range(N):
-        bord_circles.append(data[i][2])
         centroids_sphere.append(data[i][0])
-        radii_circles.append(data[i][3])
-        perimeters.append(data[i][4])
+        radii_circles.append(data[i][1])
         
     N = len(centroids_sphere)
-
-    # fig = pl.figure()
-    # ax = fig.gca(projection='3d')
-    # for slice in range(N):
-    #     for i in range(len(centroids_sphere[slice])):
-    #         ax.plot(centroids_sphere[slice][i][0], centroids_sphere[slice][i][1], slice)
-    # 
-    # pl.title('Sphere detection on real image')
-    # pl.show()
-    
-    # ------------ Sort out spheres for radii_angles (i.e. sort out centres + radii) ------------
     
     # Calculate centres according to the whole image
     """
