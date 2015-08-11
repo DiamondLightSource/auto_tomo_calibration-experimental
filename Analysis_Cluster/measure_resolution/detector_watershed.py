@@ -1,108 +1,107 @@
-import pylab as pl
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy import ndimage as ndi
-from scipy.ndimage import measurements
-from scipy import optimize
+import pylab as pl
 
 from skimage import io
-from skimage import measure, color
-from skimage.morphology import watershed
+from skimage import measure
+from scipy import ndimage, misc
+from skimage.morphology import watershed, disk
 from skimage.feature import peak_local_max
-from skimage.filter import threshold_otsu, sobel
-from skimage.filter import denoise_tv_chambolle
-from skimage.util import img_as_ubyte
-from scipy.ndimage.filters import median_filter, gaussian_filter
+from skimage.filter import threshold_otsu, rank
+from scipy.ndimage.morphology import binary_opening, binary_closing
 
 
-def save_data(filename, data):
-    import pickle
-    print("Saving data")
-    f = open(filename, 'w')
-    pickle.dump(data, f)
-    f.close()
+def preprocessing(image, smooth_size, folder, task_id):
+    """
+    'The image low contrast and under segmentation
+    problem is not yet addressed by most of the researchers'
+    
+    'Other researchers also proposed different method to
+    remedy the problem of watershed.  Li, El-
+    moataz, Fadili, and Ruan, S. (2003) proposed an improved
+    image segmentation approach based 
+    on level set and mathematical morphology'
+    
+    THE SPHERES MUST BE ALMOST ALONG THE SAME PLANES IN Z DIRECTION
+    IF THEY ARE TOUCHING AND OVERLAP, WHILE BEING ALMOST MERGED
+    IT IS IMPOSSIBLE TO RESOLVE THEM
+    
+    ONE IDEA MIGHT BE TO DETECT CENTRES ALONG ONE AXIS AND THEN ANOTHER
+    AFTER ALL THE CENTRES WERE FOUND COMBINE THEM SOMEHOW... 
+    """
+    
+    smoothed = rank.median(image, disk(smooth_size))
+    smoothed = rank.enhance_contrast(smoothed, disk(smooth_size))
+    
+#     pl.subplot(2, 3, 1)
+#     pl.title("after median")
+#     pl.imshow(smoothed)
+#     pl.gray()
+    # If after smoothing the "dot" disappears
+    # use the image value
+    
+    # TODO: what do with thresh?
+    try:
+        im_max = smoothed.max()
+        thresh = threshold_otsu(image)
+    except:
+        im_max = image.max()
+        thresh = threshold_otsu(image)
 
-  
-def watershed_segmentation(image):
     
-    image = denoise_tv_chambolle(image, weight=0.002)
-    
-    nbins = 50
-    thresh = threshold_otsu(image, nbins)
-    image = (image > thresh) * 1
-     
-    # Now we want to separate the two objects in image
-    # Generate the markers as local maxima of the distance to the background
-    distance = ndi.distance_transform_edt(image)
-    local_maxi = peak_local_max(distance, indices=False, footprint=np.ones((3, 3)),
-                                labels=image)
-    markers = ndi.label(local_maxi)[0]
-    labels = watershed(-distance, markers, mask=image)
-    
-#     fig, axes = plt.subplots(ncols=3, figsize=(8, 2.7))
-#     ax0, ax1, ax2 = axes
-#     
-#     ax0.imshow(image, cmap=plt.cm.gray, interpolation='nearest')
-#     ax0.set_title('Overlapping objects')
-#     ax1.imshow(-distance, cmap=plt.cm.jet, interpolation='nearest')
-#     ax1.set_title('Distances')
-#     ax2.imshow(labels, cmap=plt.cm.spectral, interpolation='nearest')
-#     ax2.set_title('Separated objects')
-#     
-#     for ax in axes:
-#         ax.axis('off')
-#     
-#     fig.subplots_adjust(hspace=0.01, wspace=0.01, top=1, bottom=0, left=0,
-#                         right=1)
-#     plt.show()
-    
-    centroids, areas, bord, radius = centres_of_mass_2D(labels)
-    
-    print "before", centroids
-
-    # Check the areas
-    index = []
-    size = max(image.shape[0] / 2, image.shape[1] / 2)
-
-    for i in range(0, len(areas)):
-        # Jump too big or too small areas
-        if areas[i].shape[0] >= size or areas[i].shape[1] >= size\
-        or areas[i].shape[0] <= size/5 or areas[i].shape[1] <= size/5:
-            index.append(i)
-            continue
-    
-    if index != []:
-        areas[:] = [item for i,item in enumerate(areas) if i not in index]
-        bord[:] = [item for i,item in enumerate(bord) if i not in index]
-    
-    index = []
-    for i in range(1, len(areas)):
-        # Jump almost same areas (= same circle)
-        if (abs(bord[i][0] - bord[i-1][0]) <= 100 and abs(bord[i][2] - bord[i-1][2]) <= 100):
-            index.append(i)
-            continue
-    
-    if index != []:
-        centroids[:] = [item for i,item in enumerate(centroids) if i not in index]
-        radius[:] = [item for i,item in enumerate(radius) if i not in index]
-        bord[:] = [item for i,item in enumerate(bord) if i not in index]
-        areas[:] = [item for i,item in enumerate(areas) if i not in index]
-
-    from skimage.draw import circle_perimeter
-    
-    circles = []
-    
-    for cent in range(len(bord)):
-        minr, minc, maxr, maxc = bord[cent]
-        xc = (maxr - minr) / 2.
-        yc = (maxc - minc) / 2.
-        cx, cy = circle_perimeter(int(xc), int(yc), int(radius[cent]))
-        circles.append((cy, cx))
+    if im_max < thresh:
+        labeled = np.zeros(smoothed.shape, dtype=np.int32)
         
-    print "after", centroids
-          
-    return [centroids, areas, bord, radius, circles]
+    else:
+        binary = smoothed > thresh
+        
+        # TODO: this array size is the fault of errors
+        bin_open = binary_opening(binary, np.ones((5, 5)), iterations=5)
+        
+#         pl.subplot(2, 3, 2)
+#         pl.title("threshold")
+#         pl.imshow(binary, interpolation='nearest')
+#         pl.subplot(2, 3, 3)
+#         pl.title("opening")
+#         pl.imshow(bin_open, interpolation='nearest')
+#         pl.subplot(2, 3, 4)
+#         pl.title("closing")
+#         pl.imshow(bin_close, interpolation='nearest')
+        
+        distance = ndimage.distance_transform_edt(bin_open)
+        local_maxi = peak_local_max(distance,
+                                    indices=False, labels=bin_open)
+        
+        markers = ndimage.label(local_maxi)[0]
+        
+        labeled = watershed(-distance, markers, mask=bin_open)
+#         pl.subplot(2, 3, 5)
+#         pl.title("label")
+#         pl.imshow(labeled)
+#         #pl.show()
+#         pl.savefig(folder)
+#         pl.close('all')
+        
+        misc.imsave(folder + 'labels%05i.jpg' % task_id, labeled)
+#         labels_rw = random_walker(bin_close, markers, mode='cg_mg')
+#          
+#         pl.imshow(labels_rw, interpolation='nearest')
+#         pl.show()
 
+    return labeled
+
+
+def watershed_segmentation(image, smooth_size, folder):
+    
+    if np.unique(image)[0] == 0.:
+        return [[], []]
+    
+    labels = preprocessing(image, smooth_size, folder)
+    
+    centroids, radius = centres_of_mass_2D(labels)
+    
+    print centroids
+    
+    return [centroids, radius]
 
 
 def centres_of_mass_2D(image):
@@ -115,60 +114,46 @@ def centres_of_mass_2D(image):
     areas = []
     radius = []
     
-    for info in measure.regionprops(image, ['Centroid', 'BoundingBox', 'Area', 'equivalent_diameter']): 
+    for info in measure.regionprops(image, ['Centroid', 'Area', 'equivalent_diameter', 'Label']): 
         
-        # Skip small regions
-        if info['Area'] > 100:
+        # Skip wrong regions
+        index = np.where(image==info['Label'])
+        if index[0].size==0 & index[1].size==0:
+            continue
+        
+        # TODO: change this value
+        if info['Area'] > image.shape[0] / 4.:
+            
+        
             centre = info['Centroid']
-            minr, minc, maxr, maxc = info['BoundingBox']
             D = info['equivalent_diameter']
-            
-            margin = 0
-            
-            radius.append((D / 2.0))
-            bords.append((minr-margin, minc-margin, maxr+margin, maxc+margin))
-            areas.append(image[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())
-            centroids.append(centre)
-            
-        return [centroids, areas, bords, radius]
+
+            radius.append(round(D / 2.0, 3))
+            centroids.append( (round(centre[0], 3),round(centre[1], 3)) )
+            #bords.append(box_cent)
+
+    return [centroids, radius]
 
 
-def watershed_slicing(image):
+def add_noise(np_image, amount):
     """
-    Does the watershed algorithm slice by slice.
-    Then use the labeled image to calculate the centres of
-    mass for each slice.
+    Adds random noise to the image
     """
-    image = median_filter(image, 3)
-    thresh = threshold_otsu(image)
-    image = (image > thresh) * 1
+    noise = np.random.randn(np_image.shape[0],np_image.shape[1])
+    norm_noise = abs(noise/np.max(noise))
+    np_image = np_image + norm_noise*np.max(np_image)*amount
     
-    
-    N = len(image)
-    slice_centroids = []
-    slice_radius = []
-    
-    for i in range(N):
-        
-        slice = image[:, :, i]
-        
-        labels_slice = watershed_segmentation(slice)
-        centroids, areas, bords, radius = centres_of_mass_2D(labels_slice)
-        
-        slice_centroids.append(centroids)
-        slice_radius.append(radius)
-#         if i > 49:
-#             print centroids
-#             pl.imshow(labels_slice)
-#             pl.show()
-        
-    return [bords, slice_centroids, slice_radius]
-
-# img = io.imread("/dls/tmp/tomas_aidukas/scans_july16/cropped/50867/image_01500.tif")
-# pl.imshow(img)
-# pl.show()
-#  
-# a, b, c, d, e = watershed_segmentation(img)
+    return np_image
 # 
-# print e
-
+# 
+# img = io.imread("./shifted_data/sino_00100.tif")
+# # img = io.imread("test_slice.tif")
+# pl.subplot(2, 3, 6)
+# pl.title("original")
+# pl.imshow(img)
+# pl.gray()
+#   
+#         
+# a, b, c = watershed_segmentation(img, 4, "ayy")
+#           
+# print a, b, c
