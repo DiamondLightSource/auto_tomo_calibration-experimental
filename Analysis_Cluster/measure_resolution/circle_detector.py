@@ -15,19 +15,14 @@ def select_area_for_detector(image):
     
     # Find regions
     
-    image = denoise_tv_chambolle(image, weight=0.002)
+    image_filtered = denoise_tv_chambolle(image, weight=0.002)
+    edges = sobel(image_filtered.astype("int32"))
     
     nbins = 50
-    thresh = threshold_otsu(image, nbins)
-    image = (image > thresh) * 1
-     
-    # Now we want to separate the two objects in image
-    # Generate the markers as local maxima of the distance to the background
-    distance = ndi.distance_transform_edt(image)
-    local_maxi = peak_local_max(distance, indices=False, footprint=np.ones((3, 3)),
-                                labels=image)
-    markers = ndi.label(local_maxi)[0]
-    label_image = watershed(-distance, markers, mask=image)
+    threshold = threshold_otsu(edges, nbins)
+    edges_bin = edges >= threshold
+    
+    label_image = label(edges_bin)
     
     areas = []
     areas_full = []

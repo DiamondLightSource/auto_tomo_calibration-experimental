@@ -104,6 +104,7 @@ def watershed_segmentation(image, smooth_size, folder):
     return [centroids, radius]
 
 
+
 def centres_of_mass_2D(image):
     """
     Calculates centres of mass
@@ -128,32 +129,8 @@ def centres_of_mass_2D(image):
             centre = info['Centroid']
             D = info['equivalent_diameter']
 
-            radius.append(round(D / 2.0, 3))
-            centroids.append( (round(centre[0], 3),round(centre[1], 3)) )
-            #bords.append(box_cent)
+            
+            radius.append((D / 2.0))
+            centroids.append(centre)
 
     return [centroids, radius]
-
-
-def add_noise(np_image, amount):
-    """
-    Adds random noise to the image
-    """
-    noise = np.random.randn(np_image.shape[0],np_image.shape[1])
-    norm_noise = abs(noise/np.max(noise))
-    np_image = np_image + norm_noise*np.max(np_image)*amount
-    
-    return np_image
-# 
-# 
-# img = io.imread("./shifted_data/sino_00100.tif")
-# # img = io.imread("test_slice.tif")
-# pl.subplot(2, 3, 6)
-# pl.title("original")
-# pl.imshow(img)
-# pl.gray()
-#   
-#         
-# a, b, c = watershed_segmentation(img, 4, "ayy")
-#           
-# print a, b, c
