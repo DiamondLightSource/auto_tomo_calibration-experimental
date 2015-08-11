@@ -2,7 +2,7 @@ import os
 from skimage import io
 import numpy as np
 import mhd_utils_3d as md
-
+import create_projections as projections
 
 def save_data(filename, data):
     print("Saving data")
@@ -18,31 +18,17 @@ if __name__ == '__main__' :
     parser = optparse.OptionParser()
 
     (options, args) = parser.parse_args()
+    
+    task_id = int(os.environ['SGE_TASK_ID']) - 1
+    output_filename = args[0] % task_id
 
-    output_filename = args[0]
-    input_filename = args[1]
-    start = int(args[2]) - 1
-    end = int(args[3]) - 1
+    R1=0.3
+    R2=0.3
+    C1=(0.3, 0.3, 0.)
+    C2=(-0.3, 0.3, 0.)
+    size=200 #total image dimensions
+    sampling=360
+    median=3
     
-    # Glue all tifs into one large npy file
-    z = end - start
+    projections.analytical_3D(R1, C1, 1., R2, C2, 0.8, size, sampling, output_filename)
     
-    input_file = input_filename % start
-    print("Loading image %s" % input_file)
-    
-    img = io.imread(input_file)
-    
-    x, y = img.shape[0], img.shape[1]
-    
-    area = np.zeros((x, y, z))
-    
-    for i in range(0, z):
-        
-        input_file = input_filename % (i + start)
-        print("Loading image %s" % input_file)
-        
-        img = io.imread(input_file)
-        area[:,:,i] = img[:,:]
-    
-    print "trying to save data"
-    md.write_mhd_file(output_filename + '/image.mhd', area, area.shape)
