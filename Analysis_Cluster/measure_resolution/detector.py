@@ -29,9 +29,10 @@ if __name__ == '__main__' :
 
     # process image
     print("Processing data")
-    result = circle_detector.detect_circles(image)
+    #result = circle_detector.detect_circles(image)
     # TODO: TRY WATERSHED SLICING INSTEAD OF HOUGH
-    #result = detector_watershed.watershed_segmentation(image)
+    folder = "/dls/tmp/jjl36382/resolution1/label/"
+    result = detector_watershed.watershed_segmentation(image, 3, folder, task_id)
     
     # save image
     print("Saving image %s" % output_filename)

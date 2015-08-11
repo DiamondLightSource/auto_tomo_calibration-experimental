@@ -1,6 +1,4 @@
 import numpy as np
-import pylab as pl
-from scipy.fftpack import fftshift, fft, ifftshift, ifft2
 from scipy.ndimage.interpolation import rotate
 from PIL import Image # Import the library
 
@@ -108,35 +106,50 @@ def projection_shifted(A, B, C, theta, value, t):
         return 0
 
 
-def analytical(A1, B1, C1, value1, A2, B2, C2, value2, size):
+def analytical(R1, C1, value1, R2, C2, value2, size, sampling, name, z):
     """
     Get projections at every angle
     """
-    sinogram = np.empty([180, size])
-
-    for theta in range(180):
+    ztop = max(C1[2], C2[2]) + max(R1, R2)
+    zbot = min(C1[2], C2[2]) - max(R1, R2)
+    angles = np.linspace(1, 180, sampling)
+    indices = range(sampling)
+    step = 1. / (size / 2.)
     
-        angle = np.radians(theta)
-        step = 1. / (size / 2.)
+    z = -1.0 + step * z
+    sinogram = np.zeros([sampling, size])
+    
+    h1 = abs(z - abs(C1[2]))
+    new_r1 = np.sqrt(R1**2 - h1**2)
+    h2 = abs(z - abs(C2[2]))
+    new_r2 = np.sqrt(R2**2 - h2**2)
+    
+    if z >= zbot and ztop >= z:  # optimize
+        for i in indices:
         
-        projection = []
-        counter = 0
-
-        for t in np.arange(-1.0, 1.0 + step, step):
+            theta = angles[i]
+            angle = np.radians(theta)
+            projection = []
+            counter = 0
             
-            if counter < size:
-                proj1 = projection_shifted(B1, A1, C1, angle, value1, t)
-                proj2 = projection_shifted(B2, A2, C2, angle, value2, t)
-                proj = proj1 + proj2
-                projection.append(proj)
-                counter += 1
-
-        if projection:
-            sinogram[theta, :] = projection
-            
-    from PIL import Image # Import the library
-    im = Image.fromarray(sinogram) # Convert 2D array to image object
-    im.save("analytical.tif") # Save the image object as tif format    
+            for t in np.arange(-1.0, 1.0, step):
+                
+                if counter < size:
+                    
+                    proj1 = 0
+                    proj2 = 0
+                    
+                    if R1 >= h1:
+                        proj1 = projection_shifted(new_r1, new_r1, (C1[1], C1[0]), angle, value1, t)
+                        
+                    if R2 >= h2:
+                        proj2 = projection_shifted(new_r2, new_r2, (C2[1], C2[0]), angle, value2, t)
+        
+                    proj = proj1 + proj2
+                    projection.append(proj)
+                    counter += 1
+        
+            sinogram[i, :] = projection
      
     return sinogram
 

@@ -2,6 +2,332 @@ import numpy as np
 import pylab as pl
 from scipy import optimize
 from math import isnan
+from scipy.ndimage.filters import gaussian_filter, median_filter,\
+    gaussian_filter1d
+from skimage import io
+import os
+from skimage.filter import denoise_tv_chambolle
+
+#################################### Fitting fns ############################
+
+
+
+def fit_gaussian(points, guess, weight, which):
+    """
+    Detects peaks
+    First guess for the Gaussian is the firs maxima in the signal
+    """
+    # TODO: shift the other side of the peak if they are not on the same level
+    filtered = use_filter(points, weight, which)
+    data = np.array([range(len(filtered)), filtered]).T
+    if guess == False:
+        return [[0,0,0,0], data]
+    else:
+        # the functions to be minimized
+        errfunc1 = lambda p, xdata, ydata: (gaussian(xdata, *p) - ydata)
+     
+        # TODO: PCOV SQRT GIVES THE ERRORS FOR THE STDEV
+        try:
+            p, pcov = optimize.leastsq(errfunc1, guess[:],
+                                    args=(data[:,0], data[:,1]))
+        except:
+            p, pcov = [[0,0,0,0],0]
+        return p, data
+
+
+def gaussian(x, height, center, width, offset):
+    return (height/np.sqrt(2*np.pi)*width) * np.exp(-(x - center)**2/(2*width**2)) + offset
+
+
+def create_dir(directory):
+    
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
+def parameter_estimates_stats(points):
+    """
+    Obtain guesses from simple analysis
+    """
+    try:
+        data = np.array([range(len(points)), points]).T
+        centre_guess = np.argwhere(min(points) == points).T[0][0]
+        height_guess = np.max(points) - abs(np.min(points)) 
+        
+        guess = [round(-abs(height_guess), 3), centre_guess, 10., round(abs(height_guess), 3)]
+        return guess
+    except:
+        print "Not resolved"
+        return False
+    
+    
+
+def parameter_estimates_mad(signal, tol, value):
+    """
+    Apply MAD to extract the peak
+    Take a small region around it and estimate the width
+    centre, height etc.
+    
+    Then use this on the original image to fit
+    and obtained a proper statistical measurement
+    of resolution
+    
+    Also.. noise can be estimated by doing MAD, but
+    not replacing outliers with 0
+    """
+    # Region of the Gaussian peak
+    peak, indices = get_peak(signal, tol, value)
+    
+    if indices:
+        sigma = len(indices)
+        #print "indices", indices
+        centre = np.median(indices) 
+        height = np.max(signal) - abs(signal[int(centre)])
+        
+        guess = [round(-abs(height),3), centre, sigma, round(abs(height),3)]
+        return guess
+    else:
+        print "Not resolved"
+        return False
+    
+
+
+def fit_and_visualize(image, signals, coords, folder_name):
+    """
+    Take in an array containing all of the lines
+    Take in the image along the slanted plane
+    Take in the coordinates for each pixel
+    
+    Loop through the lines array and plot that line
+    onto the image
+    At the same time fit a gaussian for each line
+    
+    Plot each subplot and store it
+    
+    Do this for every Z value
+    """
+    import scipy
+
+    max_int = np.max(image)
+    
+    
+    for i in range(len(coords)):
+        coord = coords[i]
+        signal = signals[i]
+        img_copy = image.copy()
+        new_signal = []
+        
+        for j in range(len(coord)):
+            x, y = coord[j]
+            new_signal.append(image[x, y])
+            img_copy[x, y] = max_int
+            
+        #scipy.misc.imsave('outfile.jpg', img_copy)
+        if signal:
+            signal = new_signal
+            # PLOT THE IMAGE WITH THE LINE ON IT
+            pl.subplot(2, 3, 1)        
+            pl.imshow(img_copy)
+            pl.gray()
+            #pl.plot(touch_pt, touch_pt, 'bo')
+       
+            # DETERMINE Y LIMIT
+            ymax = np.max(img_copy)
+            ymin = np.min((img_copy))
+            weight = 4
+            tol = 4 # MAD median distance higher the better - gap is a super anomally
+            # TODO: for poor contrast increase the tolerance
+            tol = 5
+            data = np.array([range(len(signal)), signal]).T
+            
+            # No filter, bad guess
+            pl.subplot(2, 3, 2)
+            guess = parameter_estimates_stats(signal)
+            print "Stats guess", guess
+            param, unused = fit_gaussian(signal, guess, weight, 0)      
+            pl.plot(data[:,0], data[:,1])
+            pl.plot(data[:,0], gaussian(data[:,0], *param))
+            pl.title("Stats guess / STD {0}".format(abs(round(param[2], 2))))
+            #pl.ylim(ymin,ymax)
+            pl.ylim(0, 1.2)
+            
+            
+            # No filter, MAD guess
+            pl.subplot(2, 3, 3)  
+            guess = parameter_estimates_mad(signal, 4, 1)
+            print "MAD guess", guess
+            param, unused = fit_gaussian(signal, guess, weight, 0)      
+            pl.plot(data[:,0], data[:,1])
+            pl.plot(data[:,0], gaussian(data[:,0], *param))
+            pl.title("MAD guess / STD {0}".format(abs(round(param[2], 2))))
+            #pl.ylim(ymin,ymax)
+            pl.ylim(0, 1.2)
+            
+            # MAD FILTER DATA
+            pl.subplot(2, 3, 4) 
+            mad_sig = noise_MAD(signal, tol)
+            c = np.array([range(len(mad_sig)), mad_sig]).T       
+            pl.plot(c[:,0], c[:,1])
+            pl.title("Noise")
+            pl.ylim(ymin,ymax)
+            pl.ylim(0, 1.2)
+            
+            # MAD - SIGNAL DATA
+            pl.subplot(2, 3, 5)
+            peak, indices = get_peak(signal, tol, 10)
+            c = np.array([range(len(peak)), peak]).T
+            pl.plot(c[:,0], c[:,1])
+            pl.title("Extracted peak")
+            #pl.ylim(ymin,ymax)
+            pl.ylim(0, 1.2)
+            
+            # MOVING AVERAGE FILTERED SIGNAL
+            pl.subplot(2, 3, 6)
+            mad_sig = thresh_MAD(signal, tol, 0)
+            c = np.array([range(len(mad_sig)), mad_sig]).T
+            pl.plot(c[:,0], c[:,1])
+            pl.title("MAD")
+            #pl.ylim(ymin,ymax)
+            pl.ylim(0, 1.2)
+            
+            pl.savefig(folder_name + 'result%i.png' % i)
+            pl.close('all')
+            
+    return
+
+######################## Signal analysis #########################
+
+def MAD(signal):
+    """
+    Calculate median absolute deviation
+    """
+    # constant linked to data normality
+    b = 1.4826
+    
+    # median of the data
+    M = np.median(np.sort(signal))
+    
+    mad = b * np.median(np.sort(abs(signal - M)))
+    
+    return mad
+
+
+def get_peak(signal, tol, value):
+    mad = MAD(signal)
+    M = np.median(np.sort(signal))
+    up_thresh = M + mad * tol
+    bot_thresh = M - mad * tol
+    
+    only_peak = []
+    
+    for i in signal:
+        if i <= up_thresh and i >= bot_thresh:
+            only_peak.append(0)
+        else:
+#             peak_indices.append(np.argwhere(i == signal))
+            only_peak.append(value)
+  
+    peak_indices = [index for index, item in enumerate(only_peak) if item == 1]  
+    return only_peak, peak_indices
+
+
+def noise_MAD(signal, tol):
+    """
+    Remove outliers using MAD
+    """
+    mad = MAD(signal)
+    M = np.median(np.sort(signal))
+    up_thresh = M + mad * tol
+    bot_thresh = M - mad * tol
+    
+    clean_signal = []
+    
+    for i in signal:
+        if i <= up_thresh and i >= bot_thresh:
+            clean_signal.append(i)
+    
+    return clean_signal    
+
+
+def thresh_MAD(signal, tol, value):
+    """
+    Remove outliers using MAD
+    """
+    mad = MAD(signal)
+    M = np.median(np.sort(signal))
+    up_thresh = M + mad * tol
+    bot_thresh = M - mad * tol
+    
+    clean_signal = []
+    
+    for i in signal:
+        if i <= up_thresh and i >= bot_thresh:
+            clean_signal.append(i)
+        else:
+            clean_signal.append(value)
+            
+    return clean_signal
+
+
+def moving_average(a, n=3) :
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1:] / float(n)
+
+
+def equalize(im,nbr_bins=256):
+    """histogram equalization function
+    it increases contrast and makes
+    all pixel values to occur
+    as comonly as other pixel values do"""
+    
+    #returns the frequency of all the 
+    imhist,bins = np.histogram(im.flatten(), nbr_bins)#,density=True)
+    #cdf of the histogram
+    cdf = imhist.cumsum()
+    #cdf[-1] gives the largest sum from the cdf i.e. largest probability. 
+    #dividing by it produces probabilitie from 0 to 1
+    #multiplying by 255 gives cdf from 0 to 255
+    cdf = cdf / cdf[-1]
+    im2 = np.interp(im.flatten(),bins[:-1],cdf)
+    
+    return im2.reshape(im.shape), bins   
+
+
+def use_filter(signal, weight, which):
+    """
+    1 = gaussian
+    2 = moving average
+    3 = MAD
+    4 = exp mov avg
+    
+    NOTES:
+    gaussian is not the worst
+    moving average seems to be really good!
+    MAD destroys the main peak - bad! (try subtracting noise from signal???)
+    wavelets dont even return a filtered signal
+
+    """
+    import pywt
+
+    if which == 1:
+        filtered = gaussian_filter(signal, weight)
+        return filtered
+    elif which == 2:
+        filtered = moving_average(signal, weight)
+        return filtered
+    elif which == 3:
+        filtered = thresh_MAD(signal)
+        return filtered
+    else:
+        return signal
+    
+    
+
+##################################################################
+
+def modulus(pt):
+    return np.sqrt(pt[0]**2 + pt[1]**2 + pt[2]**2)
 
 
 def distance_3D(c1, c2):
@@ -21,11 +347,11 @@ def vector_3D(pt1, pt2, t):
     
     modulus = np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
     
-    x = x1 - (x1 - x2) / modulus * t
-    y = y1 - (y1 - y2) / modulus * t
-    z = z1 - (z1 - z2) / modulus * t
+    x = x1 + (x2 - x1) / modulus * t
+    y = y1 + (y2 - y1) / modulus * t
+    z = z1 + (z2 - z1) / modulus * t
     
-    return [int(x), int(y), int(z)]
+    return [x, y, z]
 
 
 def vector_perpendicular_3D(pt1, pt2, which, Z, Sx):
@@ -35,122 +361,35 @@ def vector_perpendicular_3D(pt1, pt2, which, Z, Sx):
     at height Z
     """
 
-    x1, y1, z1 = pt1
-    x2, y2, z2 = pt2
-    
-    # L is a vector between pt1 and pt2
-    Lx = x1 - x2
-    Ly = y1 - y2
-    
-    try:
-        slope = -np.float(Lx) / Ly
-    except:
-        slope = 0
-        
+    v = ((pt2[0] - pt1[0]), (pt2[1] - pt1[1]), (pt2[2] - pt1[2]))
+    #v =  project_onto_plane(v, (0,0,1))
     if which == 1:
-        Sy = Sx * slope + pt1[1]
-        Sx = Sx + pt1[0]
+        Sx, Sy = (pt1[0] - v[1]/ np.sqrt(v[0]**2 + v[1]**2) * Sx, pt1[1] + v[0]/ np.sqrt(v[0]**2 + v[1]**2) * Sx)
         Sz = pt1[2]
-        
     elif which == 2:
-        Sy = Sx * slope + pt2[1]
-        Sx = Sx + pt2[0]
+        Sx, Sy = (pt2[0] - v[1]/ np.sqrt(v[0]**2 + v[1]**2) * Sx, pt2[1] + v[0]/ np.sqrt(v[0]**2 + v[1]**2) * Sx)
         Sz = pt2[2]
         
-    return [int(Sx), int(Sy), int(Sz + Z)]
+
+    return [Sx, Sy, Sz + Z]
 
 
-def gaussian(x, height, center, width, offset):
-    return height*np.exp(-(x - center)**2/(2*width**2)) + offset
 
+################## Points of contact ###############################
 
-def fit_gaussian_to_signal(points):
+def find_contact_3D(centroids, radius, tol = 1.):
     """
-    Detects peaks
-    First guess for the Gaussian is the firs maxima in the signa;
-    """
-            
-    # make the array into the correct format
-    data = np.array([range(len(points)), points]).T
+    Input: Arrays of all the centroids and all radii
+            tol defines the error tolerance between radii distance 
     
-    # find the initial guesses
-    prob = data[:, 1] / data[:, 1].sum()  # probabilities
-    mu = prob.dot(data[:, 0])  # mean or location param.
-    sigma = np.sqrt(prob.dot(data[:, 0] ** 2) - mu ** 2)
-    
-    if isnan(sigma):
-        
-        print "fitting failed - stop"
-        return False, False
-    else:
-        try:
-            centre_guess = mu
-        except:
-            centre_guess = len(points) / 2.
-        
-        try:
-            height_guess = np.argwhere(points == np.min(points))[0][0]
-        except:
-            height_guess = 1.
-                
-        sigma_guess = sigma
-        height_guess = np.argwhere(points == np.min(points))[0][0]
-        
-        # the initial guesses for the Gaussians
-        guess1 = [-abs(height_guess), centre_guess, sigma_guess, abs(height_guess)]
-    
-        
-        # the functions to be minimized
-        errfunc1 = lambda p, xdata, ydata: (gaussian(xdata, *p) - ydata)
-     
-        p, success = optimize.leastsq(errfunc1, guess1[:],
-                                    args=(data[:,0], data[:,1]))
-        
-        return p, sigma
-
-
-################################################################
-def MAD(signal):
-    """
-    Calculate median absolute deviation
-    """
-    # constant linked to data normality
-    b = 1.4826
-    
-    # median of the data
-    M = np.median(np.sort(signal))
-    
-    mad = b * np.median(np.sort(abs(signal - M)))
-    
-    return mad
-
-
-def thresh_MAD(signal):
-    """
-    Remove outliers using MAD
-    """
-    mad = MAD(signal)
-    M = np.median(np.sort(signal))
-    up_thresh = M + mad
-    bot_thresh = M - mad
-    
-    clean_signal = []
-    
-    for i in signal:
-        if i <= up_thresh and i >= bot_thresh:
-            clean_signal.append(i)
-    
-    return clean_signal
-
-
-def find_contact_3D(centroids, radius, tol = 1):
-    """
     Check all centre pairs and determine,
     based on their radii, if they are in contact
     or not
     """
     touch_pts = []
     centres = []
+    radii = []
+    
     N = len(centroids)
     for i in range(N - 1):
         for j in range(i + 1, N):
@@ -162,115 +401,97 @@ def find_contact_3D(centroids, radius, tol = 1):
             
             D = r1 + r2
             L = distance_3D(c1, c2)
-            
+            print "distance between pts", L
+            print "radii sum", D
             if abs(D - L) <= tol:
-                # TODO: Get the touch point - not midpoint
                 
-                #touch_pt = ((c1[0] + c2[0]) / 2., (c1[1] + c2[1]) / 2., (c1[2] + c2[2]) / 2.) 
+                touch_pt = vector_3D(c1, c2, r1)
                 print c1, " ", c2, "are in contact"
-                #print "touch point is ", touch_pt
-                #touch_pts.append(touch_pt)
+                print "touch point is ", touch_pt
+                touch_pts.append(touch_pt)
                 centres.append((c1, c2))
+                radii.append((r1, r2))
                 
-    return centres   
+    return centres, touch_pts, radii   
 
 
-def touch_lines_3D(pt1, pt2, image):
+def get_slices(P1, P2, name):
+    """
+    Get slices for analysis
+    """
+    zstart = np.min([P1[2], P2[2]])
+    zend  = np.max([P1[2], P2[2]])
+    
+    height = zend - zstart
+    
+    slices = {}
+    
+    for h in range(zstart, zend + 1):
+        input_file = name % (h)    
+        img = io.imread(input_file)
+        #eql = denoise_tv_chambolle(img, weight = 0.02)
+        
+        slices[h] = img
+    
+    return slices
+
+def touch_lines_3D(pt1, pt2, sampling, folder_name, name):
     """
     Goes along lines in the region between
     two points.
-    """
+    Used for obtaining the widths of the gaussian fitted
+    to the gap between spheres
+    """    
     
-    centre_dist = int(distance_3D(pt1, pt2) / 4.0)
-    
-    Xrange = range(-centre_dist, centre_dist)
-    Zrange = range(-centre_dist, centre_dist)
-
-    
-    min_widths = []
-    mean_widths = []
-    median_widths = []
-    total_widths = []
+    centre_dist = round(distance_3D(pt1, pt2), 0)
+    Xrange = np.arange(-centre_dist / 3., centre_dist / 3. + 1)
+#     Zrange = np.linspace(-centre_dist, centre_dist + 1)
+    Zrange = np.arange(0.,1.)  # Take only the centre
     
     for Z in Zrange:
-
-        widths = []
+        # Create an array to store the slanted image slices
+        # used for plotting
+        plot_image = np.zeros((centre_dist * 2. / 3., centre_dist))
+        lines = []
+        coords = []
+        slices = get_slices(pt1, pt2, name)
         
         for X in Xrange:
-            
             # Draw a line parallel to the one through the 
             # point of contact at height Z
             P1 = vector_perpendicular_3D(pt1, pt2, 1, Z, X)
             P2 = vector_perpendicular_3D(pt1, pt2, 2, Z, X)
-             
             line = []
-            length = int(distance_3D(P1, P2))
+            coord = []
+            length = distance_3D(P1, P2)
             
             # go along that line
-            for time in range(length):
+            for time in np.linspace(0, length + 1, length*sampling):
                 try:
+                    # line coordinates going through the gap
                     x, y, z = vector_3D(P1, P2, time)
-                    line.append(image[x, y, z])
+                    x, y, z = (int(round(x,0)), int(round(y,0)), int(round(z,0)))
+                    
+                    pixel_value = slices[z][x,y]
+                    plot_image[X + centre_dist / 3., time] = pixel_value
+                    
+                    line.append(pixel_value)
+                    coord.append((X + centre_dist / 3., time))
                 except:
                     continue
             
-            # if it is not empty
-            if line:
-
-                # Best Gaussian fit
-                parameters, sigma = fit_gaussian_to_signal(line)
-                
-                # find the smallest standard deviation
-                # Should be at near the touch point
-                if sigma != False:
-
-                    widths.append(abs(parameters[2]))
-                    total_widths.append(abs(parameters[2]))
-
-        # clean all the outliers
-        cleaned_widths = thresh_MAD(thresh_MAD(widths))
-        cleaned_total = thresh_MAD(thresh_MAD(total_widths))
+            lines.append(line)
+            coords.append(coord)
         
-        # get the minimum, mean and the median width
-        # for each slice
-        min_widths.append(np.min(cleaned_widths))
-        mean_widths.append(np.mean(cleaned_widths))
-        median_widths.append(np.median(np.sort(cleaned_widths)))
-    
-    print ""
-    print "GETS A SIGNAL ALONG A LINE AROUND THE POINT OF CONTACT"
-    print "STORES THE GAUSSIAN WIDTH OF THAT SIGNAL"
-    print "DOES THIS FOR THE WHOLE PLANE"
-    print "AND THEN TAKES MINIMUM / MEAN / MEDIAN WIDTH OF THE WHOLE SLICE"
-    print "THIS IS REPEATED FOR DIFFERENT HEIGHTS AND AN ARRAY OF"
-    print "MINIMUM / MEAN / MEDIAN WIDTHS IS CREATED"
-    print ""
-    print "ARRAY WITH MIN WIDTHS OF EACH SLICE"
-    print "min", np.min(min_widths)
-    print "mean", np.mean(min_widths)
-    print "median", np.median(np.sort(min_widths))
-    print ""
-    
-    print "ARRAY WITH MEAN WIDTHS OF EACH SLICE"
-    print "min sigma", np.min(mean_widths)
-    print "mean sigma", np.mean(mean_widths)
-    print "median sigma", np.median(np.sort(mean_widths))
-    print ""
-    
-    print "ARRAY WITH MEDIAN WIDTHS OF EACH SLICE"
-    print "min sigma", np.min(median_widths)
-    print "mean sigma", np.mean(median_widths)
-    print "median sigma", np.median(np.sort(median_widths))
-    print ""
+        folder_name = folder_name + "plots_%i/" % Z
+        create_dir(folder_name)
+        
+        plot_image = median_filter(plot_image, 3)
+        #plot_image, bins = equalize(plot_image, 2)
+        #plot_image, bins = equalize(plot_image, 2)
+        
+        # bins hold [background, sphere1, sphere2]
+        
+        fit_and_visualize(plot_image, lines, coords, folder_name)
 
-    print "THESE ARE ALL OF THE WIDTHS OF ALL THE SIGNALS"
-    print "AT EVERY HEIGHT"
-    print ""
-    print "ARRAY WITH WIDTHS OF ALL THE AREA"
-    print "min sigma", np.min(cleaned_total)
-    print "mean sigma", np.mean(cleaned_total)
-    print "median sigma", np.median(np.sort(cleaned_total))
-    print ""
-
-
-    return np.mean(cleaned_total)
+    return

@@ -11,7 +11,7 @@ def not_within_range(element, list):
             return False
         
     return True
-
+        
 
 def save_data(filename, data):
     print("Saving data")
@@ -56,10 +56,15 @@ if __name__ == '__main__' :
     Store the borders, centroids, radii and perimeters
     """
     for i in range(N):
-        bord_circles.append(data[i][2])
-        centroids_sphere.append(data[i][0])
-        radii_circles.append(data[i][3])
-        perimeters.append(data[i][4])
+#         bord_circles.append(data[i][2])
+#         centroids_sphere.append(data[i][0])
+#         radii_circles.append(data[i][3])
+#         perimeters.append(data[i][4])
+        bord_circles.append(data[i][0])
+        centroids_sphere.append(data[i][1])
+        radii_circles.append(data[i][2])
+        perimeters.append(data[i][3])
+        
         
     N = len(centroids_sphere)
 

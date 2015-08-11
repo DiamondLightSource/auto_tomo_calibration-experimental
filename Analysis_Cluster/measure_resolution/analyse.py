@@ -72,10 +72,6 @@ for i in range(N):
     perimeters.append(data[i][3])
 
 
-f = open('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/original_centroids.txt', 'w')
-f.write(repr(centroids_sphere))
-f.close()
-
 # # Remove empty lists---------------------------------------------------------
 # bad_indices = []
 # for n in range(N):
@@ -161,10 +157,6 @@ radius.append([(666)])
 radius.append([(666)])
 N = len(centres)
 #--------------------------------------------------------
-
-# Load data --------------------------------------------------------
-np.save('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/modified_centroids.npy', centres)
-np.save('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/radius.npy', radius)
 
 # radius = np.load('/home/jjl36382/auto_tomo_calibration-experimental/Analysis_Cluster/radius.npy')
 
@@ -288,9 +280,6 @@ for key in dict.iterkeys():
     centroids[dict_for_averaging[key]] = dict[key]
     radii[dict_for_averaging[key]] = dict_radius[key]
 
-print centroids
-print dict_radius
-
 # find the z position of the centres
 # not sure about the plus 10 - must check
 for key in centroids.iterkeys():
@@ -312,6 +301,7 @@ for key in centroids.iterkeys():
     radii_list.append(r)
     
 print centres_list
+print radii_list
 nb_spheres = len(centres_list)
 
 print("Saving data")

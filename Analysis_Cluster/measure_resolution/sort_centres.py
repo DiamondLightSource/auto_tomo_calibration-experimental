@@ -6,9 +6,14 @@ import optparse
 
 # TODO: THE TOLERANCE VALUES ARE NOT ROBUST
 
+def create_dir(directory):
+    import os
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        
 def not_within_range(element, list):
     for item in list:
-        if np.allclose(element, item, 0, 20):
+        if np.allclose(element, item, 0, 5):
             return False
         
     return True
@@ -20,7 +25,9 @@ def save_data(filename, data):
     pickle.dump(data, f)
     f.close()
     
-    
+
+tol = 10
+
 if __name__ == '__main__' :
     """
     Loads all of the detected parameters of segmented circles
@@ -57,10 +64,8 @@ if __name__ == '__main__' :
     Store the borders, centroids, radii and perimeters
     """
     for i in range(N):
-        bord_circles.append(data[i][0])
-        centroids_sphere.append(data[i][1])
-        radii_circles.append(data[i][2])
-        perimeters.append(data[i][3])
+        centroids_sphere.append(data[i][0])
+        radii_circles.append(data[i][1])
 
     
     N = len(centroids_sphere)
@@ -80,16 +85,13 @@ if __name__ == '__main__' :
         pair = []
         r = []
         for i in range(len(centroids_sphere[slice])):
-#             # TODO: THIS WAS USED USING WATERSHED SLICING
-#             cx = centroids_sphere[slice][i][0] 
-#             cy = centroids_sphere[slice][i][1]
-            cx = centroids_sphere[slice][i][0] + bord_circles[slice][i][0]
-            cy = centroids_sphere[slice][i][1] + bord_circles[slice][i][2]
+            cx = centroids_sphere[slice][i][0]
+            cy = centroids_sphere[slice][i][1]
             rad = radii_circles[slice][i]
             # IF THERE ARE SAME CENTRES IN THE SAME SLICE THEN
             # WE WILL GET ERRORS - REMOVE THEM
-            cxcy[:] = [item for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, 15)]
-            r[:] = [rad for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, 15)]
+            cxcy[:] = [item for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, tol)]
+            r[:] = [rad for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, tol)]
             # MODIFY THE RADIUS ACCORDINGLY
             r.append((rad))
             cxcy.append((cx,cy))
@@ -117,8 +119,8 @@ if __name__ == '__main__' :
     #--------------------------------------------------------
     
     N = len(centres)
-
-
+    
+    
     dict = {}
     dict_for_averaging = {}
     dict_radius = {}
@@ -139,6 +141,14 @@ if __name__ == '__main__' :
             if not_within_range(centr, dict.keys()):
                 for slice_next in range(slice_index + 1, N - 3):
                     
+    #                 Check if the array has not ended
+    #                 Since padding was used just skip this
+    #                 if slice_index == N - 5:
+    #                     # start and end index 
+    #                     dict[centr] = (slice_index, len_counter + slice_index)
+    #                     dict_for_averaging[centr] = list_for_averaging
+    #                     end_loop = True
+                            
                     # If one element was found in the slice then this is True
                     # otherwise make it False
                     found_one = False
@@ -156,7 +166,7 @@ if __name__ == '__main__' :
                         # average of the centre
                         for index in range(len(centres[slice_next])):
                             element = centres[slice_next][index]
-                            if np.allclose(np.asarray(centr), np.asarray(element), 0, 15):
+                            if np.allclose(np.asarray(centr), np.asarray(element), 0, tol):
                                 found_one = True
                                 len_counter += 1
                                 list_for_averaging.append(element)
@@ -165,7 +175,7 @@ if __name__ == '__main__' :
                         else:
                             for index1 in range(len(centres[slice_next + 1])):
                                 element = centres[slice_next + 1][index1]
-                                if np.allclose(np.asarray(centr), np.asarray(element), 0, 15):
+                                if np.allclose(np.asarray(centr), np.asarray(element), 0, tol):
                                     found_one = True
                                     len_counter += 1
                                     list_for_averaging.append(element)
@@ -174,7 +184,7 @@ if __name__ == '__main__' :
                             else:
                                 for index2 in range(len(centres[slice_next + 2])):
                                     element = centres[slice_next + 2][index2]
-                                    if np.allclose(np.asarray(centr), np.asarray(element), 0, 15):
+                                    if np.allclose(np.asarray(centr), np.asarray(element), 0, tol):
                                         found_one = True
                                         len_counter += 1
                                         list_for_averaging.append(element)
@@ -183,7 +193,7 @@ if __name__ == '__main__' :
                                 else:
                                     for index3 in range(len(centres[slice_next + 3])):
                                         element = centres[slice_next + 3][index3]
-                                        if np.allclose(np.asarray(centr), np.asarray(element), 0, 15):
+                                        if np.allclose(np.asarray(centr), np.asarray(element), 0, tol):
                                             found_one = True
                                             len_counter += 1
                                             list_for_averaging.append(element)
@@ -213,7 +223,7 @@ if __name__ == '__main__' :
         
         # also take the median of all the centre values
         avg = np.median(dict_for_averaging[centre], axis=0)
-        dict_for_averaging[centre] = tuple(np.array(avg, dtype='int64'))
+        dict_for_averaging[centre] = tuple(np.array(avg))
         
         avg_rad = np.max(dict_radius[centre])
         dict_radius[centre] = np.array(avg_rad)
@@ -236,7 +246,7 @@ if __name__ == '__main__' :
         slice_start = centroids[key][0]
         slice_end = centroids[key][1]
         z = (slice_end + slice_start) / 2.0
-        centroids[key] = int(z  * step) + start
+        centroids[key] = int(z)
     
     # make a list with x,y,z coordinates
     centres_list = []
@@ -252,22 +262,28 @@ if __name__ == '__main__' :
     print "centres", centres_list
     print "radii", radii_list
     nb_spheres = len(centres_list)
+    print "nb_spheres", nb_spheres
     
-    # Store data
-    f = open(results_folder + '/nb_spheres.txt', 'w')
+    create_dir(sorted)
+
+    save_data(sorted + '/nb_spheres.npy', nb_spheres)
+    f = open(sorted + '/nb_spheres.txt', 'w')
     f.write(repr(nb_spheres))
     f.close()
- 
-    f = open(results_folder + '/centres.txt', 'w')
+    
+    save_data(sorted + '/centres.npy', centres_list)
+    f = open(sorted + '/centres.txt', 'w')
     for i in range(nb_spheres):
         f.write(repr(centres_list[i]) + '\n')
     f.close()
      
-    f = open(results_folder + '/radii.txt', 'w')
+    
+    max_radii = []
     for i in range(nb_spheres):
-        f.write(repr(int(radii_list[i])) + '\n')
+        max_radii.append(np.max(radii_list[i]))
+
+
+    save_data(sorted + '/radii.npy', max_radii)
+    f = open(sorted + '/radii.txt', 'w')
+    f.write(repr(max_radii) + '\n')
     f.close()
-     
-#     save_data(results_folder + '/centres.npy', centres_list)
-#     save_data(results_folder + '/radii.npy', radii_list)
-#     save_data(results_folder + '/spheres_nb.npy', nb_spheres)

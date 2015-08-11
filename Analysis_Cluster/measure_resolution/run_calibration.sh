@@ -27,26 +27,27 @@ mkdir /dls/tmp/jjl36382/resolution1/results
 mkdir /dls/tmp/jjl36382/resolution1/sorted
 mkdir /dls/tmp/jjl36382/resolution1/plots
 mkdir /dls/tmp/jjl36382/resolution1/label
+mkdir /dls/tmp/jjl36382/resolution1/data
 cd /dls/tmp/jjl36382/resolution1/logs
 
-#homepath="${HOME}/auto_tomo_calibration-experimental/Analysis_Cluster/measure_resolution"
+homepath="${HOME}/auto_tomo_calibration-experimental/Analysis_Cluster/measure_resolution"
 #datapath="/dls/tmp/tomas_aidukas/scans_july16/cropped/50867/image_%05i.tif"
-#resultspath="/dls/tmp/jjl36382/resolution1/results"
-#spherepath="/dls/tmp/jjl36382/resolution1/spheres"
+datapath="/dls/tmp/jjl36382/resolution1/sinograms/sino_%05i.tif"
+resultspath="/dls/tmp/jjl36382/resolution1/results"
+spherepath="/dls/tmp/jjl36382/resolution1/spheres"
 #analysispath="/dls/tmp/jjl36382/complicated_data/resolution1/analysis"
 
 # ENTER START FILE NUMBER + 1 AND END NUMBER +1
-start=1
-stop=2128
-step=10
+start=2160
+stop=2161
+step=1
 # Two points are considered to be in contact if their radii sum
 # equals the distance between the points within the tolerance value
 tolerance=2
 
-# Merge tiffs ------------------------------------------------------------------------------------------------------
-# Do this independently of other processes
+# Create simulation data
 holder="-N merge"
-qsub $holder -pe smp 2 -j y -t 1 $homepath/merge.sh $datapath
+qsub $holder -pe smp 2 -j y -t $start-$stop:1 -tc 25 $homepath/merge.sh $datapath
 
 # Detect circles ------------------------------------------------------------------------------------------------------
 holder="-N detect"
