@@ -27,12 +27,12 @@ C1 = (0.3, 0.3, 0.)
 #C2 = ( X, Y,round((R1 + R2) * np.sin(np.radians(45)), 2)) # 45 degree angle contact
 C2 = (-0.3, 0.3, 0.)
 x,y,z = C2
-size = 200 #total image dimensions
+size = 300 #total image dimensions
 sampling = 360
 median = 3
 
 # just change then ends of the folders for different data sets
-folder_start = "./huge_contrast/"
+folder_start = "./samegray/"
 name = folder_start + "data/sino_%05i.tif"
 label_name = folder_start + "label/analytical%i.png"
 results = folder_start + "results/result%i.txt"
@@ -45,7 +45,7 @@ create_dir(folder_start + "label/")
 
 ############## GENERATE A SPHERE ######################
 
-#projections.analytical_3D(R1, C1, 1., R2, C2, 0.4, size, sampling, name)
+#projections.analytical_3D(R1, C1, 1., R2, C2, 0.5, size, sampling, name)
 #sphere = projections.sphere(R1, R2, C1, C2, 0.5, 0.5, size)
 #projections.get_projections_3D(sphere, size, name, sampling)
 

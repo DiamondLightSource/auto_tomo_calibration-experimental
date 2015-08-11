@@ -7,7 +7,7 @@ from scipy.ndimage.filters import gaussian_filter, median_filter,\
 from skimage import io
 import os
 from skimage.filter import denoise_tv_chambolle
-
+import fit_data
 #################################### Fitting fns ############################
 
 
@@ -54,7 +54,15 @@ def parameter_estimates_stats(points):
         centre_guess = np.argwhere(min(points) == points).T[0][0]
         height_guess = np.max(points) - abs(np.min(points)) 
         
-        guess = [round(-abs(height_guess), 3), centre_guess, 10., round(abs(height_guess), 3)]
+        prob = gaussian_filter(points, 6)
+#         mu   = data[:,0].dot(prob)               # mean value
+#         mom2 = np.power(data[:,0], 2).dot(prob)  # 2nd moment
+#         var  = mom2 - mu**2               # variance
+        mu = prob.dot(data[:, 0])  # mean or location param.
+        sigma = np.sqrt(prob.dot(data[:, 0] ** 2) - mu ** 2)
+        sigma_guess = sigma
+        
+        guess = [round(-abs(height_guess), 3), centre_guess, sigma_guess, round(abs(height_guess), 3)]
         return guess
     except:
         print "Not resolved"
@@ -137,19 +145,18 @@ def fit_and_visualize(image, signals, coords, folder_name):
             weight = 4
             tol = 4 # MAD median distance higher the better - gap is a super anomally
             # TODO: for poor contrast increase the tolerance
-            tol = 5
             data = np.array([range(len(signal)), signal]).T
             
-            # No filter, bad guess
+            # STATS GUESS
             pl.subplot(2, 3, 2)
             guess = parameter_estimates_stats(signal)
             print "Stats guess", guess
             param, unused = fit_gaussian(signal, guess, weight, 0)      
             pl.plot(data[:,0], data[:,1])
             pl.plot(data[:,0], gaussian(data[:,0], *param))
-            pl.title("Stats guess / STD {0}".format(abs(round(param[2], 2))))
-            #pl.ylim(ymin,ymax)
-            pl.ylim(0, 1.2)
+            pl.title("Stats / STD {0}".format(abs(round(param[2], 2))))
+            pl.ylim(ymin,ymax)
+            #pl.ylim(0, 1.2)
             
             
             # No filter, MAD guess
@@ -159,36 +166,39 @@ def fit_and_visualize(image, signals, coords, folder_name):
             param, unused = fit_gaussian(signal, guess, weight, 0)      
             pl.plot(data[:,0], data[:,1])
             pl.plot(data[:,0], gaussian(data[:,0], *param))
-            pl.title("MAD guess / STD {0}".format(abs(round(param[2], 2))))
-            #pl.ylim(ymin,ymax)
-            pl.ylim(0, 1.2)
+            pl.title("MAD / STD {0}".format(abs(round(param[2], 2))))
+            pl.ylim(ymin,ymax)
+            #pl.ylim(0, 1.2)
             
             # MAD FILTER DATA
             pl.subplot(2, 3, 4) 
-            mad_sig = noise_MAD(signal, tol)
-            c = np.array([range(len(mad_sig)), mad_sig]).T       
-            pl.plot(c[:,0], c[:,1])
-            pl.title("Noise")
+            guess = parameter_estimates_stats(signal)
+            X, best_fit = fit_data.box_step(signal, guess)
+            pl.plot(data[:,0], data[:,1])
+            pl.plot(X, best_fit)
+            pl.title("Box + step")
             pl.ylim(ymin,ymax)
-            pl.ylim(0, 1.2)
+            #pl.ylim(0, 1.2)
             
             # MAD - SIGNAL DATA
             pl.subplot(2, 3, 5)
-            peak, indices = get_peak(signal, tol, 10)
-            c = np.array([range(len(peak)), peak]).T
-            pl.plot(c[:,0], c[:,1])
-            pl.title("Extracted peak")
-            #pl.ylim(ymin,ymax)
-            pl.ylim(0, 1.2)
+            guess = parameter_estimates_stats(signal)
+            X, best_fit = fit_data.lorentz_step(signal, guess)
+            pl.plot(data[:,0], data[:,1])
+            pl.plot(X, best_fit)
+            pl.title("Lorentzian + step")
+            pl.ylim(ymin,ymax)
+            #pl.ylim(0, 1.2)
             
-            # MOVING AVERAGE FILTERED SIGNAL
+            # MLMFIT
             pl.subplot(2, 3, 6)
-            mad_sig = thresh_MAD(signal, tol, 0)
-            c = np.array([range(len(mad_sig)), mad_sig]).T
-            pl.plot(c[:,0], c[:,1])
-            pl.title("MAD")
-            #pl.ylim(ymin,ymax)
-            pl.ylim(0, 1.2)
+            guess = parameter_estimates_stats(signal)
+            X, best_fit = fit_data.gauss_step(signal, guess)
+            pl.plot(data[:,0], data[:,1])
+            pl.plot(X, best_fit)
+            pl.title("Gaussian + Step")
+            pl.ylim(ymin,ymax)
+            #pl.ylim(0, 1.2)
             
             pl.savefig(folder_name + 'result%i.png' % i)
             pl.close('all')
@@ -486,7 +496,8 @@ def touch_lines_3D(pt1, pt2, sampling, folder_name, name):
         folder_name = folder_name + "plots_%i/" % Z
         create_dir(folder_name)
         
-        plot_image = median_filter(plot_image, 3)
+        # TODO : change the equalization or median filtering
+        #plot_image = median_filter(plot_image, 3)
         #plot_image, bins = equalize(plot_image, 2)
         #plot_image, bins = equalize(plot_image, 2)
         

@@ -32,7 +32,7 @@ def detect(size, name, results, median, label_name):
         
         # Open tiffs, add noise and save them
         image = io.imread(input_filename)
-        #image = add_noise(image, 0.3)
+        image = add_noise(image, 0.3)
 
         result = detector_watershed.watershed_segmentation(image, median, folder)
         
