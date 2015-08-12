@@ -1,13 +1,13 @@
 import numpy as np
-import pylab as pl
 
 from skimage import io
 from skimage import measure
 from scipy import ndimage, misc
 from skimage.morphology import watershed, disk
 from skimage.feature import peak_local_max
-from skimage.filter import threshold_otsu, rank
-from scipy.ndimage.morphology import binary_opening, binary_closing
+from skimage.filter import threshold_otsu, rank, denoise_tv_chambolle
+from scipy.ndimage.morphology import binary_opening, binary_closing, binary_fill_holes, binary_erosion, binary_dilation
+from scipy.ndimage.filters import median_filter, gaussian_filter
 
 
 def preprocessing(image, smooth_size, folder, task_id):
@@ -28,21 +28,13 @@ def preprocessing(image, smooth_size, folder, task_id):
     ONE IDEA MIGHT BE TO DETECT CENTRES ALONG ONE AXIS AND THEN ANOTHER
     AFTER ALL THE CENTRES WERE FOUND COMBINE THEM SOMEHOW... 
     """
-    
-    smoothed = rank.median(image, disk(smooth_size))
-    smoothed = rank.enhance_contrast(smoothed, disk(smooth_size))
-    
-#     pl.subplot(2, 3, 1)
-#     pl.title("after median")
-#     pl.imshow(smoothed)
-#     pl.gray()
-    # If after smoothing the "dot" disappears
-    # use the image value
+    smoothed = gaussian_filter(image, 5)
+#     misc.imsave(folder + 'smooth%05i.jpg' % task_id, smoothed)
     
     # TODO: what do with thresh?
     try:
         im_max = smoothed.max()
-        thresh = threshold_otsu(image)
+        thresh = threshold_otsu(smoothed)
     except:
         im_max = image.max()
         thresh = threshold_otsu(image)
@@ -53,49 +45,82 @@ def preprocessing(image, smooth_size, folder, task_id):
         
     else:
         binary = smoothed > thresh
-        
-        # TODO: this array size is the fault of errors
+     
+        # Open the image by connecting small cracks and remove salt
         bin_open = binary_opening(binary, np.ones((5, 5)), iterations=5)
+
+        # Close up any small cracks
+        bin_close = binary_closing(bin_open, np.ones((5, 5)), iterations=5)
         
-#         pl.subplot(2, 3, 2)
-#         pl.title("threshold")
-#         pl.imshow(binary, interpolation='nearest')
-#         pl.subplot(2, 3, 3)
-#         pl.title("opening")
-#         pl.imshow(bin_open, interpolation='nearest')
-#         pl.subplot(2, 3, 4)
-#         pl.title("closing")
-#         pl.imshow(bin_close, interpolation='nearest')
+        # Fill the holes inside the circles
+        bin_fill = binary_fill_holes(bin_close)
         
-        distance = ndimage.distance_transform_edt(bin_open)
+        
+#         # Dilated image to get the regions we are sure aren't circles
+#         background = binary_dilation(bin_fill, np.ones((5, 5)), iterations=5)
+#          
+#         # Foreground
+#         dist_transform = ndimage.distance_transform_edt(bin_fill)
+#         foreground = (dist_transform > threshold_otsu(dist_transform))
+#          
+#         # Unknown region
+#         unknown = (background - foreground) * 1
+#          
+#         # Marker labelling
+#         marks = ndimage.label(foreground)[0]
+#          
+#         # Add one to all labels so that sure background is not 0, but 1
+#         marks = marks+1
+#          
+#         # Now, mark the region of unknown with zero
+#         #print unknown
+#         marks[unknown==1.] = 0
+#  
+#         # water
+#         water = watershed(image, marks)
+        
+        distance = ndimage.distance_transform_edt(bin_fill)
         local_maxi = peak_local_max(distance,
-                                    indices=False, labels=bin_open)
+                                    indices=False, labels=bin_fill)
         
         markers = ndimage.label(local_maxi)[0]
         
-        labeled = watershed(-distance, markers, mask=bin_open)
+        labeled = watershed(-distance, markers, mask=bin_fill)
+        
+#         pl.subplot(2, 3, 1)
+#         pl.title("filtered")
+#         pl.imshow(smoothed)
+#         pl.gray()
+#         pl.subplot(2, 3, 2)
+#         pl.title("opened")
+#         pl.imshow(bin_open)
+#         pl.subplot(2, 3, 3)
+#         pl.title("closed")
+#         pl.imshow(bin_close)
+#         pl.subplot(2, 3, 4)
+#         pl.title("filled")
+#         pl.imshow(bin_fill)
 #         pl.subplot(2, 3, 5)
 #         pl.title("label")
-#         pl.imshow(labeled)
-#         #pl.show()
+#         pl.imshow(water)
+#         pl.show()
 #         pl.savefig(folder)
 #         pl.close('all')
-        
         misc.imsave(folder + 'labels%05i.jpg' % task_id, labeled)
+
 #         labels_rw = random_walker(bin_close, markers, mode='cg_mg')
-#          
 #         pl.imshow(labels_rw, interpolation='nearest')
 #         pl.show()
 
     return labeled
 
 
-def watershed_segmentation(image, smooth_size, folder):
+def watershed_segmentation(image, smooth_size, folder, task_id):
     
     if np.unique(image)[0] == 0.:
         return [[], []]
     
-    labels = preprocessing(image, smooth_size, folder)
+    labels = preprocessing(image, smooth_size, folder, task_id)
     
     centroids, radius = centres_of_mass_2D(labels)
     
@@ -134,3 +159,10 @@ def centres_of_mass_2D(image):
             centroids.append(centre)
 
     return [centroids, radius]
+ 
+# from skimage import io
+# import pylab as pl
+#   
+# img = io.imread("/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_01400.tif")
+# 
+# watershed_segmentation(img, 3, 1, 1)

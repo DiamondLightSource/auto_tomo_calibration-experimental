@@ -1,5 +1,5 @@
 module load global/cluster
-cd /dls/tmp/jjl36382/resolution1/logs
+cd /dls/tmp/jjl36382/resolution/logs
 
 #read -p "enter path together with the file name and format > " datapath
 #read -p "enter starting file number > " start
@@ -21,20 +21,24 @@ cd /dls/tmp/jjl36382/resolution1/logs
 #sorted = folder_start + "sorted/"
 #plots = folder_start + "plots/"
 
-mkdir /dls/tmp/jjl36382/resolution1
-mkdir /dls/tmp/jjl36382/resolution1/logs
-mkdir /dls/tmp/jjl36382/resolution1/results
-mkdir /dls/tmp/jjl36382/resolution1/sorted
-mkdir /dls/tmp/jjl36382/resolution1/plots
-mkdir /dls/tmp/jjl36382/resolution1/label
-mkdir /dls/tmp/jjl36382/resolution1/data
-cd /dls/tmp/jjl36382/resolution1/logs
+mkdir /dls/tmp/jjl36382/resolution
+mkdir /dls/tmp/jjl36382/resolution/logs
+mkdir /dls/tmp/jjl36382/resolution/results
+mkdir /dls/tmp/jjl36382/resolution/sorted
+mkdir /dls/tmp/jjl36382/resolution/plots
+mkdir /dls/tmp/jjl36382/resolution/label
+mkdir /dls/tmp/jjl36382/resolution/data
+cd /dls/tmp/jjl36382/resolution/logs
 
 homepath="${HOME}/auto_tomo_calibration-experimental/Analysis_Cluster/measure_resolution"
 #datapath="/dls/tmp/tomas_aidukas/scans_july16/cropped/50867/image_%05i.tif"
-datapath="/dls/tmp/jjl36382/resolution1/sinograms/sino_%05i.tif"
-resultspath="/dls/tmp/jjl36382/resolution1/results"
-spherepath="/dls/tmp/jjl36382/resolution1/spheres"
+datapath="/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_%05i.tif"
+#datapath="/dls/tmp/jjl36382/resolution1/reconstruction/testdata1/image_%05i.tif"
+sinopath="/dls/tmp/jjl36382/resolution/sinograms/sino_%05i.tif"
+resultspath="/dls/tmp/jjl36382/resolution/results"
+spherepath="/dls/tmp/jjl36382/resolution/spheres"
+labelpath="/dls/tmp/jjl36382/resolution/label/"
+plotspath="/dls/tmp/jjl36382/resolution/plots"
 #analysispath="/dls/tmp/jjl36382/complicated_data/resolution1/analysis"
 
 # ENTER START FILE NUMBER + 1 AND END NUMBER +1
@@ -43,15 +47,15 @@ stop=2161
 step=1
 # Two points are considered to be in contact if their radii sum
 # equals the distance between the points within the tolerance value
-tolerance=2
+tolerance=5
 
 # Create simulation data
-holder="-N merge"
-qsub $holder -pe smp 3 -j y -t $start-$stop:1 -tc 30 $homepath/merge.sh $datapath
+#holder="-N merge"
+#qsub $holder -pe smp 3 -j y -t $start-$stop:1 -tc 30 $homepath/merge.sh $sinopath
 
 # Detect circles ------------------------------------------------------------------------------------------------------
 holder="-N detect"
-#qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 20 $homepath/detector.sh $datapath $resultspath/out%05i.dat
+qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 25 $homepath/detector.sh $datapath $resultspath/out%05i.dat $labelpath
 
 # Analyse areas ------------------------------------------------------------------------------------------------------
 holder="-hold_jid detect -N analyse"
@@ -63,4 +67,5 @@ holder="-hold_jid detect -N analyse"
 
 # Get resolution ------------------------------------------------------------------------------------------------------
 holder="-hold_jid merge -N resolution"
-#qsub $holder -pe smp 2 -j y -t 1 -tc 10 $homepath/find_contacts.sh $resultspath $tolerance
+#qsub $holder -pe smp 2 -j y -t 1 -tc 10 $homepath/find_contacts.sh $plotspath $resultspath/ $datapath $tolerance
+#$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $tolerance $start $stop

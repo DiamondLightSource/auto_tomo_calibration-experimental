@@ -1,12 +1,26 @@
 import pickle
 import find_resolution as resolution
+import optparse
 
 if __name__ == '__main__' :
+    parser = optparse.OptionParser()
+
+    (options, args) = parser.parse_args()
+
+    # make the filename
+    plots_path = args[0]
+    results_paths = args[1]
+    data_path = args[2]
+    tolerance = args[3]
+    dim_bot = int(args[4]) - 1
+    dim_top = int(args[5]) - 1
     
-    f = open(sorted + "centres.npy", 'r')
+    print int(tolerance)
+    
+    f = open(results_paths + "centres.npy", 'r')
     centroids = pickle.load(f)
     f.close()
-    f = open(sorted +"radii.npy", 'r')
+    f = open(results_paths + "radii.npy", 'r')
     radius = pickle.load(f)
     f.close()
     
@@ -23,7 +37,11 @@ if __name__ == '__main__' :
         r1 = radii[i][0]
         r2 = radii[i][1]
         
-        plots = "/dls/tmp/jjl36382/resolution1/plots" 
-        name = ???????????????
-        resolution.touch_lines_3D(c1, c2, sample, plots, name)
+        # check if we have full sphere and not just a "bit" of it
+        if (dim_top - c1[2])< r1 or (dim_top - c2[2])< r2 or (dim_bot + c1[2]) < r1 or (dim_bot + c2[2]) < r2:
+            print "centres", c1, c2, "are wrongly detected"
+        else:
+            # for every centre pair generate a new folder
+            plots = plots_path + "/%i/" % (i)
+            resolution.touch_lines_3D(c1, c2, sample, plots, data_path)
 

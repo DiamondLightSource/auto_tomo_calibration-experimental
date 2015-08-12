@@ -1,7 +1,5 @@
 import pickle
-import pylab as pl
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
 import optparse
 
 # TODO: THE TOLERANCE VALUES ARE NOT ROBUST
@@ -264,15 +262,14 @@ if __name__ == '__main__' :
     nb_spheres = len(centres_list)
     print "nb_spheres", nb_spheres
     
-    create_dir(sorted)
 
-    save_data(sorted + '/nb_spheres.npy', nb_spheres)
-    f = open(sorted + '/nb_spheres.txt', 'w')
+    save_data(results_folder + '/nb_spheres.npy', nb_spheres)
+    f = open(results_folder + '/nb_spheres.txt', 'w')
     f.write(repr(nb_spheres))
     f.close()
     
-    save_data(sorted + '/centres.npy', centres_list)
-    f = open(sorted + '/centres.txt', 'w')
+    save_data(results_folder + '/centres.npy', centres_list)
+    f = open(results_folder + '/centres.txt', 'w')
     for i in range(nb_spheres):
         f.write(repr(centres_list[i]) + '\n')
     f.close()
@@ -283,7 +280,7 @@ if __name__ == '__main__' :
         max_radii.append(np.max(radii_list[i]))
 
 
-    save_data(sorted + '/radii.npy', max_radii)
-    f = open(sorted + '/radii.txt', 'w')
+    save_data(results_folder + '/radii.npy', max_radii)
+    f = open(results_folder + '/radii.txt', 'w')
     f.write(repr(max_radii) + '\n')
     f.close()
