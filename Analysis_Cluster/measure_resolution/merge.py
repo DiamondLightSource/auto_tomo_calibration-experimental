@@ -21,7 +21,7 @@ if __name__ == '__main__' :
     C1 = (0.2, 0.2, 0.)
     C2 = (-0.2, 0.2, 0.)
     size = 2560 #total image dimensions
-    sampling = 360 * 3
+    sampling = 360 * 6
     
     sino = projections.analytical(R1, C1, 1., R2, C2, 1., size, sampling, output_filename, task_id)
     
