@@ -8,6 +8,7 @@ from skimage import io
 import os
 from skimage.filter import denoise_tv_chambolle
 import fit_data
+from scipy import misc
 #################################### Fitting fns ############################
 
 
@@ -50,19 +51,14 @@ def parameter_estimates_stats(points):
     Obtain guesses from simple analysis
     """
     try:
+        
         data = np.array([range(len(points)), points]).T
+        xs = data[:,0]
+        ys = data[:,1]
         centre_guess = np.argwhere(min(points) == points).T[0][0]
-        height_guess = np.max(points) - abs(np.min(points)) 
+        height_guess = np.max(points) - abs(np.min(points))
         
-        prob = gaussian_filter(points, 6)
-#         mu   = data[:,0].dot(prob)               # mean value
-#         mom2 = np.power(data[:,0], 2).dot(prob)  # 2nd moment
-#         var  = mom2 - mu**2               # variance
-        mu = prob.dot(data[:, 0])  # mean or location param.
-        sigma = np.sqrt(prob.dot(data[:, 0] ** 2) - mu ** 2)
-        sigma_guess = sigma
-        
-        guess = [round(-abs(height_guess), 3), centre_guess, sigma_guess, round(abs(height_guess), 3)]
+        guess = [round(-abs(height_guess), 3), centre_guess, 10., round(abs(height_guess), 3)]
         return guess
     except:
         print "Not resolved"
@@ -115,8 +111,12 @@ def fit_and_visualize(image, folder_name):
     Do this for every Z value
     """
     
-    io.imsave(folder_name + "touch_img.png", image)
-    io.imsave(folder_name + "touch_img.tif", image)
+    
+    #misc.imsave(folder_name + "touch_img.png", image)
+    #misc.imsave(folder_name + "touch_img.tif", image)
+    image = io.imread("/dls/tmp/jjl36382/resolution/plots1/7/plots_0/touch_img.tif")
+    
+    image = denoise_tv_chambolle(image, weight = 0.5)
     
     for i in range(image.shape[0]):
         
@@ -135,7 +135,7 @@ def fit_and_visualize(image, folder_name):
             data = np.array([range(len(signal)), signal]).T
             # PLOT THE IMAGE WITH THE LINE ON IT
 #             pl.subplot(2, 3, 1)
-            pl.subplot(1, 3, 1)
+            pl.subplot(2, 3, 1)
             pl.imshow(image)
             pl.plot(Ydata, Xdata)
             pl.gray()
@@ -149,60 +149,61 @@ def fit_and_visualize(image, folder_name):
 
             # STATS GUESS
 #             pl.subplot(2, 3, 2)
-            pl.subplot(1, 3, 2)
+            pl.subplot(2, 3, 2)
             guess = parameter_estimates_mad(signal_filt, 4, 1)
-            print "Guess", guess
+            print "MAD guess", guess
             param, unused = fit_gaussian(signal, guess, weight, 0)
-            pl.plot(data[:,0], data[:,1])
-            pl.plot(data[:,0], gaussian(data[:,0], *param))
-            pl.title("NoFilter / STD {0}".format(abs(round(param[2], 2))))
+            pl.plot(unused[:,0], unused[:,1])
+            pl.plot(unused[:,0], gaussian(unused[:,0], *param))
+            pl.title("Median filt MAD / STD {0}".format(abs(round(param[2], 2))))
             pl.ylim(ymin,ymax)
             #pl.ylim(0, 1.2)
             
             
 #             # No filter, MAD guess
-            pl.subplot(1, 3, 3)
+            pl.subplot(2, 3, 3)
             guess = parameter_estimates_mad(signal, 4, 1)
             print "MAD guess", guess
             param, unused = fit_gaussian(signal, guess, weight, 0)
-            pl.plot(data[:,0], data[:,1])
-            pl.plot(data[:,0], gaussian(data[:,0], *param))
-            pl.title("Filter / STD {0}".format(abs(round(param[2], 2))))
+            pl.plot(unused[:,0], unused[:,1])
+            pl.plot(unused[:,0], gaussian(unused[:,0], *param))
+            pl.title("No Filter MAD / STD {0}".format(abs(round(param[2], 2))))
             pl.ylim(ymin,ymax)
             #pl.ylim(0, 1.2)
-#             
-#             # MAD FILTER DATA
-#             pl.subplot(2, 3, 4) 
-#             smooth_sig = gaussian_filter(signal, 6)
-#             datasm = np.array([range(len(smooth_sig)), smooth_sig]).T
-#             Xsm = datasm[:,0]
-#             Ysm = datasm[:,1]
-#             pl.plot(Xsm, Ysm)
-#             pl.title("Gaussian smooth")
-#             pl.ylim(ymin,ymax)
-#             #pl.ylim(0, 1.2)
-#             
-#             # MAD - SIGNAL DATA
-#             pl.subplot(2, 3, 5)
-#             guess = parameter_estimates_stats(signal)
-#             X, best_fit = fit_data.lorentz_step(signal, guess)
-#             pl.plot(data[:,0], data[:,1])
-#             pl.plot(X, best_fit)
-#             pl.title("Lorentzian + step")
-#             pl.ylim(ymin,ymax)
-#             #pl.ylim(0, 1.2)
-#             
-#             # MLMFIT
-#             pl.subplot(2, 3, 6)
-#             guess = parameter_estimates_mad(signal, 4, 1)
-#             X, best_fit = fit_data.gauss_step(signal, guess)
-#             pl.plot(data[:,0], data[:,1])
-#             pl.plot(X, best_fit)
-#             pl.title("Gaussian + Step")
-#             pl.ylim(ymin,ymax)
-#             #pl.ylim(0, 1.2)
             
-            pl.savefig(folder_name + 'result%i.png' % i)
+             
+            # MAD - SIGNAL DATA
+            pl.subplot(2, 3, 4)
+            guess = parameter_estimates_stats(signal)
+            X, best_fit, err = fit_data.Breit(signal, guess)
+            pl.plot(data[:,0], data[:,1])
+            pl.plot(X, best_fit)
+            pl.title("Breit model")
+            pl.ylim(ymin,ymax)
+            #pl.ylim(0, 1.2)
+             
+            # MLMFIT
+            pl.subplot(2, 3, 5)
+            guess = parameter_estimates_stats(signal)
+            X, best_fit = fit_data.minimized_residuals(signal, guess)
+            pl.plot(data[:,0], data[:,1])
+            pl.plot(X, best_fit)
+            pl.title("Lowest error plot")
+            pl.ylim(ymin,ymax)
+            #pl.ylim(0, 1.2)
+            
+            # MAD FILTER DATA
+            pl.subplot(2, 3, 6) 
+            guess = parameter_estimates_stats(signal)
+            
+            X, best_fit, err = fit_data.Donaich(signal, guess)
+            pl.plot(data[:,0], data[:,1])
+            pl.plot(X, best_fit)
+            pl.title("Donaic")
+            pl.ylim(ymin,ymax)
+            #pl.ylim(0, 1.2)
+            #pl.savefig(folder_name + 'result%i.png' % i)
+            pl.savefig("./" + 'result%i.png' % i)
             pl.close('all')
             
     return
@@ -441,7 +442,7 @@ def get_slice(P1, P2, name, sampling):
         new_pt = vector_3D(P1, P2, time)
         
         input_file = name % int(round(new_pt[2], 0))
-        print input_file
+        #print input_file
         img = io.imread(input_file)
         
         for X in Xrange:
@@ -512,3 +513,6 @@ def touch_lines_3D(pt1, pt2, sampling, folder_name, name):
         fit_and_visualize(slice, folder_name)
 
     return
+
+
+fit_and_visualize("ayy", "ayy")
