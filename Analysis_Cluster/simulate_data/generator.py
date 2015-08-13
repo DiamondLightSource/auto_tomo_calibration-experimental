@@ -32,7 +32,7 @@ sampling = 360
 median = 3
 
 # just change then ends of the folders for different data sets
-folder_start = "./samegray/"
+folder_start = "./contrast/"
 name = folder_start + "data/sino_%05i.tif"
 label_name = folder_start + "label/analytical%i.png"
 results = folder_start + "results/result%i.txt"

@@ -180,23 +180,21 @@ def fit_and_visualize(image, signals, coords, folder_name):
             pl.ylim(ymin,ymax)
             #pl.ylim(0, 1.2)
             
-            # MAD - SIGNAL DATA
             pl.subplot(2, 3, 5)
             guess = parameter_estimates_stats(signal)
-            X, best_fit = fit_data.lorentz_step(signal, guess)
+            X, best_fit = fit_data.gauss_step_const(signal, guess)
             pl.plot(data[:,0], data[:,1])
             pl.plot(X, best_fit)
-            pl.title("Lorentzian + step")
+            pl.title("Gauss + const+C")
             pl.ylim(ymin,ymax)
             #pl.ylim(0, 1.2)
             
-            # MLMFIT
             pl.subplot(2, 3, 6)
             guess = parameter_estimates_stats(signal)
-            X, best_fit = fit_data.gauss_step(signal, guess)
+            X, best_fit = fit_data.gaussFN_const(signal, guess)
             pl.plot(data[:,0], data[:,1])
             pl.plot(X, best_fit)
-            pl.title("Gaussian + Step")
+            pl.title("GaussFN" )
             pl.ylim(ymin,ymax)
             #pl.ylim(0, 1.2)
             
