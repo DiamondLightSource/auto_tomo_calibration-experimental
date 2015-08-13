@@ -31,6 +31,8 @@ if __name__ == '__main__' :
     # define sampling size
     sample = 2
         
+    print "spheres in contact", touch_c
+    print "number of spheres in contact", len(touch_c)
     for i in range(len(touch_c)):
         c1 = touch_c[i][0]
         c2 = touch_c[i][1]
@@ -41,6 +43,8 @@ if __name__ == '__main__' :
         if (dim_top - c1[2])< r1 or (dim_top - c2[2])< r2 or (dim_bot + c1[2]) < r1 or (dim_bot + c2[2]) < r2:
             print "centres", c1, c2, "are wrongly detected"
         else:
+            print "centres", c1, c2, "are being processed"
+            print "with radii", r1, r2
             # for every centre pair generate a new folder
             plots = plots_path + "/%i/" % (i)
             resolution.touch_lines_3D(c1, c2, sample, plots, data_path)

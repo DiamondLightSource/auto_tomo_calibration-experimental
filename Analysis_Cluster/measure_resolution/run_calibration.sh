@@ -39,6 +39,7 @@ resultspath="/dls/tmp/jjl36382/resolution/results"
 spherepath="/dls/tmp/jjl36382/resolution/spheres"
 labelpath="/dls/tmp/jjl36382/resolution/label/"
 plotspath="/dls/tmp/jjl36382/resolution/plots"
+segmented="/dls/tmp/jjl36382/resolution/data/sphere"
 #analysispath="/dls/tmp/jjl36382/complicated_data/resolution1/analysis"
 
 # ENTER START FILE NUMBER + 1 AND END NUMBER +1
@@ -55,17 +56,14 @@ tolerance=5
 
 # Detect circles ------------------------------------------------------------------------------------------------------
 holder="-N detect"
-qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 25 $homepath/detector.sh $datapath $resultspath/out%05i.dat $labelpath
+#qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 25 $homepath/detector.sh $datapath $resultspath/out%05i.dat $labelpath
 
 # Analyse areas ------------------------------------------------------------------------------------------------------
 holder="-hold_jid detect -N analyse"
 #qsub $holder -pe smp 2 -j y -t 1 $homepath/sort_centres.sh $start $stop $step $resultspath/out%05i.dat $resultspath
 #$homepath/sort_centres.sh $start $stop $step $resultspath/out%05i.dat $resultspath
 
-# Plot images based on centres ---------------------------------------------------------------------------------------
-#$homepath/plot_image.sh $start $stop $step $resultspath/out%05i.dat $resultspath
-
 # Get resolution ------------------------------------------------------------------------------------------------------
 holder="-hold_jid merge -N resolution"
 #qsub $holder -pe smp 2 -j y -t 1 -tc 10 $homepath/find_contacts.sh $plotspath $resultspath/ $datapath $tolerance
-#$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $tolerance $start $stop
+$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $tolerance $start $stop

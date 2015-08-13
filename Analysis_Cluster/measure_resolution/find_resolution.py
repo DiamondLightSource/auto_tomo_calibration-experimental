@@ -100,7 +100,7 @@ def parameter_estimates_mad(signal, tol, value):
     
 
 
-def fit_and_visualize(image, signals, coords, folder_name):
+def fit_and_visualize(image, folder_name):
     """
     Take in an array containing all of the lines
     Take in the image along the slanted plane
@@ -114,96 +114,93 @@ def fit_and_visualize(image, signals, coords, folder_name):
     
     Do this for every Z value
     """
-    import scipy
-
-    max_int = np.max(image)
     
+    io.imsave(folder_name + "touch_img.png", image)
+    io.imsave(folder_name + "touch_img.tif", image)
     
-    for i in range(len(coords)):
-        coord = coords[i]
-        signal = signals[i]
-        img_copy = image.copy()
+    for i in range(image.shape[0]):
+        
         Xdata = []
         Ydata = []
+        signal = [pixel for pixel in image[i,:]]
         
-        for j in range(0, len(coord)):
-            x, y = coord[j]
-            Xdata.append(x)
-            Ydata.append(y)
-            #img_copy[x, y] = max_int
+        for j in range(image.shape[1]):
+            
+            Xdata.append(i)
+            Ydata.append(j)
             
         if signal:
             
-            signal = median_filter(signal, 5)
+            signal_filt = median_filter(signal, 5)
             data = np.array([range(len(signal)), signal]).T
             # PLOT THE IMAGE WITH THE LINE ON IT
-            pl.subplot(2, 3, 1)
-            pl.imshow(img_copy)
+#             pl.subplot(2, 3, 1)
+            pl.subplot(1, 3, 1)
+            pl.imshow(image)
             pl.plot(Ydata, Xdata)
             pl.gray()
             pl.axis('off')
             
             # DETERMINE Y LIMIT
-            ymax = np.max(img_copy)
-            ymin = np.min((img_copy))
+            ymax = np.max(image)
+            ymin = np.min(image)
             weight = 4
             tol = 4 # MAD median distance higher the better - gap is a super anomally
-            # TODO: for poor contrast increase the tolerance
-            
-            
+
             # STATS GUESS
-            pl.subplot(2, 3, 2)
-            guess = parameter_estimates_stats(signal)
-            print "Stats guess", guess
+#             pl.subplot(2, 3, 2)
+            pl.subplot(1, 3, 2)
+            guess = parameter_estimates_mad(signal_filt, 4, 1)
+            print "Guess", guess
             param, unused = fit_gaussian(signal, guess, weight, 0)
             pl.plot(data[:,0], data[:,1])
             pl.plot(data[:,0], gaussian(data[:,0], *param))
-            pl.title("Stats / STD {0}".format(abs(round(param[2], 2))))
+            pl.title("NoFilter / STD {0}".format(abs(round(param[2], 2))))
             pl.ylim(ymin,ymax)
             #pl.ylim(0, 1.2)
             
             
-            # No filter, MAD guess
-            pl.subplot(2, 3, 3)  
+#             # No filter, MAD guess
+            pl.subplot(1, 3, 3)
             guess = parameter_estimates_mad(signal, 4, 1)
             print "MAD guess", guess
-            param, unused = fit_gaussian(signal, guess, weight, 0)      
+            param, unused = fit_gaussian(signal, guess, weight, 0)
             pl.plot(data[:,0], data[:,1])
             pl.plot(data[:,0], gaussian(data[:,0], *param))
-            pl.title("MAD / STD {0}".format(abs(round(param[2], 2))))
+            pl.title("Filter / STD {0}".format(abs(round(param[2], 2))))
             pl.ylim(ymin,ymax)
             #pl.ylim(0, 1.2)
-            
-            # MAD FILTER DATA
-            pl.subplot(2, 3, 4) 
-            smooth_sig = gaussian_filter(signal, 6)
-            datasm = np.array([range(len(smooth_sig)), smooth_sig]).T
-            Xsm = datasm[:,0]
-            Ysm = datasm[:,1]
-            pl.plot(Xsm, Ysm)
-            pl.title("Gaussian smooth")
-            pl.ylim(ymin,ymax)
-            #pl.ylim(0, 1.2)
-            
-            # MAD - SIGNAL DATA
-            pl.subplot(2, 3, 5)
-            guess = parameter_estimates_stats(signal)
-            X, best_fit = fit_data.lorentz_step(signal, guess)
-            pl.plot(data[:,0], data[:,1])
-            pl.plot(X, best_fit)
-            pl.title("Lorentzian + step")
-            pl.ylim(ymin,ymax)
-            #pl.ylim(0, 1.2)
-            
-            # MLMFIT
-            pl.subplot(2, 3, 6)
-            guess = parameter_estimates_mad(signal, 4, 1)
-            X, best_fit = fit_data.gauss_step(signal, guess)
-            pl.plot(data[:,0], data[:,1])
-            pl.plot(X, best_fit)
-            pl.title("Gaussian + Step")
-            pl.ylim(ymin,ymax)
-            #pl.ylim(0, 1.2)
+#             
+#             # MAD FILTER DATA
+#             pl.subplot(2, 3, 4) 
+#             smooth_sig = gaussian_filter(signal, 6)
+#             datasm = np.array([range(len(smooth_sig)), smooth_sig]).T
+#             Xsm = datasm[:,0]
+#             Ysm = datasm[:,1]
+#             pl.plot(Xsm, Ysm)
+#             pl.title("Gaussian smooth")
+#             pl.ylim(ymin,ymax)
+#             #pl.ylim(0, 1.2)
+#             
+#             # MAD - SIGNAL DATA
+#             pl.subplot(2, 3, 5)
+#             guess = parameter_estimates_stats(signal)
+#             X, best_fit = fit_data.lorentz_step(signal, guess)
+#             pl.plot(data[:,0], data[:,1])
+#             pl.plot(X, best_fit)
+#             pl.title("Lorentzian + step")
+#             pl.ylim(ymin,ymax)
+#             #pl.ylim(0, 1.2)
+#             
+#             # MLMFIT
+#             pl.subplot(2, 3, 6)
+#             guess = parameter_estimates_mad(signal, 4, 1)
+#             X, best_fit = fit_data.gauss_step(signal, guess)
+#             pl.plot(data[:,0], data[:,1])
+#             pl.plot(X, best_fit)
+#             pl.title("Gaussian + Step")
+#             pl.ylim(ymin,ymax)
+#             #pl.ylim(0, 1.2)
             
             pl.savefig(folder_name + 'result%i.png' % i)
             pl.close('all')
@@ -416,39 +413,49 @@ def find_contact_3D(centroids, radius, tol = 1.):
             
             D = r1 + r2
             L = distance_3D(c1, c2)
-            print "distance between pts", L
-            print "radii sum", D
             if abs(D - L) <= tol:
                 
                 touch_pt = vector_3D(c1, c2, r1)
-                print c1, " ", c2, "are in contact"
-                print "touch point is ", touch_pt
                 touch_pts.append(touch_pt)
                 centres.append((c1, c2))
                 radii.append((r1, r2))
                 
-    return centres, touch_pts, radii   
+    return centres, touch_pts, radii
 
 
-def get_slices(P1, P2, name):
+def get_slice(P1, P2, name, sampling):
     """
-    Get slices for analysis
+    Get slice through centre for analysis
     """
-    zstart = np.min([P1[2], P2[2]])
-    zend  = np.max([P1[2], P2[2]])
+    centre_dist = distance_3D(P1, P2)
+    plot_img = np.zeros((centre_dist / 4. + 2, centre_dist / 5. + 2))
+
+    Xrange = np.arange(-centre_dist / 8., centre_dist / 8. + 1)
     
-    height = zend - zstart
+    print len(Xrange)
     
-    slices = {}
-    
-    for h in range(zstart, zend + 1):
-        input_file = name % (h)    
-        img = io.imread(input_file)
-        #img = median_filter(img, 3)
+    for time in np.linspace(centre_dist*0.4, centre_dist*0.6 + 1,
+                            centre_dist / 2.* sampling):
         
-        slices[h] = img
+        # Go up along the line
+        new_pt = vector_3D(P1, P2, time)
+        
+        input_file = name % int(round(new_pt[2], 0))
+        print input_file
+        img = io.imread(input_file)
+        
+        for X in Xrange:
+            
+            # Get along the X direction for every height
+            perp = vector_perpendicular_3D(new_pt, P2, 1, 0, X)
+            
+            pixel_value = img[perp[0], perp[1]]
+            
+            time_mod = time - centre_dist * 0.4
+            plot_img[X + centre_dist / 8., time_mod] = pixel_value
     
-    return slices
+    return plot_img
+
 
 def touch_lines_3D(pt1, pt2, sampling, folder_name, name):
     """
@@ -456,49 +463,42 @@ def touch_lines_3D(pt1, pt2, sampling, folder_name, name):
     two points.
     Used for obtaining the widths of the gaussian fitted
     to the gap between spheres
-    """    
+    """
     
-    centre_dist = distance_3D(pt1, pt2)
-    Xrange = np.arange(-centre_dist / 6., centre_dist / 6. + 1)
-#     Zrange = np.linspace(-centre_dist, centre_dist + 1)
     Zrange = np.arange(0.,1.)  # Take only the centre
     
     for Z in Zrange:
         # Create an array to store the slanted image slices
         # used for plotting
-        plot_image = np.zeros((centre_dist / 3., centre_dist / 2.))
-        lines = []
-        coords = []
-        slices = get_slices(pt1, pt2, name)
+        slice = get_slice(pt1, pt2, name, sampling)
+
         
-        for X in Xrange:
-            # Draw a line parallel to the one through the 
-            # point of contact at height Z
-            P1 = vector_perpendicular_3D(pt1, pt2, 1, Z, X)
-            P2 = vector_perpendicular_3D(pt1, pt2, 2, Z, X)
-            line = []
-            coord = []
-            length = distance_3D(P1, P2)
-            
-            # go along that line
-            for time in np.linspace(length*1./4., length*3./4. + 1, length / 2.*sampling):
-                try:
-                    # line coordinates going through the gap
-                    x, y, z = vector_3D(P1, P2, time)
-                    x, y, z = (int(round(x,0)), int(round(y,0)), int(round(z,0)))
-                    
-                    pixel_value = slices[z][x,y]
-                    time_mod = time - length*1./4
-                    plot_image[X + centre_dist / 6., time_mod] = pixel_value
-                    
-                    line.append(pixel_value)
-                    coord.append((X + centre_dist / 6., time_mod))
-                except:
-                    continue
-            
-            lines.append(line)
-            coords.append(coord)
-        
+#         for X in Xrange:
+#             # Draw a line parallel to the one through the 
+#             # point of contact at height Z
+#             P1 = vector_perpendicular_3D(pt1, pt2, 1, Z, X)
+#             P2 = vector_perpendicular_3D(pt1, pt2, 2, Z, X)
+#             line = []
+#             coord = []
+#             length = distance_3D(P1, P2)
+#             
+#             # go along that line
+#             for time in np.linspace(length*1./4., length*3./4. + 1, length / 2.*sampling):
+#                 try:
+#                     # line coordinates going through the gap
+#                     x, y, z = vector_3D(P1, P2, time)
+#                     x, y, z = (int(round(x,0)), int(round(y,0)), int(round(z,0)))
+#                     
+#                     pixel_value = 0
+#                     
+#                     time_mod = time - length*1./4
+#                     plot_image[X + centre_dist / 6., time_mod] = pixel_value
+#                     
+#                     line.append(pixel_value)
+#                     coord.append((X + centre_dist / 6., time_mod))
+#                 except:
+#                     continue
+
         folder_name = folder_name + "plots_%i/" % Z
         create_dir(folder_name)
         
@@ -509,6 +509,6 @@ def touch_lines_3D(pt1, pt2, sampling, folder_name, name):
         
         # bins hold [background, sphere1, sphere2]
         
-        fit_and_visualize(plot_image, lines, coords, folder_name)
+        fit_and_visualize(slice, folder_name)
 
     return
