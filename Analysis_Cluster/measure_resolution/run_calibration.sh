@@ -21,26 +21,31 @@ cd /dls/tmp/jjl36382/resolution/logs
 #sorted = folder_start + "sorted/"
 #plots = folder_start + "plots/"
 
-mkdir /dls/tmp/jjl36382/resolution
-mkdir /dls/tmp/jjl36382/resolution/logs
-mkdir /dls/tmp/jjl36382/resolution/results
-mkdir /dls/tmp/jjl36382/resolution/sorted
-mkdir /dls/tmp/jjl36382/resolution/plots
-mkdir /dls/tmp/jjl36382/resolution/label
-mkdir /dls/tmp/jjl36382/resolution/data
-cd /dls/tmp/jjl36382/resolution/logs
+folder="/dls/tmp/jjl36382/resolution2"
+
+mkdir $folder
+mkdir $folder/logs
+mkdir $folder/results
+mkdir $folder/sorted
+mkdir $folder/plots
+mkdir $folder/label
+mkdir $folder/data
+mkdir $folder/logs
+mkdir $folder/sinograms
+
 
 homepath="${HOME}/auto_tomo_calibration-experimental/Analysis_Cluster/measure_resolution"
 #datapath="/dls/tmp/tomas_aidukas/scans_july16/cropped/50867/image_%05i.tif"
-datapath="/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_%05i.tif"
+#datapath="/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_%05i.tif"
 #datapath="/dls/tmp/jjl36382/resolution1/reconstruction/testdata1/image_%05i.tif"
-sinopath="/dls/tmp/jjl36382/resolution/sinograms/sino_%05i.tif"
-resultspath="/dls/tmp/jjl36382/resolution/results"
-spherepath="/dls/tmp/jjl36382/resolution/spheres"
-labelpath="/dls/tmp/jjl36382/resolution/label/"
-plotspath="/dls/tmp/jjl36382/resolution/plots"
-segmented="/dls/tmp/jjl36382/resolution/data/sphere"
-#analysispath="/dls/tmp/jjl36382/complicated_data/resolution1/analysis"
+datapath="/dls/tmp/jjl36382/resolution2/reconstruction/testdata/image_%05i.tif"
+
+sinopath=$folder"/sinograms/sino_%05i.tiff"
+resultspath=$folder"/results"
+spherepath=$folder"/spheres"
+labelpath=$folder"/label/"
+plotspath=$folder"/plots"
+segmented=$folder"/sphere"
 
 # ENTER START FILE NUMBER + 1 AND END NUMBER +1
 start=1

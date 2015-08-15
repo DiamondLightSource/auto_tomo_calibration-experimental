@@ -18,12 +18,17 @@ if __name__ == '__main__' :
 
     R1 = 0.2
     R2 = 0.2
+    R3 = 0.2
+    R4 = 0.2
     C1 = (0.2, 0.2, 0.)
-    C2 = (-0.2, 0.2, 0.)
+    C2 = (-0.2, 0.2, 0.2) 
+    C3 = (-0.2, -0.2, 0.)
+    C4 = (0.2, -0.2, 0.)
     size = 2560 #total image dimensions
-    sampling = 360 * 6
+    sampling = 360 * 3
     
-    sino = projections.analytical(R1, C1, 1., R2, C2, 1., size, sampling, output_filename, task_id)
+    sino = projections.analytical(R1, C1, 1., R2, C2, 0.9, R3, C3, 0.8, R4, C4, 0.7,
+                                  size, sampling, output_filename, task_id)
     
     out = output_filename % task_id
     im = Image.fromarray(sino) # Convert 2D array to image object

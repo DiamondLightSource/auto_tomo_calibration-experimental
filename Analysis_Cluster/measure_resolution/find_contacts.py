@@ -26,7 +26,7 @@ if __name__ == '__main__' :
     
     print "centres of spheres", centroids
     print "radii of spheres", radius
-    touch_c, touch_pt, radii = resolution.find_contact_3D(centroids, radius, tol = 5.)
+    touch_c, touch_pt, radii = resolution.find_contact_3D(centroids, radius, tol = 20.)
     
     # define sampling size
     sample = 2
@@ -47,5 +47,5 @@ if __name__ == '__main__' :
             print "with radii", r1, r2
             # for every centre pair generate a new folder
             plots = plots_path + "/%i/" % (i)
-            resolution.touch_lines_3D(c1, c2, sample, plots, data_path)
+            resolution.touch_lines_3D(c1, c2, sample, plots, data_path, r1, r2)
 

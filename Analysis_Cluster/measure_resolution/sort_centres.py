@@ -11,7 +11,7 @@ def create_dir(directory):
         
 def not_within_range(element, list):
     for item in list:
-        if np.allclose(element, item, 0, 5):
+        if np.allclose(element, item, 0, 20):
             return False
         
     return True
@@ -24,7 +24,7 @@ def save_data(filename, data):
     f.close()
     
 
-tol = 10
+tol = 40
 
 if __name__ == '__main__' :
     """
@@ -91,8 +91,8 @@ if __name__ == '__main__' :
             cxcy[:] = [item for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, tol)]
             r[:] = [rad for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, tol)]
             # MODIFY THE RADIUS ACCORDINGLY
-            r.append((rad))
-            cxcy.append((cx,cy))
+            r.append((round(rad,2)))
+            cxcy.append((round(cx,2),round(cy,2)))
         centres.append(cxcy)
         radius.append(r)
     #--------------------------------------------------------
@@ -107,6 +107,10 @@ if __name__ == '__main__' :
     centres.append([(1,1)])
     centres.append([(1,1)])
     centres.append([(1,1)])
+    centres.append([(1,1)])
+    centres.append([(1,1)])
+    radius.append([(666)])
+    radius.append([(666)])
     radius.append([(666)])
     radius.append([(666)])
     radius.append([(666)])
@@ -122,10 +126,12 @@ if __name__ == '__main__' :
     dict = {}
     dict_for_averaging = {}
     dict_radius = {}
-    
+    for i in centres:
+        if i:
+            print i
     # Takes an element from every slice and loops through the array to check if
     # if the same centres exist within three slices
-    for slice_index in range(N - 4):
+    for slice_index in range(N - 6):
         for centr in centres[slice_index]:
             len_counter = 0
             end_loop = False
@@ -137,7 +143,7 @@ if __name__ == '__main__' :
             # set up a variable for length
             # go to the next slice
             if not_within_range(centr, dict.keys()):
-                for slice_next in range(slice_index + 1, N - 3):
+                for slice_next in range(slice_index + 1, N - 5):
                     
     #                 Check if the array has not ended
     #                 Since padding was used just skip this
@@ -197,38 +203,64 @@ if __name__ == '__main__' :
                                             list_for_averaging.append(element)
                                             rad_for_averaging.append(radius[slice_next + 3][index3])
                                             break
+                                    else:
+                                        for index4 in range(len(centres[slice_next + 4])):
+                                            element = centres[slice_next + 4][index4]
+                                            if np.allclose(np.asarray(centr), np.asarray(element), 0, tol):
+                                                found_one = True
+                                                len_counter += 1
+                                                list_for_averaging.append(element)
+                                                rad_for_averaging.append(radius[slice_next + 4][index4])
+                                                break
+                                        else:
+                                            for index5 in range(len(centres[slice_next + 5])):
+                                                element = centres[slice_next + 5][index5]
+                                                if np.allclose(np.asarray(centr), np.asarray(element), 0, tol):
+                                                    found_one = True
+                                                    len_counter += 1
+                                                    list_for_averaging.append(element)
+                                                    rad_for_averaging.append(radius[slice_next + 5][index5])
+                                                    break
+                                                
+                                                
                         # If the element was n ot found within 3 slices
                         # then it does not form a sphere
                         # hence found_one will be False
                         # and this part will execute meaning the end
                         # of the sphere
                         if not found_one:
-                            if len_counter > 2:
-                                # start and end index 
-                                dict[centr] = (slice_index, len_counter + slice_index)
-                                dict_for_averaging[centr] = list_for_averaging
-                                dict_radius[centr] = rad_for_averaging
-                                end_loop = True
-                            else:
-                                continue
+                            # start and end index 
+                            dict[centr] = (slice_index, len_counter + slice_index)
+                            dict_for_averaging[centr] = list_for_averaging
+                            dict_radius[centr] = rad_for_averaging
+                            end_loop = True
     
-    # Check if the lengths are more than 2
+    index = []
     for centre in dict.iterkeys():
+        
         slice_start = dict[centre][0]
         slice_end = dict[centre][1]
         # end is inclusive so add 1
         length = slice_end - slice_start + 1
-        
-        # also take the median of all the centre values
-        avg = np.median(dict_for_averaging[centre], axis=0)
-        dict_for_averaging[centre] = tuple(np.array(avg))
-        
-        avg_rad = np.max(dict_radius[centre])
-        dict_radius[centre] = np.array(avg_rad)
-        if length < 3:
-            del dict[centre]
-            del dict_radius[centre]
+        print length
+        if length > 100:
+            # also take the median of all the centre values
+            avg = np.mean(dict_for_averaging[centre], axis=0)
+            dict_for_averaging[centre] = tuple(np.array(avg))
             
+            avg_rad = np.max(dict_radius[centre])
+            dict_radius[centre] = np.array(avg_rad)
+        else:
+            dict_for_averaging[centre] = False
+            dict_radius[centre] = False
+            
+            index.append(centre)
+            
+    for centre in index:
+        del dict[centre]
+        del dict_radius[centre]
+        del dict_for_averaging[centre]
+        
     # take the mean value of the centre together
     # with its lengths and make one dict
     centroids = {}
@@ -244,7 +276,7 @@ if __name__ == '__main__' :
         slice_start = centroids[key][0]
         slice_end = centroids[key][1]
         z = (slice_end + slice_start) / 2.0
-        centroids[key] = int(z)
+        centroids[key] = z
     
     # make a list with x,y,z coordinates
     centres_list = []

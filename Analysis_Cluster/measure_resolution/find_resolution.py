@@ -96,7 +96,7 @@ def parameter_estimates_mad(signal, tol, value):
     
 
 
-def fit_and_visualize(image, folder_name):
+def fit_and_visualize(image, folder_name, r1, r2):
     """
     Take in an array containing all of the lines
     Take in the image along the slanted plane
@@ -112,54 +112,63 @@ def fit_and_visualize(image, folder_name):
     """
     
     
-    #misc.imsave(folder_name + "touch_img.png", image)
-    #misc.imsave(folder_name + "touch_img.tif", image)
-    image = io.imread("/dls/tmp/jjl36382/resolution/plots1/7/plots_0/touch_img.tif")
+    misc.imsave(folder_name + "touch_img.png", image)
+    misc.imsave(folder_name + "touch_img.tif", image)
+#     image = io.imread("/dls/tmp/jjl36382/resolution/plots1/7/plots_0/touch_img.tif")
     
-    image = denoise_tv_chambolle(image, weight = 0.5)
+#     image = denoise_tv_chambolle(image, weight = 0.2)
+    denoised = median_filter(image, 3)
+        
+    contrast_left = measure_contrast_left(denoised)
+    contrast_right = measure_contrast_right(denoised)
+
+    mtf_fwhm = []
+    mtf_cleft = []
+    mtf_cright = []
     
-    for i in range(image.shape[0]):
+    for i in range(int(image.shape[0]/2.)):
         
         Xdata = []
         Ydata = []
+        
         signal = [pixel for pixel in image[i,:]]
+        signal = crop_peak(signal, r1, r2, i, image.shape[0]/2.)
+
         
         for j in range(image.shape[1]):
             
-            Xdata.append(i)
-            Ydata.append(j)
+            Xdata.append(j)
+            Ydata.append(i)
             
         if signal:
             
-            signal_filt = median_filter(signal, 5)
             data = np.array([range(len(signal)), signal]).T
             # PLOT THE IMAGE WITH THE LINE ON IT
-#             pl.subplot(2, 3, 1)
             pl.subplot(2, 3, 1)
+#             measure_contrast(with_noise, i)
             pl.imshow(image)
-            pl.plot(Ydata, Xdata)
+            pl.plot(Xdata, Ydata)
             pl.gray()
             pl.axis('off')
-            
+             
             # DETERMINE Y LIMIT
             ymax = np.max(image)
             ymin = np.min(image)
             weight = 4
             tol = 4 # MAD median distance higher the better - gap is a super anomally
-
+ 
             # STATS GUESS
-#             pl.subplot(2, 3, 2)
             pl.subplot(2, 3, 2)
-            guess = parameter_estimates_mad(signal_filt, 4, 1)
+            guess = parameter_estimates_mad(signal, 4, 1)
             print "MAD guess", guess
             param, unused = fit_gaussian(signal, guess, weight, 0)
             pl.plot(unused[:,0], unused[:,1])
             pl.plot(unused[:,0], gaussian(unused[:,0], *param))
-            pl.title("Median filt MAD / STD {0}".format(abs(round(param[2], 2))))
+            pl.title("Median filt / STD {0}".format(abs(round(param[2], 2))))
             pl.ylim(ymin,ymax)
             #pl.ylim(0, 1.2)
-            
-            
+             
+             
 #             # No filter, MAD guess
             pl.subplot(2, 3, 3)
             guess = parameter_estimates_mad(signal, 4, 1)
@@ -170,45 +179,138 @@ def fit_and_visualize(image, folder_name):
             pl.title("No Filter MAD / STD {0}".format(abs(round(param[2], 2))))
             pl.ylim(ymin,ymax)
             #pl.ylim(0, 1.2)
-            
-             
-            # MAD - SIGNAL DATA
+ 
+              
+            # MLMFIT
             pl.subplot(2, 3, 4)
             guess = parameter_estimates_stats(signal)
-            X, best_fit, err = fit_data.Breit(signal, guess)
-            pl.plot(data[:,0], data[:,1])
-            pl.plot(X, best_fit)
-            pl.title("Breit model")
-            pl.ylim(ymin,ymax)
-            #pl.ylim(0, 1.2)
-             
-            # MLMFIT
-            pl.subplot(2, 3, 5)
-            guess = parameter_estimates_stats(signal)
-            X, best_fit = fit_data.minimized_residuals(signal, guess)
+            X, best_fit, fwhm = fit_data.minimized_residuals(signal, guess)
             pl.plot(data[:,0], data[:,1])
             pl.plot(X, best_fit)
             pl.title("Lowest error plot")
             pl.ylim(ymin,ymax)
             #pl.ylim(0, 1.2)
+             
+#             pl.savefig("./" + 'result%i.png' % i)
+            pl.savefig(folder_name + 'result%i.png' % i)
             
-            # MAD FILTER DATA
-            pl.subplot(2, 3, 6) 
-            guess = parameter_estimates_stats(signal)
-            
-            X, best_fit, err = fit_data.Donaich(signal, guess)
-            pl.plot(data[:,0], data[:,1])
-            pl.plot(X, best_fit)
-            pl.title("Donaic")
-            pl.ylim(ymin,ymax)
-            #pl.ylim(0, 1.2)
-            #pl.savefig(folder_name + 'result%i.png' % i)
-            pl.savefig("./" + 'result%i.png' % i)
+            fwhm = dist_between_spheres(r1, r2, i, image.shape[0]/2.)
+            # GET THE DATA TO PLOT THE MTF
+            # CONTRAST VS WIDTH
+            mtf_fwhm.append(fwhm)
+            mtf_cleft.append(np.min(signal) / contrast_left)
+            mtf_cright.append(np.min(signal) / contrast_right)
+                
+                
             pl.close('all')
-            
+
+    print mtf_cleft
+    print mtf_fwhm
+    print mtf_cright
+     
+    pl.plot(mtf_fwhm, mtf_cleft)
+    pl.plot(mtf_fwhm, mtf_cright)
+#     pl.savefig("./" + 'mtf.png')
+    pl.savefig(folder_name + 'mtf.png')
+    
     return
 
+
+def dist_between_spheres(r1, r2, Y, C):
+    
+    h = C - Y
+    
+    d1 = np.sqrt(r1**2 - h**2)
+    d2 = np.sqrt(r2**2 - h**2)
+
+    dist = r1 - d1 + r2 - d2
+    
+    return dist
+
+
+def crop_peak(signal, r1, r2, Y, C):
+    
+    h = C - Y
+    
+    d1 = np.sqrt(r1**2 - h**2)
+    d2 = np.sqrt(r2**2 - h**2)
+    
+    val = np.max(signal)
+    
+    lower = min(d1, d2)
+    higher = max(d1,d2)
+    for i in range(len(signal)):
+        if i < lower or i > higher:
+            signal[i] = val
+    
+    return signal
+
+
 ######################## Signal analysis #########################
+def measure_contrast_left(image):
+    """
+    Measure contrast of the sphere being
+    analyse which is on the left side of the image
+    """
+    pixels = []
+
+    for j in range(image.shape[0]):
+        pixels.append(image[j, 1])
+#         image[j, 5] = 0
+
+    return np.mean(pixels) 
+
+
+def measure_contrast_right(image):
+    """
+    Measure contrast of the sphere being
+    analyse which is on the left side of the image
+    """
+    pixels = []
+
+    for j in range(image.shape[0]):
+        pixels.append(image[j, image.shape[1] - 1])
+#         image[j, image.shape[1]-5] = 0
+
+    return np.mean(pixels) 
+
+def check_signal(signal):
+    """
+    Check if the signal still has any peaks or it is just noise
+    """
+    
+    
+    return
+
+def measure_contrast(signal):
+    """
+    Measure contrast of the sphere being
+    analyse which is on the left side of the image
+    """
+        
+    len_left = int(round(len(signal) / 3., 0))
+    len_right = int(round(len(signal) * 2 / 3., 0))
+    
+    values_left = [pixel for pixel in signal[0:len_left]]
+    values_right = [pixel for pixel in signal[len_right:len(signal)]]
+            
+#     CYleft = [i for coord in range(0, len_left)]
+#     CXleft = [coord for coord in range(0, len_left)]
+#     
+#     CYright = [i for coord in range(len_right,image.shape[1])]
+#     CXright = [coord for coord in range(len_right,image.shape[1])]
+#             
+#     pl.plot(CXleft, CYleft, '*')
+#     pl.plot(CXright, CYright, '+')
+
+    left = np.mean(values_left)
+    right = np.mean(values_right)
+    
+    contrast_L = np.min(signal) / left
+    contrast_R = np.min(signal) / right
+    
+    return contrast_L, contrast_R
+    
 
 def MAD(signal):
     """
@@ -237,7 +339,6 @@ def get_peak(signal, tol, value):
         if i <= up_thresh and i >= bot_thresh:
             only_peak.append(0)
         else:
-#             peak_indices.append(np.argwhere(i == signal))
             only_peak.append(value)
   
     peak_indices = [index for index, item in enumerate(only_peak) if item == 1]  
@@ -259,7 +360,7 @@ def noise_MAD(signal, tol):
         if i <= up_thresh and i >= bot_thresh:
             clean_signal.append(i)
     
-    return clean_signal    
+    return clean_signal
 
 
 def thresh_MAD(signal, tol, value):
@@ -414,6 +515,7 @@ def find_contact_3D(centroids, radius, tol = 1.):
             
             D = r1 + r2
             L = distance_3D(c1, c2)
+            print abs(D - L)
             if abs(D - L) <= tol:
                 
                 touch_pt = vector_3D(c1, c2, r1)
@@ -432,8 +534,6 @@ def get_slice(P1, P2, name, sampling):
     plot_img = np.zeros((centre_dist / 4. + 2, centre_dist / 5. + 2))
 
     Xrange = np.arange(-centre_dist / 8., centre_dist / 8. + 1)
-    
-    print len(Xrange)
     
     for time in np.linspace(centre_dist*0.4, centre_dist*0.6 + 1,
                             centre_dist / 2.* sampling):
@@ -458,7 +558,7 @@ def get_slice(P1, P2, name, sampling):
     return plot_img
 
 
-def touch_lines_3D(pt1, pt2, sampling, folder_name, name):
+def touch_lines_3D(pt1, pt2, sampling, folder_name, name, r1, r2):
     """
     Goes along lines in the region between
     two points.
@@ -473,46 +573,12 @@ def touch_lines_3D(pt1, pt2, sampling, folder_name, name):
         # used for plotting
         slice = get_slice(pt1, pt2, name, sampling)
 
-        
-#         for X in Xrange:
-#             # Draw a line parallel to the one through the 
-#             # point of contact at height Z
-#             P1 = vector_perpendicular_3D(pt1, pt2, 1, Z, X)
-#             P2 = vector_perpendicular_3D(pt1, pt2, 2, Z, X)
-#             line = []
-#             coord = []
-#             length = distance_3D(P1, P2)
-#             
-#             # go along that line
-#             for time in np.linspace(length*1./4., length*3./4. + 1, length / 2.*sampling):
-#                 try:
-#                     # line coordinates going through the gap
-#                     x, y, z = vector_3D(P1, P2, time)
-#                     x, y, z = (int(round(x,0)), int(round(y,0)), int(round(z,0)))
-#                     
-#                     pixel_value = 0
-#                     
-#                     time_mod = time - length*1./4
-#                     plot_image[X + centre_dist / 6., time_mod] = pixel_value
-#                     
-#                     line.append(pixel_value)
-#                     coord.append((X + centre_dist / 6., time_mod))
-#                 except:
-#                     continue
-
         folder_name = folder_name + "plots_%i/" % Z
         create_dir(folder_name)
         
-        # TODO : change the equalization or median filtering
-        #plot_image = median_filter(plot_image, 3)
-        #plot_image, bins = equalize(plot_image, 2)
-        #plot_image, bins = equalize(plot_image, 2)
-        
-        # bins hold [background, sphere1, sphere2]
-        
-        fit_and_visualize(slice, folder_name)
+        fit_and_visualize(slice, folder_name, r1, r2)
 
     return
 
 
-fit_and_visualize("ayy", "ayy")
+# fit_and_visualize("ayy", "ayy")

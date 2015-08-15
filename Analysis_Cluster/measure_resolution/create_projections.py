@@ -106,12 +106,12 @@ def projection_shifted(A, B, C, theta, value, t):
         return 0
 
 
-def analytical(R1, C1, value1, R2, C2, value2, size, sampling, name, z):
+def analytical(R1, C1, value1, R2, C2, value2, R3, C3, value3, R4, C4, value4 ,size, sampling, name, z):
     """
     Get projections at every angle
     """
-    ztop = max(C1[2], C2[2]) + max(R1, R2)
-    zbot = min(C1[2], C2[2]) - max(R1, R2)
+    ztop = max(C1[2], C2[2], C3[2], C4[2]) + max(R1, R2, R3, R4)
+    zbot = min(C1[2], C2[2], C3[2], C4[2]) - max(R1, R2, R3, R4)
     angles = np.linspace(1, 180, sampling)
     indices = range(sampling)
     step = 1. / (size / 2.)
@@ -123,7 +123,10 @@ def analytical(R1, C1, value1, R2, C2, value2, size, sampling, name, z):
     new_r1 = np.sqrt(R1**2 - h1**2)
     h2 = abs(z - abs(C2[2]))
     new_r2 = np.sqrt(R2**2 - h2**2)
-    
+    h3 = abs(z - abs(C3[2]))
+    new_r3 = np.sqrt(R3**2 - h3**2)
+    h4 = abs(z - abs(C4[2]))
+    new_r4 = np.sqrt(R4**2 - h4**2)
     if z >= zbot and ztop >= z:  # optimize
         for i in indices:
         
@@ -138,14 +141,20 @@ def analytical(R1, C1, value1, R2, C2, value2, size, sampling, name, z):
                     
                     proj1 = 0
                     proj2 = 0
+                    proj3 = 0
+                    proj4 = 0
                     
                     if R1 >= h1:
                         proj1 = projection_shifted(new_r1, new_r1, (C1[1], C1[0]), angle, value1, t)
                         
                     if R2 >= h2:
                         proj2 = projection_shifted(new_r2, new_r2, (C2[1], C2[0]), angle, value2, t)
+                    if R3 >= h3:
+                        proj4 = projection_shifted(new_r3, new_r3, (C3[1], C3[0]), angle, value3, t)
+                    if R4 >= h4:
+                        proj4 = projection_shifted(new_r4, new_r4, (C4[1], C4[0]), angle, value4, t)
         
-                    proj = proj1 + proj2
+                    proj = proj1 + proj2 + proj3 + proj4
                     projection.append(proj)
                     counter += 1
         
