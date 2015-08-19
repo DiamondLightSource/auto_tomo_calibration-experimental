@@ -21,7 +21,9 @@ cd /dls/tmp/jjl36382/resolution/logs
 #sorted = folder_start + "sorted/"
 #plots = folder_start + "plots/"
 
-folder="/dls/tmp/jjl36382/resolution2"
+##########################################
+folder="/dls/tmp/jjl36382/resolution_new"
+##########################################
 
 mkdir $folder
 mkdir $folder/logs
@@ -35,10 +37,10 @@ mkdir $folder/sinograms
 
 
 homepath="${HOME}/auto_tomo_calibration-experimental/Analysis_Cluster/measure_resolution"
-#datapath="/dls/tmp/tomas_aidukas/scans_july16/cropped/50867/image_%05i.tif"
+datapath="/dls/tmp/tomas_aidukas/scans_july16/cropped/50867/image_%05i.tif"
 #datapath="/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_%05i.tif"
 #datapath="/dls/tmp/jjl36382/resolution1/reconstruction/testdata1/image_%05i.tif"
-datapath="/dls/tmp/jjl36382/resolution2/reconstruction/testdata/image_%05i.tif"
+#datapath="/dls/tmp/jjl36382/resolution2/reconstruction/testdata/image_%05i.tif"
 
 sinopath=$folder"/sinograms/sino_%05i.tiff"
 resultspath=$folder"/results"
@@ -49,7 +51,7 @@ segmented=$folder"/sphere"
 
 # ENTER START FILE NUMBER + 1 AND END NUMBER +1
 start=1
-stop=2161
+stop=2128
 step=1
 # Two points are considered to be in contact if their radii sum
 # equals the distance between the points within the tolerance value
@@ -60,15 +62,15 @@ tolerance=5
 #qsub $holder -pe smp 3 -j y -t $start-$stop:1 -tc 30 $homepath/merge.sh $sinopath
 
 # Detect circles ------------------------------------------------------------------------------------------------------
-holder="-N detect"
-qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 25 $homepath/detector.sh $datapath $resultspath/out%05i.dat $labelpath
+holder="-hold_jid noprec.sh -N nigtproc"
+#qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 30 $homepath/detector.sh $datapath $resultspath/out%05i.dat $labelpath
 
 # Analyse areas ------------------------------------------------------------------------------------------------------
 holder="-hold_jid detect -N analyse"
 #qsub $holder -pe smp 2 -j y -t 1 $homepath/sort_centres.sh $start $stop $step $resultspath/out%05i.dat $resultspath
-#$homepath/sort_centres.sh $start $stop $step $resultspath/out%05i.dat $resultspath
+$homepath/sort_centres.sh $start $stop $step $resultspath/out%05i.dat $resultspath
 
 # Get resolution ------------------------------------------------------------------------------------------------------
 holder="-hold_jid merge -N resolution"
 #qsub $holder -pe smp 2 -j y -t 1 -tc 10 $homepath/find_contacts.sh $plotspath $resultspath/ $datapath $tolerance
-#$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $tolerance $start $stop
+$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $tolerance $start $stop

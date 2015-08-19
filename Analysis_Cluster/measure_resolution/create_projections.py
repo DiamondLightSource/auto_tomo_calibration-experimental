@@ -150,7 +150,7 @@ def analytical(R1, C1, value1, R2, C2, value2, R3, C3, value3, R4, C4, value4 ,s
                     if R2 >= h2:
                         proj2 = projection_shifted(new_r2, new_r2, (C2[1], C2[0]), angle, value2, t)
                     if R3 >= h3:
-                        proj4 = projection_shifted(new_r3, new_r3, (C3[1], C3[0]), angle, value3, t)
+                        proj3 = projection_shifted(new_r3, new_r3, (C3[1], C3[0]), angle, value3, t)
                     if R4 >= h4:
                         proj4 = projection_shifted(new_r4, new_r4, (C4[1], C4[0]), angle, value4, t)
         

@@ -1,8 +1,8 @@
 import os
 from skimage import io
 import optparse
-#import circle_detector
-import detector_watershed
+import circle_detector
+#import detector_watershed
 
 def save_data(filename, data):
     import pickle
@@ -29,9 +29,9 @@ if __name__ == '__main__' :
 
     # process image
     print("Processing data")
-    #result = circle_detector.detect_circles(image)
+    result = circle_detector.watershed_segmentation(image, 3, label_filename, task_id)
     # TODO: TRY WATERSHED SLICING INSTEAD OF HOUGH
-    result = detector_watershed.watershed_segmentation(image, 3, label_filename, task_id)
+    #result = detector_watershed.watershed_segmentation(image, 3, label_filename, task_id)
     
     # save image
     print("Saving image %s" % output_filename)

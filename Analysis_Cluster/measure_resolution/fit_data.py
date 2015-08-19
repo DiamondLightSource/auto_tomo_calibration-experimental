@@ -2,7 +2,7 @@ import numpy as np
 import pylab as pl
 from lmfit import minimize, Parameters, Parameter,\
                     report_fit, Model
-from lmfit.models import StepModel,BreitWignerModel, DonaichModel, GaussianModel, LorentzianModel, ConstantModel, RectangleModel, LinearModel
+from lmfit.models import StepModel,ExponentialModel, DonaichModel, GaussianModel, LorentzianModel, ConstantModel, RectangleModel, LinearModel
 
 
 def gaussian(x, height, center, width, offset):
@@ -35,31 +35,16 @@ def Donaich(signal, guess):
     return X, result.best_fit, result.redchi
 
 
-def Breit(signal, guess):
-    """
-    Model used in physics for assymetric curves
-    """
-    if guess == False:
-        return [0, 0, 0]
-    else:
-        amp, centre, stdev, offset = guess
-        
-        data = np.array([range(len(signal)), signal]).T
-        X = data[:,0]
-        Y = data[:,1]
+def Exponential(X, Y):
 
-#         gauss_mod = Model(gaussian)
-        breit_mod = BreitWignerModel()
-        
-        
-        pars = breit_mod.make_params(amplitude=amp, center=centre, sigma=stdev / 3.)
-        breit_mod.set_param_hint('sigma', value = stdev / 2., min=0., max=stdev*2)
-        
-        result = breit_mod.fit(Y, pars, x=X)
-        # write error report
-        #print result.fit_report()
+    exp_mod = ExponentialModel()
+
+    pars = exp_mod.guess(Y, x=X)#, amplitude=np.max(Y))
     
-    return X, result.best_fit, result.redchi
+    result = exp_mod.fit(Y, pars, x=X)
+    decay = result.best_values['decay']
+    
+    return X, result.best_fit, decay
 
 
 
@@ -81,9 +66,14 @@ def GaussStepConst(signal, guess):
         const_mod = ConstantModel()
         step_mod = StepModel(prefix='step')
         
-        gauss_mod.set_param_hint('width', value = stdev / 2., min=stdev / 3., max=stdev)
-        gauss_mod.set_param_hint('fwhm', expr='2.3548*width')
+#         gauss_mod.set_param_hint('width', value = stdev / 2., min=stdev / 3., max=stdev)
+#         
         pars = gauss_mod.make_params(height=amp, center=centre, width=stdev / 2., offset=offset)
+        pars['width'].min = stdev / 3.
+        pars['width'].max = stdev
+        pars['center'].min = centre - stdev / 1.5
+        pars['center'].max = centre + stdev / 1.5
+                
         
         pars += step_mod.guess(Y, x=X, center=centre)
 
@@ -165,21 +155,23 @@ def GaussConst(signal, guess):
         gauss_mod = GaussianModel(prefix='gauss_')
         const_mod = ConstantModel(prefix='const_')
         
-        #pars = lorentz_mod.make_params(amplitude=amp, center=centre, sigma=stdev / 3.)
-        #lorentz_mod.set_param_hint('sigma', value = stdev / 3., min=0., max=stdev)
+        pars = gauss_mod.guess(Y, x=X, center=centre, sigma=stdev / 2., amplitude=amp)
+        pars['gauss_center'].min = centre - stdev / 1.5
+        pars['gauss_center'].max = centre + stdev / 1.5
+        pars['gauss_sigma'].min = stdev / 3.
+        pars['gauss_sigma'].max = stdev
         
-        pars = gauss_mod.guess(Y, x=X, center=centre, sigma=stdev / 3., amplitude=amp)
-        #pars += step_mod.guess(Y, x=X, center=centre)
         pars += const_mod.guess(Y, x=X)
         
         mod = gauss_mod + const_mod
+        
         result = mod.fit(Y, pars, x=X)
         # write error report
         #print result.fit_report()
         fwhm = result.best_values['gauss_sigma'] * 2.3548
-
+        cent = result.best_values['gauss_center']
         
-    return X, result.best_fit, result.redchi, fwhm
+    return X, result.best_fit, cent, fwhm
 
 def Line(signal, guess):
     """

@@ -26,7 +26,7 @@ if __name__ == '__main__' :
     
     print "centres of spheres", centroids
     print "radii of spheres", radius
-    touch_c, touch_pt, radii = resolution.find_contact_3D(centroids, radius, tol = 20.)
+    touch_c, touch_pt, radii = resolution.find_contact_3D(centroids, radius, tol = 15.)
     
     # define sampling size
     sample = 2
@@ -41,9 +41,9 @@ if __name__ == '__main__' :
         
         # check if we have full sphere and not just a "bit" of it
         if (dim_top - c1[2])< r1 or (dim_top - c2[2])< r2 or (dim_bot + c1[2]) < r1 or (dim_bot + c2[2]) < r2:
-            print "centres", c1, c2, "are wrongly detected"
+            print "centre pair", c1, c2, "are wrongly detected"
         else:
-            print "centres", c1, c2, "are being processed"
+            print "centre pair", c1, c2, "are being processed"
             print "with radii", r1, r2
             # for every centre pair generate a new folder
             plots = plots_path + "/%i/" % (i)

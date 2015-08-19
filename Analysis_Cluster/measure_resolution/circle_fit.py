@@ -22,7 +22,7 @@ def leastsq_circle(x,y):
     R        = Ri.mean()
     residu   = np.sum((Ri - R)**2)
     
-    #plot_data_circle(x,y, xc, yc, R)
+#     plot_data_circle(x,y, xc, yc, R)
     
     return xc, yc, R, residu
 
