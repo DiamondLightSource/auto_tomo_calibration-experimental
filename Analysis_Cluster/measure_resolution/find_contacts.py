@@ -26,10 +26,10 @@ if __name__ == '__main__' :
     
     print "centres of spheres", centroids
     print "radii of spheres", radius
-    touch_c, touch_pt, radii = resolution.find_contact_3D(centroids, radius, tol = 15.)
+    touch_c, touch_pt, radii = resolution.find_contact_3D(centroids, radius, tol = 20.)
     
     # define sampling size
-    sample = 2
+    sample = 1
         
     print "spheres in contact", touch_c
     print "number of spheres in contact", len(touch_c)
@@ -38,14 +38,14 @@ if __name__ == '__main__' :
         c2 = touch_c[i][1]
         r1 = radii[i][0]
         r2 = radii[i][1]
-        
-        # check if we have full sphere and not just a "bit" of it
+#         # check if we have full sphere and not just a "bit" of it
         if (dim_top - c1[2])< r1 or (dim_top - c2[2])< r2 or (dim_bot + c1[2]) < r1 or (dim_bot + c2[2]) < r2:
-            print "centre pair", c1, c2, "are wrongly detected"
+            print "centre pair", c1, c2, "are incorectly detected"
         else:
             print "centre pair", c1, c2, "are being processed"
             print "with radii", r1, r2
             # for every centre pair generate a new folder
-            plots = plots_path + "/%i/" % (i)
+            plots = plots_path + "/{0},{1}/".format(round(c1[0],2), round(c1[1],2), round(c1[2],2),
+                                                    round(c2[0],2), round(c2[1],2), round(c2[2],2))
             resolution.touch_lines_3D(c1, c2, sample, plots, data_path, r1, r2)
 

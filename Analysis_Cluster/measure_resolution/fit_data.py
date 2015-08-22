@@ -2,49 +2,43 @@ import numpy as np
 import pylab as pl
 from lmfit import minimize, Parameters, Parameter,\
                     report_fit, Model
-from lmfit.models import StepModel,ExponentialModel, DonaichModel, GaussianModel, LorentzianModel, ConstantModel, RectangleModel, LinearModel
+from lmfit.models import StepModel,PolynomialModel, ExponentialModel, DonaichModel, GaussianModel, LorentzianModel, ConstantModel, RectangleModel, LinearModel
 
 
 def gaussian(x, height, center, width, offset):
     return (height/np.sqrt(2*np.pi)*width) * np.exp(-(x - center)**2/(2*width**2)) + offset
 
+def polynomial(c0,c1,c2,c3,c4,y):
+    return c0 + c1*y + c2*(y**2) + c3*(y**3) + c4*(y**4)
+    
 
-def Donaich(signal, guess):
+def MTF(Y, X):
     """
     Model used in photo emission
     """
-    if guess == False:
-        return [0, 0, 0]
-    else:
-        amp, centre, stdev, offset = guess
-        
-        data = np.array([range(len(signal)), signal]).T
-        X = data[:,0]
-        Y = data[:,1]
-
-#         gauss_mod = Model(gaussian)
-        don_mod = DonaichModel()
-        
-        pars = don_mod.make_params(amplitude=amp, center=centre, sigma=stdev / 3., gamma = 1)
-        don_mod.set_param_hint('sigma', value = stdev / 2., min=0., max=stdev*2)
-        
-        result = don_mod.fit(Y, pars, x=X)
-        # write error report
-        #print result.fit_report()
-    
-    return X, result.best_fit, result.redchi
-
-
-def Exponential(X, Y):
-
+    lin_mod = LinearModel(prefix="line_")
     exp_mod = ExponentialModel()
+    const_mod = ConstantModel()
+    poly_mod = PolynomialModel(5)
+    
+    #X = list(reversed(X))
+    
+    pars = poly_mod.guess(Y, x=X)
+    model = poly_mod
+    
+    result = model.fit(Y, pars, x=X)
+    # write error report
+    print result.fit_report()
+    
+    c0 = result.best_values['c0']
+    c1 = result.best_values['c1']
+    c2 = result.best_values['c2']
+    c3 = result.best_values['c3']
+    c4 = result.best_values['c4']
+    
+    limit = polynomial(c0,c1,c2,c3,c4,9)
+    return result.best_fit, limit
 
-    pars = exp_mod.guess(Y, x=X)#, amplitude=np.max(Y))
-    
-    result = exp_mod.fit(Y, pars, x=X)
-    decay = result.best_values['decay']
-    
-    return X, result.best_fit, decay
 
 
 
@@ -66,18 +60,15 @@ def GaussStepConst(signal, guess):
         const_mod = ConstantModel()
         step_mod = StepModel(prefix='step')
         
-#         gauss_mod.set_param_hint('width', value = stdev / 2., min=stdev / 3., max=stdev)
-#         
+        gauss_mod.set_param_hint('width', value = stdev / 2., min=stdev / 3., max=stdev)
+        gauss_mod.set_param_hint('fwhm', expr='2.3548*width')
         pars = gauss_mod.make_params(height=amp, center=centre, width=stdev / 2., offset=offset)
-        pars['width'].min = stdev / 3.
-        pars['width'].max = stdev
-        pars['center'].min = centre - stdev / 1.5
-        pars['center'].max = centre + stdev / 1.5
-                
         
         pars += step_mod.guess(Y, x=X, center=centre)
 
         pars += const_mod.guess(Y, x=X)
+        
+        pars['width'].vary = False
         
         mod = const_mod + gauss_mod + step_mod
         result = mod.fit(Y, pars, x=X)
@@ -155,45 +146,23 @@ def GaussConst(signal, guess):
         gauss_mod = GaussianModel(prefix='gauss_')
         const_mod = ConstantModel(prefix='const_')
         
-        pars = gauss_mod.guess(Y, x=X, center=centre, sigma=stdev / 2., amplitude=amp)
-        pars['gauss_center'].min = centre - stdev / 1.5
-        pars['gauss_center'].max = centre + stdev / 1.5
-        pars['gauss_sigma'].min = stdev / 3.
-        pars['gauss_sigma'].max = stdev
+        #pars = lorentz_mod.make_params(amplitude=amp, center=centre, sigma=stdev / 3.)
+        #lorentz_mod.set_param_hint('sigma', value = stdev / 3., min=0., max=stdev)
         
+        pars = gauss_mod.guess(Y, x=X, center=centre, sigma=stdev / 3., amplitude=amp)
+        #pars += step_mod.guess(Y, x=X, center=centre)
         pars += const_mod.guess(Y, x=X)
         
+        pars['gauss_sigma'].vary = False
         mod = gauss_mod + const_mod
-        
         result = mod.fit(Y, pars, x=X)
         # write error report
         #print result.fit_report()
         fwhm = result.best_values['gauss_sigma'] * 2.3548
-        cent = result.best_values['gauss_center']
-        
-    return X, result.best_fit, cent, fwhm
 
-def Line(signal, guess):
-    """
-    Fit a line to check if the signal is gone
-    """
-    if guess == False:
-        return [0, 0, 0]
-    else:
-        amp, centre, stdev, offset = guess
+        
+    return X, result.best_fit, result.redchi, fwhm
 
-        data = np.array([range(len(signal)), signal]).T
-        X = data[:,0]
-        Y = data[:,1]
-
-        linear_mod = LinearModel()
-        
-        pars = linear_mod.guess(Y, x=X, slope=0, interceipt=offset)
-        
-        mod = linear_mod
-        result = mod.fit(Y, pars, x=X)
-        
-        return X, result.best_fit, result.redchi, 0
 
 def minimized_residuals(signal, guess):
     if guess == False:
@@ -203,8 +172,7 @@ def minimized_residuals(signal, guess):
         X1, result1, err1, fwhm1 = GaussConst(signal, guess)
         X2, result2, err2, fwhm2 = GaussStepConst(signal, guess)
         X3, result3, err3, fwhm3 = Step(signal, guess)
-        X4, result4, err4, fwhm4 = Line(signal, guess)
-
+        
         errors = []
         if np.isnan(err1):
             pass
@@ -219,10 +187,6 @@ def minimized_residuals(signal, guess):
             pass
         else:
             errors.append(err3)
-        if np.isnan(err4):
-            pass
-        else:
-            errors.append(err4)
             
             
         if err1 == np.min(errors):
@@ -233,7 +197,5 @@ def minimized_residuals(signal, guess):
             return X2, result2, fwhm2
         elif err3 == np.min(errors):
             return X3, result3, fwhm3
-        elif err4 == np.min(errors):
-            print "Line is the best"
-            return X4, result4, fwhm4
+    
     

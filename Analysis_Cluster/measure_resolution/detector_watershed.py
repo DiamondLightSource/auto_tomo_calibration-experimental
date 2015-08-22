@@ -1,191 +1,227 @@
+from skimage import exposure, img_as_ubyte, dtype_limits
 import numpy as np
 import pylab as pl
 
+from skimage.color import gray2rgb
 from skimage import measure, io
 from scipy import ndimage, misc, optimize
-from skimage.morphology import watershed, label
-from skimage.filter import threshold_otsu, sobel, canny, prewitt, denoise_tv_chambolle
-from scipy.ndimage.morphology import binary_opening, binary_closing, binary_fill_holes, binary_erosion, binary_dilation
+from skimage.morphology import watershed, label, reconstruction, binary_erosion, disk
+from skimage.filter import threshold_otsu, sobel, canny, prewitt, denoise_tv_chambolle, scharr
+from scipy.ndimage.morphology import binary_opening, binary_closing, binary_fill_holes, binary_dilation
 from scipy.ndimage.filters import gaussian_filter, median_filter
 from skimage.transform import hough_circle
 from skimage.feature import peak_local_max
+from skimage.filter import canny
 from sklearn.cluster import spectral_clustering
-from skimage.draw import circle_perimeter
+from circle_fit import leastsq_circle
+from skimage.draw import circle_perimeter, set_color
+from skimage.exposure import rescale_intensity
+from skimage.filter.rank import enhance_contrast_percentile
 
 
-def preprocessing(image, smooth_size, folder, task_id):
-    """
-    'The image low contrast and under segmentation
-    problem is not yet addressed by most of the researchers'
+def select_area_for_detector(np_image):
     
-    'Other researchers also proposed different method to
-    remedy the problem of watershed.  Li, El-
-    moataz, Fadili, and Ruan, S. (2003) proposed an improved
-    image segmentation approach based 
-    on level set and mathematical morphology'
+   
+    pl.close('all')
     
-    THE SPHERES MUST BE ALMOST ALONG THE SAME PLANES IN Z DIRECTION
-    IF THEY ARE TOUCHING AND OVERLAP, WHILE BEING ALMOST MERGED
-    IT IS IMPOSSIBLE TO RESOLVE THEM
+    # Find regions
+    # Contrast stretching
+    image_filtered = denoise_tv_chambolle(np_image, weight=0.005)
+#     image_filtered = np_image
+    rescale = exposure.rescale_intensity(image_filtered, in_range='uint8')
+
+    equalize = enhance_contrast_percentile(rescale, disk(5), p0=.1, p1=.9)
+#     equalize = exposure.equalize_adapthist(image_filtered)
+#     equalize = exposure.equalize_hist(image_filtered)
     
-    ONE IDEA MIGHT BE TO DETECT CENTRES ALONG ONE AXIS AND THEN ANOTHER
-    AFTER ALL THE CENTRES WERE FOUND COMBINE THEM SOMEHOW... 
-    """
-    smoothed = median_filter(image, 3)
-    smoothed = gaussian_filter(smoothed, 3)
-#     smoothed = denoise_tv_chambolle(image, weight=0.002)
-#     misc.imsave(folder + 'smooth%05i.jpg' % task_id, smoothed)
-
-    # TODO: what do with thresh?
-    thresh = threshold_otsu(smoothed)
-     
-    binary = smoothed > thresh
-     
-     #     # Close up any small cracks
-    bin_close = binary_closing(binary, np.ones((5, 5)), iterations=10)
-    # Open the image by connecting small cracks and remove salt
-    bin_open = binary_opening(bin_close, np.ones((5, 5)), iterations=10)
-#     filled = binary_fill_holes(bin_open)
-
- 
-    # Fill the holes inside the circles
-#     bin_fill = binary_fill_holes(bin_close, np.ones((5, 5)))
-     
-    distance = ndimage.distance_transform_edt(bin_open)
+    thresh = threshold_otsu(equalize)
+    binary = equalize > thresh
+    
+    distance = ndimage.distance_transform_edt(binary)
     local_maxi = peak_local_max(distance,
-                                indices=False, labels=bin_open)
+                                indices=False, labels=binary)
      
     markers = ndimage.label(local_maxi)[0]
      
-    labeled = watershed(-distance, markers, mask=bin_open)
-
-#     pl.subplot(2, 3, 1)
-#     pl.title("graph")
-#     pl.imshow(binary)
-#     pl.gray()
-#     pl.subplot(2, 3, 2)
-#     pl.title("label_im")
-#     pl.imshow(smoothed)
-#     pl.subplot(2, 3, 3)
-#     pl.title("closed")
-#     pl.imshow(bin_close)
-#     pl.subplot(2, 3, 4)
-# #         pl.title("filled")
-# #         pl.imshow(bin_fill)
-#     pl.subplot(2, 3, 5)
-#     pl.title("local_maxi")
-#     pl.imshow(distance)
-#     pl.subplot(2, 3, 6)
-#     pl.title("label")
-#     pl.imshow(labeled)
-#     pl.show()
-#     pl.close('all')
+    labeled = watershed(-distance, markers, mask=binary)
     
-#         labels_rw = random_walker(bin_close, markers)
-#         pl.imshow(labels_rw, interpolation='nearest')
-#         pl.show()
+    pl.subplot(2, 3, 2)
+    pl.title("image_filtered")
+    pl.imshow(image_filtered)
+    pl.gray()
+#     pl.subplot(2, 3, 1)
+#     pl.title("rescale")
+#     pl.imshow(rescale)
+    pl.subplot(2, 3, 4)
+    pl.title("equalize")
+    pl.imshow(equalize)
+    pl.subplot(2, 3, 5)
+    pl.title("binary")
+    pl.imshow(binary)
+    pl.subplot(2, 3, 6)
+    pl.title("label")
+    pl.imshow(labeled)
+    pl.show()
+    pl.close('all')
 
-    return labeled, binary
+    areas = []
+    centroids_fit = []
+    radius_fit = []
+    edge_coords = []
+    bords = []
+    
+    
+    # Extract information from the regions
+    
+    for region in measure.regionprops(labeled, ['Area', 'BoundingBox', 'Label']):
+        
+        # Skip wrong regions
+        index = np.where(labeled==region['Label'])
+        if index[0].size==0 & index[1].size==0:
+            continue
+        
+        # Skip small regions
+        if region['Area'] < 100:
+            continue
+        
+        # Extract the coordinates of regions
+        minr, minc, maxr, maxc = region.bbox
+        margin = 3
+        
+        crop = equalize[minr-margin:maxr+margin,minc-margin:maxc+margin].copy()
+        
+        thresh = threshold_otsu(crop)
+        binary = crop >= thresh
+        crop = sobel(binary)
+        
+        coords = np.column_stack(np.nonzero(crop))
+        X = np.array(coords[:,0]) + minr - margin 
+        Y = np.array(coords[:,1]) + minc - margin
+
+        try:
+            XC, YC, RAD, RESID = leastsq_circle(X, Y)
+            if region.area * 1.3 > np.pi*(RAD+margin)**2:
+                
+                centroids_fit.append((round(XC, 4), round(YC, 4)))
+                radius_fit.append(round(RAD, 2))
+#                 edge_coords.append((X, Y))
+                bords.append((minr - margin, minc - margin, maxr + margin, maxc + margin))
+                areas.append(crop)
+        except:
+            continue
+    
+    return [centroids_fit, radius_fit, bords, areas, image_filtered]
+
+
+def detect_circles(np_image, folder, task_id):
+    
+    import numpy as np
+    import pylab as pl
+    
+    from skimage.transform import hough_circle
+    from skimage.feature import peak_local_max
+    from skimage.draw import circle_perimeter
+    from skimage.util import img_as_ubyte
+    from scipy import ndimage, misc, optimize
+
+    pl.close('all')
+
+    centroids_fit, radius_fit, bord, areas, rescale\
+     = select_area_for_detector(np_image)
+        
+    print 'Number of areas before selection:', len(areas)
+    # Check the areas
+    index = []
+    size = max(np_image.shape[0] / 2, np_image.shape[1] / 2)
+
+    for i in range(0, len(areas)):
+        # Jump too big or too small areas
+        if areas[i].shape[0] >= size*1.5 or areas[i].shape[1] >= size*1.5\
+        or areas[i].shape[0] <= size/8 or areas[i].shape[1] <= size/8:
+            index.append(i)
+            continue
+    
+    if index != []:
+        areas[:] = [item for i,item in enumerate(areas) if i not in index]
+        bord[:] = [item for i,item in enumerate(bord) if i not in index]
+        centroids_fit[:] = [item for i,item in enumerate(centroids_fit) if i not in index]
+        radius_fit[:] = [item for i,item in enumerate(radius_fit) if i not in index]
+#         edge_coords[:] = [item for i,item in enumerate(edge_coords) if i not in index]
+        
+    print 'Borders after selection:', bord
+    print 'Number of areas:', len(areas)
+    
+
+    # Detect circles into each area
+     
+    circles = [] # to get the outlines of the circles
+    C = [] # to get the centres of the circles, in relation to the different areas
+    R = [] # to get radii
+     
+    for i in range(0, len(areas)):
+          
+        hough_radii = np.arange(radius_fit[i] - radius_fit[i]/2., radius_fit[i] + radius_fit[i]/2.)
+        hough_res = hough_circle(areas[i], hough_radii)
+             
+        centers = []
+        accums = []
+        radii = []
+        minr, minc, maxr, maxc = bord[i]
+        
+        # For each radius, extract one circle
+        for radius, h in zip(hough_radii, hough_res):
+            peaks = peak_local_max(h, num_peaks=2)
+            centers.extend(peaks)
+            accums.extend(h[peaks[:, 0], peaks[:, 1]])
+            radii.extend([radius, radius])
+        try:     
+            for idx in np.argsort(accums)[::-1][:1]:
+                center_x, center_y = centers[idx]
+                C.append((center_x + minr, center_y + minc))
+                radius = radii[idx]
+                R.append(radius)
+                cx, cy = circle_perimeter(int(round(center_x + minr,0)), int(round(center_y + minc,0)), int(round(radius,0)))
+                circles.append((cx, cy))
+        except:
+            # If watershed segmentation failed
+            C.append([])
+            circles.append([])
+            R.append([])
+            
+    if circles:
+        for cent in C:
+            xc, yc = cent
+            rescale[int(xc), int(yc)] = 0
+            rescale[int(xc)-5:int(xc)+5, int(yc)-5:int(yc)+5] = 0
+            
+    # Hough circles
+    if C:
+        import matplotlib.pyplot as plt
+        for per in circles:
+            e1, e2= per
+            rescale[e1, e2] = 1
+    
+    pl.imshow(rescale)
+    pl.gray()
+    pl.show()
+
+    if task_id % 3 == 0:
+        misc.imsave(folder + 'labels%05i.jpg' % task_id, rescale)
+
+    return [C, R, circles, bord]
 
 
 def watershed_segmentation(image, smooth_size, folder, task_id):
-    
-#     if np.unique(image)[0] == 0.:
-#         return [[], []]
-#     
-    labels, denoised = preprocessing(image, smooth_size, folder, task_id)
-    centroids, radius, edges, bords = centres_of_mass_2D(labels, folder, task_id, denoised)
+
+    centroids, radius, edges, bords = detect_circles(image, folder, task_id)
     
     print centroids
     print radius
     
     return [centroids, radius, edges, bords]
 
-
-def centres_of_mass_2D(image, folder, task_id, original):
-    """
-    Calculates centres of mass
-    for all the labels
-    """
-    from circle_fit import leastsq_circle
-    centroids_fit = []
-    radius_fit = []
-    edge_coords = []
-    bords = []
-    circles = []
     
-    for info in measure.regionprops(image, ['coords ', 'Label', 'Area', 'equivalent_diameter', 'Centroid']): 
-        
-        if info['Area'] > image.shape[0] / 4.:
-            
-            minr, minc, maxr, maxc = info.bbox
-            margin = 30
-            crop = original[minr-margin:maxr+margin,minc-margin:maxc+margin].copy()
-#             edges = sobel(np.pad(info.image, 30, mode="constant"))
-            edges = sobel(crop)
-            print minr, minc
-# #             pl.imshow(edges)
-# #             pl.gray()
-# #             pl.show()
-#             
-            coords = np.column_stack(np.nonzero(edges))
-            X = np.array(coords[:,0]) + minr-margin 
-            Y = np.array(coords[:,1]) + minc-margin
-
-            XC, YC, RAD, RESID = leastsq_circle(X, Y)
-            
-            cx, cy = circle_perimeter(int(round(XC,0)) + minr-margin , int(round(YC,0)) + minc-margin, int(round(RAD,0)))
-
-            
-            if info.area * 1.5 > np.pi*RAD**2:
-                centroids_fit.append((round(XC, 4), round(YC, 4)))
-                radius_fit.append(round(RAD, 2))
-                edge_coords.append((cx, cy))
-                bords.append((minr - 30, minc - 30, maxr + 30, maxc + 30))
-    # Check the areas
-    index = []
-    print "before clearing number of circles was", len(centroids_fit)
-
-    size = max(image.shape[0] / 2, image.shape[1] / 2)
-
-    for i in range(0, len(centroids_fit)):
-        # Jump too big or too small areas
-        if (maxr + 60 - minr) <= size/5 or (maxc + 60 - minc) <= size/5:
-            index.append(i)
-
-    if index != []:
-        centroids_fit[:] = [item for i,item in enumerate(centroids_fit) if i not in index]
-        radius_fit[:] = [item for i,item in enumerate(radius_fit) if i not in index]
-        edge_coords[:] = [item for i,item in enumerate(edge_coords) if i not in index]
-        bords[:] = [item for i,item in enumerate(bords) if i not in index]
-        
-    for i in range(1, len(centroids_fit)):
-        # Jump almost same areas (= same circle)
-        if (abs(bords[i][0] - bords[i-1][0]) <= 100 and abs(bords[i][2] - bords[i-1][2]) <= 100):
-            index.append(i)
-            continue
-    
-    if index != []:
-        centroids_fit[:] = [item for i,item in enumerate(centroids_fit) if i not in index]
-        radius_fit[:] = [item for i,item in enumerate(radius_fit) if i not in index]
-        edge_coords[:] = [item for i,item in enumerate(edge_coords) if i not in index]
-        bords[:] = [item for i,item in enumerate(bords) if i not in index]
-
-    print "after removal, number of circles is", len(centroids_fit)
-    
-    # Plot stuff
-    if centroids_fit:
-        for cent in centroids_fit:
-            xc, yc = cent
-            image[int(xc), int(yc)] = 0
-            image[int(xc)-5:int(xc)+5, int(yc)-5:int(yc)+5] = 0
-            
-    if task_id % 30 == 0:
-        misc.imsave(folder + 'labels%05i.jpg' % task_id, image)
-#     pl.imshow(image)
-#     pl.show()
-    return [centroids_fit, radius_fit, edge_coords, bords]
-
-img = io.imread("/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_01230.tif")
+from skimage import io
+img = io.imread("/dls/tmp/tomas_aidukas/scans_july16/cropped/50867/image_02000.tif")
                     
 watershed_segmentation(img, 3, 1, 1)

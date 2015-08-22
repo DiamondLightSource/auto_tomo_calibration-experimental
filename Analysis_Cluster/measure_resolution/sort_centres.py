@@ -1,17 +1,17 @@
-import pickle
+import cPickle 
 import numpy as np
 import optparse
-
-# TODO: THE TOLERANCE VALUES ARE NOT ROBUST
+import json
 
 def create_dir(directory):
     import os
     if not os.path.exists(directory):
         os.makedirs(directory)
         
-def not_within_range(element, list):
+        
+def not_within_range(element, list, value):
     for item in list:
-        if np.allclose(element, item, 0, 20):
+        if np.allclose(element, item, 0, value):
             return False
         
     return True
@@ -20,11 +20,11 @@ def not_within_range(element, list):
 def save_data(filename, data):
     print("Saving data")
     f = open(filename, 'w')
-    pickle.dump(data, f)
+    cPickle.dump(data, f)
     f.close()
     
 
-tol = 15
+
 
 if __name__ == '__main__' :
     """
@@ -40,42 +40,32 @@ if __name__ == '__main__' :
     step = int(args[2])
     input_filename = args[3]
     results_folder = args[4]
-
+    tol = 50
+    
     """
     Loads all of the detected parameters of segmented circles
     in a slice and appends them to a list.
     """
-    data = []
-    for i in range(start, stop, step):
-        f = open(input_filename % i, 'r')
-        data.append(pickle.load(f))
-        f.close()
-    
-    N = len(data)
-    
-    bord_circles = []
-    centroids_sphere = []
-    radii_circles = []
-    edge_coords = []
-    borders = []
-    
     centres = []
     radius = []
     edges = []
     bords = []
-    """
-    Store the borders, centroids, radii and perimeters
-    """
-    for i in range(N):
-#         centroids_sphere.append(data[i][0])
-#         radii_circles.append(data[i][1])
-#         edge_coords.append(data[i][2])
-#         borders.append(data[i][3])
-        centres.append(data[i][0])
-        radius.append(data[i][1])
-        edges.append(data[i][2])
-        bords.append(data[i][3])
-        
+    for i in range(start, stop, step):
+        try:
+            f = open(input_filename % i, 'r')
+            data = cPickle.load(f)
+            centres.append(data[0])
+            radius.append(data[1])
+            edges.append(data[2])
+            bords.append(data[3])
+            f.close()
+        except:
+            print "MISSING FRAME %05i" % i
+            centres.append([])
+            radius.append([])
+            edges.append([])
+            bords.append([])
+
     N = len(centres)
     # Calculate centres according to the whole image
     """
@@ -92,52 +82,12 @@ if __name__ == '__main__' :
     for slice in range(N):
         for i in range(len(edges[slice])):
             ax.plot(edges[slice][i][0], edges[slice][i][1], slice*step+step)
-             
-             
-    # ax.set_xlim(0, stop)
-    # ax.set_ylim(0, stop)
-    # ax.set_zlim(0, stop)
+
     pl.title('Sphere detection on real image')
     pl.savefig(results_folder + "/full_plot.png")
     pl.close('all')
     
-#     pl.show()
 
-#     # Remove repeating centres--------------------------------------------------------
-#     print edge_coords[1280]
-#     centres = []
-#     radius = []
-#     edges = []
-#     bords = []
-#     
-#     for slice in range(N):
-#         cxcy = []
-#         pair = []
-#         r = []
-#         e = []
-#         b = []
-#         for i in range(len(centroids_sphere[slice])):
-#             cx = centroids_sphere[slice][i][0]
-#             cy = centroids_sphere[slice][i][1]
-#             rad = radii_circles[slice][i]
-#             edgeX = edge_coords[slice][i][0]
-#             edgeY = edge_coords[slice][i][1]
-#             border = borders[slice][i]
-#             # IF THERE ARE SAME CENTRES IN THE SAME SLICE THEN
-#             # WE WILL GET ERRORS - REMOVE THEM
-#             cxcy[:] = [item for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, tol)]
-#             r[:] = [rad for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, tol)]
-#             e[:] = [(edgeX, edgeY) for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, tol)]
-#             b[:] = [border for item in cxcy if not np.allclose(np.asarray((cx,cy)), np.asarray(item), 0, tol)]
-#             # MODIFY THE RADIUS ACCORDINGLY
-#             r.append((round(rad,2)))
-#             cxcy.append((round(cx,2),round(cy,2)))
-#             e.append(((edgeX, edgeY)))
-#             b.append((border))
-#         centres.append(cxcy)
-#         radius.append(r)
-#         edges.append(e)
-#         bords.append(b)
     #--------------------------------------------------------
 
     # PAD THE END OF THE LIST IN ORDER TO CHECK THROUGH
@@ -160,10 +110,7 @@ if __name__ == '__main__' :
     radius.append([(666)])
     radius.append([(666)])
     N = len(centres)
-    #--------------------------------------------------------
-    
-    N = len(centres)
-    
+
     dict = {}
     dict_for_averaging = {}
     dict_radius = {}
@@ -185,7 +132,7 @@ if __name__ == '__main__' :
             # brute force...
             # set up a variable for length
             # go to the next slice
-            if not_within_range(centr, dict.keys()):
+            if not_within_range(centr, dict.keys(), 50):
                 for slice_next in range(slice_index + 1, N - 7):
                          
                     # If one element was found in the slice then this is True
@@ -277,28 +224,29 @@ if __name__ == '__main__' :
                         # of the sphere
                         if not found_one:
                             # start and end index 
-                            dict[centr] = (slice_index, len_counter * step + slice_index)
+                            dict[centr] = (slice_index + start, len_counter * step + slice_index + start)
                             dict_for_averaging[centr] = list_for_averaging
                             dict_radius[centr] = rad_for_averaging
                             dict_edge[centr] = shell
                             dict_bord[centr] = borderz
                             end_loop = True
     
-    
     index = []
+    median_centres = {}
+    mean_radius = {}
     for centre in dict.iterkeys():
         
         slice_start = dict[centre][0]
         slice_end = dict[centre][1]
         # end is inclusive so add 1
         length = (slice_end - slice_start + 1)
-        if length > 50:
+        if length > 20:
             # also take the median of all the centre values
-            avg = np.mean(dict_for_averaging[centre], axis=0)
-            dict_for_averaging[centre] = tuple(np.array(avg))
+            avg = np.median(dict_for_averaging[centre], axis=0)
+            median_centres[centre] = tuple(np.array(avg))
             
             avg_rad = np.max(dict_radius[centre])
-            dict_radius[centre] = np.array(avg_rad)
+            mean_radius[centre] = np.array(avg_rad)
         else:
             index.append(centre)
             
@@ -309,30 +257,37 @@ if __name__ == '__main__' :
         del dict_edge[centre]
         del dict_bord[centre]
     
-#     for centre in dict.iterkeys():
-#          
-#         index = []
-#         avg = np.mean(dict_for_averaging[centre], axis=0)
-#         std = np.std(dict_for_averaging[centre], axis=0)
-#         all_centres = dict_for_averaging[centre]
-#         all_edges = dict_edge[centre]
-#         
-#         print avg
-#         print std
-#         
-#         for i in range(len(all_centres)):
-#             centroid = all_centres[i]
-#              
-#             if centroid[0] >= avg[0] + std[0] * 2 or\
-#             centroid[1] >= avg[1] + std[1] * 2:
-#                 all_centres[i] = False
-#                 all_edges[i] = False
-#          
-#         dict_edge[centre] = all_edges
-#         dict_for_averaging[centre] = all_centres
     
+    sorted_centroids = {}
+    sorted_edges = {}
+    # Re-sort the values based on the median centroid value
+    for centre in dict.iterkeys():
+        median_centroid = median_centres[centre]
+        centre_list = dict_for_averaging[centre]
+        edge_list = dict_edge[centre]
+        
+        temp_centroid = []
+        temp_edge = []
+        
+        for i in range(len(centre_list)):
+            centroid = centre_list[i]
+            edge = edge_list[i]
             
+            if np.allclose(median_centroid, centroid, 0, 2):
+                print centroid
+                temp_centroid.append(centroid)
+                temp_edge.append(edge)
+            else:
+                temp_centroid.append([])
+                temp_edge.append([])
+        
+        sorted_centroids[centre] = temp_centroid
+        sorted_edges[centre] = temp_edge
+    
+    ################### FIT SPHERES #######################
+    
     sphere_centres = []
+    
     # Take circle perimeters and merge them into one array
     from sphere_fit import leastsq_sphere
     import pylab as pl
@@ -340,123 +295,65 @@ if __name__ == '__main__' :
     
     for centre in dict.iterkeys():
         
-        X_coords_true = []
-        Y_coords_true = []
-        X_coords_fake = []
-        Y_coords_fake = []
-        Z_coords_true = []
-        Z_coords_fake = []
+        X_coords = []
+        Y_coords = []
+        Z_coords = []
         
-        perimeter = dict_edge[centre]
-        slice_start = dict[centre][0] * step
-        border = dict_bord[centre]
-        rad = dict_radius[centre]
-        
-        max_rad = np.max(rad)
+        perimeter = sorted_edges[centre]
+        slice_start = dict[centre][0]
+        rad = mean_radius[centre]
+
         for i in range(0, len(perimeter), 1):
             
-            if perimeter[i] != False:
-                length1 = len(perimeter[i][0])
-                length2 = len(perimeter[i][3])
+            if perimeter[i] != False and perimeter[i] != []:
+                length = len(perimeter[i][0])
                 
-                X_coords_true.extend(perimeter[i][0])
-                Y_coords_true.extend(perimeter[i][1])
-                Z_coords_true= np.concatenate([np.repeat([slice_start], length1), Z_coords_true])
-                
-                X_coords_fake.extend(perimeter[i][2])
-                Y_coords_fake.extend(perimeter[i][3])
-                Z_coords_fake= np.concatenate([np.repeat([slice_start], length2), Z_coords_fake])
-                
+                X_coords.extend(perimeter[i][0])
+                Y_coords.extend(perimeter[i][1])
+                Z_coords = np.concatenate([np.repeat([slice_start], length), Z_coords])
                 slice_start += step
             else:
                 slice_start += step
         
-        # Once the coordinates are obtained fit the sphere
-        p1, resid1 = leastsq_sphere(X_coords_true, Y_coords_true, Z_coords_true, rad)
+        print median_centres[centre]
+        # Once the coordinates are obtained fit the spheres
+        p1, resid1 = leastsq_sphere(X_coords, Y_coords, Z_coords, rad, median_centres[centre])
         x1, y1, z1, r1 = p1
-        p2, resid2 = leastsq_sphere(X_coords_fake, Y_coords_fake, Z_coords_fake, rad)
-        x2, y2, z2, r2 = p2
-        
-        # CHANGE
-        if resid1 > resid2:
-            N = len(perimeter)
-            print "RESID1"
-            sphere_centres.append([x1, y1, z1, r1])
-            print "SPHERE CENTRE AND RADIUS", x1, y1, z1, r1
-            fig = pl.figure()
-            ax = fig.gca(projection='3d')
-            for slice in range(N):
-                    ax.plot(perimeter[slice][0], perimeter[slice][1], slice)
-     
-            pl.title('Sphere detection on real image')
-            pl.savefig(results_folder + "/{0}.png".format(centre))
-            pl.close('all')
-        else:
-            N = len(perimeter)
-            sphere_centres.append([x2, y2, z2, r2])
-            print "RESID2"
-            print "SPHERE CENTRE AND RADIUS", x2, y2, z2, r2
-             
-            fig = pl.figure()
-            ax = fig.gca(projection='3d')
-            for slice in range(N):
-                    ax.plot(perimeter[slice][0], perimeter[slice][1], slice)
-     
-            pl.title('Sphere detection on real image')
-            pl.savefig(results_folder + "/{0}.png".format(centre))
-            pl.close('all')
-        
-        # Calculate centres according to the whole image
-        """
-        An element of centres array is an array of tuples
-        where each array stores slice information
-        and tuples store the centres of the segmented circles
-        of the slice
-        """
 
         
+        ################################################
+        N = len(perimeter)
+        sphere_centres.append([x1, y1, z1, r1])
+        print "DATA USING PERIMETERS FROM HOUGH CIRCLES"
+        print "SPHERE CENTRE AND RADIUS", x1, y1, z1, r1
+        print "R SQUARED", resid1
 
-        
-        
-    # take the mean value of the centre together
-    # with its lengths and make one dict
-    centroids = {}
-    radii = {}
-    for key in dict.iterkeys():
-        centroids[dict_for_averaging[key]] = dict[key]
-        radii[dict_for_averaging[key]] = dict_radius[key]
-    
-    
-    # find the z position of the centres
-    for key in centroids.iterkeys():
-        slice_start = centroids[key][0]
-        slice_end = centroids[key][1]
-        z = (slice_end + slice_start) / 2.0
-        centroids[key] = z
-    
-    # make a list with x,y,z coordinates
+        fig = pl.figure()
+        ax = fig.gca(projection='3d')
+        for slice in range(N):
+            if perimeter[slice] != []:
+                ax.plot(perimeter[slice][0], perimeter[slice][1], slice)
+            else:
+                ax.plot([], [], slice)
+  
+        pl.title('Segmented sphere')
+        pl.savefig(results_folder + "/true{0}.png".format((round(centre[0],2), round(centre[1],2))))
+        pl.close('all')
+
+    ############################## SAVE DATA ##########################
     centres_list = []
     radii_list = []
-#     for key in centroids.iterkeys():
-#         x = key[0]
-#         y = key[1]
-#         z = centroids[key]
-#         r = radii[key]
-#         centres_list.append((x, y, z))
-#         radii_list.append(r)
-#         
+
     for i in range(len(sphere_centres)):
         x,y,z,r = sphere_centres[i]
         centres_list.append((x,y,z))
         radii_list.append(r)
-        
         
     print "centres", centres_list
     print "radii", radii_list
     nb_spheres = len(centres_list)
     print "nb_spheres", nb_spheres
     
-
     save_data(results_folder + '/nb_spheres.npy', nb_spheres)
     f = open(results_folder + '/nb_spheres.txt', 'w')
     f.write(repr(nb_spheres))
@@ -467,14 +364,9 @@ if __name__ == '__main__' :
     for i in range(nb_spheres):
         f.write(repr(centres_list[i]) + '\n')
     f.close()
-     
-    
-    max_radii = []
-    for i in range(nb_spheres):
-        max_radii.append(np.max(radii_list[i]))
 
-
-    save_data(results_folder + '/radii.npy', max_radii)
+    save_data(results_folder + '/radii.npy', radii_list)
     f = open(results_folder + '/radii.txt', 'w')
-    f.write(repr(max_radii) + '\n')
+    for i in range(nb_spheres):
+        f.write(repr(radii_list[i]) + '\n')
     f.close()

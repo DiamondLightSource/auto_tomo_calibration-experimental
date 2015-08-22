@@ -9,7 +9,90 @@ import os
 from skimage.filter import denoise_tv_chambolle
 import fit_data
 from scipy import misc
+from math import ceil
 #################################### Fitting fns ############################
+
+
+
+def sgolay2d( z, window_size, order, derivative=None):
+    from scipy import signal
+    # number of terms in the polynomial expression
+    n_terms = ( order + 1 ) * ( order + 2)  / 2.0
+
+    if  window_size % 2 == 0:
+        raise ValueError('window_size must be odd')
+
+    if window_size**2 < n_terms:
+        raise ValueError('order is too high for the window size')
+
+    half_size = window_size // 2
+
+    # exponents of the polynomial. 
+    # p(x,y) = a0 + a1*x + a2*y + a3*x^2 + a4*y^2 + a5*x*y + ... 
+    # this line gives a list of two item tuple. Each tuple contains 
+    # the exponents of the k-th term. First element of tuple is for x
+    # second element for y.
+    # Ex. exps = [(0,0), (1,0), (0,1), (2,0), (1,1), (0,2), ...]
+    exps = [ (k-n, n) for k in range(order+1) for n in range(k+1) ]
+
+    # coordinates of points
+    ind = np.arange(-half_size, half_size+1, dtype=np.float64)
+    dx = np.repeat( ind, window_size )
+    dy = np.tile( ind, [window_size, 1]).reshape(window_size**2, )
+
+    # build matrix of system of equation
+    A = np.empty( (window_size**2, len(exps)) )
+    for i, exp in enumerate( exps ):
+        A[:,i] = (dx**exp[0]) * (dy**exp[1])
+
+    # pad input array with appropriate values at the four borders
+    new_shape = z.shape[0] + 2*half_size, z.shape[1] + 2*half_size
+    Z = np.zeros( (new_shape) )
+    # top band
+    band = z[0, :]
+    Z[:half_size, half_size:-half_size] =  band -  np.abs( np.flipud( z[1:half_size+1, :] ) - band )
+    # bottom band
+    band = z[-1, :]
+    Z[-half_size:, half_size:-half_size] = band  + np.abs( np.flipud( z[-half_size-1:-1, :] )  -band )
+    # left band
+    band = np.tile( z[:,0].reshape(-1,1), [1,half_size])
+    Z[half_size:-half_size, :half_size] = band - np.abs( np.fliplr( z[:, 1:half_size+1] ) - band )
+    # right band
+    band = np.tile( z[:,-1].reshape(-1,1), [1,half_size] )
+    Z[half_size:-half_size, -half_size:] =  band + np.abs( np.fliplr( z[:, -half_size-1:-1] ) - band )
+    # central band
+    Z[half_size:-half_size, half_size:-half_size] = z
+
+    # top left corner
+    band = z[0,0]
+    Z[:half_size,:half_size] = band - np.abs( np.flipud(np.fliplr(z[1:half_size+1,1:half_size+1]) ) - band )
+    # bottom right corner
+    band = z[-1,-1]
+    Z[-half_size:,-half_size:] = band + np.abs( np.flipud(np.fliplr(z[-half_size-1:-1,-half_size-1:-1]) ) - band )
+
+    # top right corner
+    band = Z[half_size,-half_size:]
+    Z[:half_size,-half_size:] = band - np.abs( np.flipud(Z[half_size+1:2*half_size+1,-half_size:]) - band )
+    # bottom left corner
+    band = Z[-half_size:,half_size].reshape(-1,1)
+    Z[-half_size:,:half_size] = band - np.abs( np.fliplr(Z[-half_size:, half_size+1:2*half_size+1]) - band )
+
+    # solve system and convolve
+    if derivative == None:
+        m = np.linalg.pinv(A)[0].reshape((window_size, -1))
+        return signal.fftconvolve(Z, m, mode='valid')
+    elif derivative == 'col':
+        c = np.linalg.pinv(A)[1].reshape((window_size, -1))
+        return signal.fftconvolve(Z, -c, mode='valid')
+    elif derivative == 'row':
+        r = np.linalg.pinv(A)[2].reshape((window_size, -1))
+        return signal.fftconvolve(Z, -r, mode='valid')
+    elif derivative == 'both':
+        c = np.linalg.pinv(A)[1].reshape((window_size, -1))
+        r = np.linalg.pinv(A)[2].reshape((window_size, -1))
+        return signal.fftconvolve(Z, -r, mode='valid'), signal.fftconvolve(Z, -c, mode='valid')
+
+
 
 def remove_noise(signal, r1, r2, Y, C):
     from scipy.fftpack import fftshift, fft
@@ -18,7 +101,7 @@ def remove_noise(signal, r1, r2, Y, C):
     h = C - Y
     
     d1 = np.sqrt(r1**2 - h**2)
-    dist = int(dist_between_spheres(r1, r2, Y, C) * 2)
+    dist = int(dist_between_spheres(r1, r2, Y, C))
     
     if dist % 2 == 0:
         dist += 1
@@ -73,11 +156,11 @@ def parameter_estimates_stats(points, distance):
         data = np.array([range(len(points)), points]).T
         xs = data[:,0]
         ys = data[:,1]
-#         centre_guess = np.argwhere(min(points) == points).T[0][0]
-        centre_guess = len(points) / 2.
+        centre_guess = np.argwhere(min(points) == points).T[0][0]
+#         centre_guess = len(points) / 2.
         height_guess = np.max(points) - abs(np.min(points))
         
-        guess = [round(-abs(height_guess), 3), centre_guess, distance, round(abs(height_guess), 3)]
+        guess = [round(-abs(height_guess), 3), centre_guess, distance + 2, round(abs(height_guess), 3)]
         return guess
     except:
         print "Not resolved"
@@ -140,14 +223,10 @@ def fit_and_visualize(image, folder_name, r1, r2):
     Do this for every Z value
     """
     
-#     image = add_noise(image, 0.5)
     misc.imsave(folder_name + "touch_img.png", image)
     misc.imsave(folder_name + "touch_img.tif", image)
 #     image = io.imread("/dls/tmp/jjl36382/resolution/plots1/7/plots_0/touch_img.tif")
-     
-#     denoised = denoise_tv_chambolle(image, weight = 0.2)
-    denoised = median_filter(image, 5)
-         
+    denoised = image 
     contrast_left = measure_contrast_left(denoised)
     contrast_right = measure_contrast_right(denoised)
     
@@ -156,91 +235,138 @@ def fit_and_visualize(image, folder_name, r1, r2):
     low_freq_right = (contrast_right - np.min(denoised[0,:])) /\
                      (contrast_right + np.min(denoised[0,:]))
     
-    mtf_fwhm_left = []
-    mtf_fwhm_right = []
+    gap = []
     mtf_cleft = []
     mtf_cright = []
      
-    for i in range(int(image.shape[0]/2.)):
+    for i in np.arange(0, image.shape[0]/2., 0.05):
          
         Xdata = []
         Ydata = []
-         
-        signal = [pixel for pixel in denoised[i,:]]
-
-        for j in range(image.shape[1]):
+        gapX = []
+        gapY = []
+        
+        distance = dist_between_spheres(r1, r2, i, image.shape[0]/2.)
+        
+        signal = [pixel for pixel in denoised[int(round(i,0)),:]]
+        for j in np.arange(0, image.shape[1], 0.1):
              
             Xdata.append(j)
             Ydata.append(i)
+            if image.shape[1]/2. + distance/2. >= j >= image.shape[1]/2. - distance/2.:
+                gapX.append(j)
+                gapY.append(i)
              
-        if signal:
-             
-            filtered_signal = remove_noise(signal, r1, r2, i, image.shape[0]/2.)
-            data = np.array([range(len(signal)), signal]).T
+#         if signal:
+#             
+#             # PLOT THE IMAGE WITH THE LINE ON IT
+#             if i > 50:
+#                 pl.imshow(denoised)
+#                 pl.plot(Xdata, Ydata)
+#                 pl.plot(gapX, gapY)
+#                 pl.gray()
+#                 pl.axis('off')
+#                 pl.savefig(folder_name + 'result{0}.png'.format(i))
+#                 pl.close('all')
             
-            # PLOT THE IMAGE WITH THE LINE ON IT
-            pl.subplot(1, 3, 1)
-            pl.imshow(denoised)
-            pl.plot(Xdata, Ydata)
-            pl.gray()
-            pl.axis('off')
-              
-            # DETERMINE Y LIMIT
-            ymax = np.max(denoised)
-            ymin = np.min(denoised)
-            
-            pl.subplot(1, 3, 2)
-            pl.plot(data[:,0], data[:,1])
-            pl.title("Filtered")
-            pl.ylim(ymin,ymax) 
-               
-            # MLMFIT
-            data = np.array([range(len(filtered_signal)), filtered_signal]).T
-            
-            pl.subplot(1, 3, 3)
-            distance = dist_between_spheres(r1, r2, i, image.shape[0]/2.)
-            guess = parameter_estimates_stats(filtered_signal, distance)
-            X, best_fit, cent, fwhm = fit_data.GaussConst(filtered_signal, guess)
-            pl.plot(data[:,0], data[:,1])
-            pl.plot(X, best_fit)
-            pl.title(fwhm)
-            pl.ylim(ymin,ymax)
-            
-#             pl.savefig("./" + 'result%i.png' % i)
-            pl.savefig(folder_name + 'result%i.png' % i)
-            pl.close('all')
-            
-            # if it is still the minima..
-            if np.min(signal) > best_fit[int(cent)]:
-                if fwhm < 8:
-                    mtf = 100 * modulation(signal[int(cent)], contrast_left, distance) / low_freq_left
-                    mtf_cleft.append(mtf)
-                    mtf_fwhm_left.append(fwhm)
-        
-                    
-                    mtf = 100 * modulation(signal[int(cent)], contrast_right, distance) / low_freq_right        
-                    mtf_cright.append(mtf)
-                    mtf_fwhm_right.append(fwhm)
+#             # DETERMINE Y LIMIT
+#             ymax = np.max(denoised)
+#             ymin = np.min(denoised)
+#                 
+#             # MLMFIT
+#             data = np.array([range(len(filtered_signal)), filtered_signal]).T
+#              
+#             pl.subplot(1, 2, 2)
+#             distance = dist_between_spheres(r1, r2, i, image.shape[0]/2.)
+#             guess = parameter_estimates_stats(filtered_signal, distance)
+#             X, best_fit, cent, fwhm = fit_data.GaussConst(filtered_signal, guess)
+#             pl.plot(data[:,0], data[:,1])
+#             pl.plot(X, best_fit)
+#             pl.title("FWHM {0}".format(round(fwhm,2)))
+#             pl.ylim(ymin,ymax)
+#              
+# #             pl.savefig("./" + 'result%i.png' % i)
+#             pl.savefig(folder_name + 'result%i.png' % i)
+#             pl.close('all')
+# 
+#             if fwhm < 8:
+#                 mtf = 100 * modulation(np.min(signal), contrast_left, distance) / low_freq_left
+#                 # bellow this limit the spheres are unresolved
+#                 # and the width gets distorted - drop this data
+#                 if mtf > 9:
+#                     mtf_cleft.append(mtf)
+#                     mtf_fwhm_left.append(fwhm)
+#      
+#                  
+#                 mtf = 100 * modulation(signal[int(cent)], contrast_right, distance) / low_freq_right
+#                 # bellow this limit the spheres are unresolved
+#                 # and the width gets distorted - drop this data
+#                 if mtf > 9:
+#                     mtf_cright.append(mtf)
+#                     mtf_fwhm_right.append(fwhm)
 
-            """
-            An MTF of 9% is implied in the definition of the Rayleigh diffraction limit.
-            """
-    
-    X, exp_fit, decay = fit_data.Exponential(mtf_fwhm_left, mtf_cleft)
-    
-    pl.plot(mtf_fwhm_left, mtf_cleft, 'or', label = "left")
-    pl.plot(X, exp_fit, label = "best fit")
+        distance = dist_between_spheres(r1, r2, i, image.shape[0] / 2.)
+        gap.append(distance)
+               
+        mtf = 100 * modulation(np.min(signal), contrast_left, distance) / low_freq_left
+        # bellow this limit the spheres are unresolved
+        # and the width gets distorted - drop this data
+        mtf_cleft.append(mtf)
+        
+        mtf = 100 * modulation(np.min(signal), contrast_right, distance) / low_freq_right
+        # bellow this limit the spheres are unresolved
+        # and the width gets distorted - drop this data
+        mtf_cright.append(mtf)
+
+    ############# LEFT SPHERE #########################
+    best_fit, limit = fit_data.MTF(gap, mtf_cleft)
     pl.gca().invert_xaxis()
-    pl.plot(mtf_fwhm_right, mtf_cright, 'xb', label = "right")
+    pl.plot(best_fit, mtf_cleft, label = "best fit")
+
+    mtf_resolutionX = [item for item in gap if item > limit]
+    mtf_resolutionY = [item for item in mtf_cleft if item < 9]
+
+    pl.plot(gap, mtf_cleft, 'r,', label="left sphere")
+    pl.plot(mtf_resolutionX, np.repeat(9, len(mtf_resolutionX)), 'y')
+    pl.plot(np.repeat(limit, len(mtf_resolutionY)), mtf_resolutionY, 'y')
     pl.legend()
+    pl.title("Gap width at 9% (Rayleigh diffraction limit) is {0}".format(limit))
     pl.xlabel("Width")
     pl.ylabel("MTF %")
-    pl.ylim(0, 100)
-#     pl.savefig("./" + 'mtf.png')
-    pl.savefig(folder_name + 'mtf.png')
+    pl.xlim(np.max(gap), 0)
+    pl.ylim(0, 110)
+    pl.savefig(folder_name + 'mtf_left.png')
+    pl.tight_layout()
+
+    pl.close('all')
+    
+    ############### RIGHT SPHERE #####################
+    best_fit, limit = fit_data.MTF(gap, mtf_cright)
+    pl.gca().invert_xaxis()
+    pl.plot(best_fit, mtf_cleft, label = "best fit")
+
+    mtf_resolutionX = [item for item in gap if item > limit]
+    mtf_resolutionY = [item for item in mtf_cright if item < 9]
+
+    pl.plot(gap, mtf_cright, 'b,', label="right sphere")
+    pl.plot(mtf_resolutionX, np.repeat(9, len(mtf_resolutionX)), 'y')
+    pl.plot(np.repeat(limit, len(mtf_resolutionY)), mtf_resolutionY, 'y')
+    pl.legend()
+    pl.title("Gap width at 9% (Rayleigh diffraction limit) is {0}".format(limit))
+    pl.xlabel("Width")
+    pl.ylabel("MTF %")
+    pl.xlim(np.max(gap), 0)
+    pl.ylim(0, 110)
+    pl.savefig(folder_name + 'mtf_right.png')
     
     return
 
+def gap(r1, r2, Y, C,):
+    h = C - Y
+    
+    d1 = np.sqrt(r1**2 - h**2)
+    
+    return d1
 
 def dist_between_spheres(r1, r2, Y, C):
     
@@ -311,12 +437,6 @@ def measure_contrast_right(image):
 
     return np.mean(pixels) 
 
-def check_signal(signal):
-    """
-    Check if the signal still has any peaks or it is just noise
-    """
-    
-    
     return
 
 
@@ -469,8 +589,6 @@ def use_filter(signal, weight, which):
         return filtered
     else:
         return signal
-    
-    
 
 ##################################################################
 
@@ -564,36 +682,50 @@ def get_slice(P1, P2, name, sampling, Z):
     """
     Get slice through centre for analysis
     """
-    from skimage.util import random_noise
     
     centre_dist = distance_3D(P1, P2)
-    plot_img = np.zeros((centre_dist / 4. + 2, centre_dist / 5. + 2))
-#     plot_img = np.zeros((centre_dist + 2, centre_dist + 2))
-
+    plot_img = np.zeros((ceil(centre_dist / 4. + 1), centre_dist / 5. + 2 ))
+    
     Xrange = np.arange(-centre_dist / 8., centre_dist / 8. + 1)
-#     Xrange = np.arange(-centre_dist / 2., centre_dist / 2. + 1)
     
     for time in np.linspace(centre_dist*0.4, centre_dist*0.6 + 1,
                             centre_dist / 2.* sampling):
-#     for time in np.linspace(0, centre_dist + 1,
-#                            centre_dist * sampling):
         # Go up along the line
         new_pt = vector_3D(P1, P2, time)
+        old_pt = vector_3D(P1, P2, time - centre_dist / 2.* sampling)
         
-        input_file = name % int(round(new_pt[2] + Z, 0))
-#         img = random_noise(io.imread(input_file))
-        img = io.imread(input_file)
-        for X in Xrange:
+        # If this is not the first iteration
+        if time == centre_dist*0.4:
+            input_file = name % int(round(new_pt[2] + Z, 0))
+            img = io.imread(input_file)
             
-            # Get along the X direction for every height
-            perp = vector_perpendicular_3D(new_pt, P2, 1, 0, X)
+        # check if the previous slice is the same as the next
+        # dont load it again if it is
+        if int(round(new_pt[2] + Z, 0)) != int(round(old_pt[2] + Z, 0)):
             
-            pixel_value = img[perp[0], perp[1]]
+            input_file = name % int(round(new_pt[2] + Z, 0))
+            img = io.imread(input_file)
             
-            time_mod = time - centre_dist * 0.4
-            plot_img[X + centre_dist / 8., time_mod] = pixel_value
-#             plot_img[X, time_mod] = pixel_value
-
+            for X in Xrange:
+        
+                # Get along the X direction for every height
+                perp = vector_perpendicular_3D(new_pt, P2, 1, 0, X)
+                
+                pixel_value = img[perp[0], perp[1]]
+                
+                time_mod = time - centre_dist * 0.4
+                plot_img[X + centre_dist / 8., time_mod] = pixel_value
+        else:
+            for X in Xrange:
+        
+                # Get along the X direction for every height
+                perp = vector_perpendicular_3D(new_pt, P2, 1, 0, X)
+                
+                pixel_value = img[perp[0], perp[1]]
+                
+                time_mod = time - centre_dist * 0.4
+                plot_img[X + centre_dist / 8., time_mod] = pixel_value
+   
     return plot_img
 
 
@@ -619,9 +751,9 @@ def touch_lines_3D(pt1, pt2, sampling, folder_name, name, r1, r2):
 
     return
 
-# fit_and_visualize(1,1,382,382)
+# # fit_and_visualize(1,1,382,382)
 # p1 = ( 0.2 * 1280 + 1280, -0.2 * 1280 + 1280,1280.)
 # p2 = ( 0.2 * 1280 + 1280, 0.2 * 1280 + 1280, 1280.)
-# print p1, p2
-# 
+# # print p1, p2
+# # 
 # touch_lines_3D(p2, p1, 2, "./", "/dls/tmp/jjl36382/resolution1/reconstruction/testdata1/image_%05i.tif", 0.2 * 1280, 0.2 * 1280)

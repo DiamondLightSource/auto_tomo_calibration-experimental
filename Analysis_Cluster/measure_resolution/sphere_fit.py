@@ -16,30 +16,16 @@ def f(c, x, y, z):
 
 def fitfunc(p, x, y, z):
     x0, y0, z0, R = p
-    return np.sqrt((x-x0)**2 + (y-y0)**2 + (z-z0)**2)
+    return ((x-x0)**2 + (y-y0)**2 + (z-z0)**2)
 
 
-def leastsq_sphere(x, y, z, rad):
+def leastsq_sphere(x, y, z, rad, centr):
     # coordinates of the barycenter
-    x_m = np.mean(x)
-    y_m = np.mean(y)
+    x_m, y_m, = centr
     z_m = np.mean(z)
-     
-#     print x_m,y_m, z_m
-#     
-#     center_estimate = x_m, y_m, z_m
-#     
-#     center, ier = optimize.leastsq(f, center_estimate, args=(x, y, z))
-#     
-#     xc, yc, zc = center
-#     Ri       = calc_R(x, y, z, *center)
-#     R        = Ri.mean()
-#     residu   = np.sum((Ri - R)**2)
-#     
-#     return xc, yc, zc, R
 
     p0 = [x_m, y_m, z_m, rad]
-    errfunc = lambda p, x, y, z: fitfunc(p, x, y, z) - p[3]
+    errfunc = lambda p, x, y, z: fitfunc(p, x, y, z) - p[3]**2
     
     p1, cov, infodict, mesg, ier = optimize.leastsq(errfunc, p0, args=(x, y, z) ,full_output=True)
     
