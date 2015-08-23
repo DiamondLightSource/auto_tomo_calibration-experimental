@@ -248,7 +248,7 @@ def fit_and_visualize(image, folder_name, r1, r2):
         
         distance = dist_between_spheres(r1, r2, i, image.shape[0]/2.)
         
-        signal = [pixel for pixel in denoised[int(round(i,0)),:]]
+        signal = [pixel for pixel in denoised[i,:]]
         for j in np.arange(0, image.shape[1], 0.1):
              
             Xdata.append(j)
@@ -334,7 +334,7 @@ def fit_and_visualize(image, folder_name, r1, r2):
     pl.xlabel("Width")
     pl.ylabel("MTF %")
     pl.xlim(np.max(gap), 0)
-    pl.ylim(0, 110)
+    pl.ylim(-1, 110)
     pl.savefig(folder_name + 'mtf_left.png')
     pl.tight_layout()
 
@@ -356,9 +356,10 @@ def fit_and_visualize(image, folder_name, r1, r2):
     pl.xlabel("Width")
     pl.ylabel("MTF %")
     pl.xlim(np.max(gap), 0)
-    pl.ylim(0, 110)
+    pl.ylim(-1, 110)
     pl.savefig(folder_name + 'mtf_right.png')
-    
+    pl.close('all')
+
     return
 
 def gap(r1, r2, Y, C,):
@@ -418,7 +419,8 @@ def measure_contrast_left(image):
     pixels = []
 
     for j in range(image.shape[0]):
-        pixels.append(image[j, 1])
+        for i in range(1, 6):
+            pixels.append(image[j, i])
 #         image[j, 5] = 0
 
     return np.mean(pixels) 
@@ -432,7 +434,8 @@ def measure_contrast_right(image):
     pixels = []
 
     for j in range(image.shape[0]):
-        pixels.append(image[j, image.shape[1] - 1])
+        for i in range(1, 6):
+            pixels.append(image[j, image.shape[1] - i])
 #         image[j, image.shape[1]-5] = 0
 
     return np.mean(pixels) 

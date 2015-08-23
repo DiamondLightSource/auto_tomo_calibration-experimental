@@ -8,18 +8,18 @@ from lmfit.models import StepModel,PolynomialModel, ExponentialModel, DonaichMod
 def gaussian(x, height, center, width, offset):
     return (height/np.sqrt(2*np.pi)*width) * np.exp(-(x - center)**2/(2*width**2)) + offset
 
-def polynomial(c0,c1,c2,c3,c4,y):
-    return c0 + c1*y + c2*(y**2) + c3*(y**3) + c4*(y**4)
+def polynomial(c0,c1,c2,c3,c4,c5,c6,y):
+    return c0 + c1*y + c2*(y**2) + c3*(y**3) + c4*(y**4) + c5*(y**5)+ c6*(y**6)
     
 
 def MTF(Y, X):
     """
-    Model used in photo emission
+    Fit a polynomial to the MTF curve
     """
     lin_mod = LinearModel(prefix="line_")
     exp_mod = ExponentialModel()
     const_mod = ConstantModel()
-    poly_mod = PolynomialModel(5)
+    poly_mod = PolynomialModel(7)
     
     #X = list(reversed(X))
     
@@ -35,8 +35,10 @@ def MTF(Y, X):
     c2 = result.best_values['c2']
     c3 = result.best_values['c3']
     c4 = result.best_values['c4']
+    c5 = result.best_values['c5']
+    c6 = result.best_values['c6']
     
-    limit = polynomial(c0,c1,c2,c3,c4,9)
+    limit = polynomial(c0,c1,c2,c3,c4,c5,c6,9)
     return result.best_fit, limit
 
 

@@ -29,7 +29,7 @@ if __name__ == '__main__' :
     touch_c, touch_pt, radii = resolution.find_contact_3D(centroids, radius, tol = 20.)
     
     # define sampling size
-    sample = 1
+    sample = 3
         
     print "spheres in contact", touch_c
     print "number of spheres in contact", len(touch_c)

@@ -6,7 +6,7 @@ from skimage.color import gray2rgb
 from skimage import measure, io
 from scipy import ndimage, misc, optimize
 from skimage.morphology import watershed, label, reconstruction, binary_erosion, disk
-from skimage.filter import threshold_otsu, sobel, canny, prewitt, denoise_tv_chambolle, scharr
+from skimage.filter import threshold_otsu, sobel, threshold_adaptive, prewitt, denoise_tv_chambolle, scharr
 from scipy.ndimage.morphology import binary_opening, binary_closing, binary_fill_holes, binary_dilation
 from scipy.ndimage.filters import gaussian_filter, median_filter
 from skimage.transform import hough_circle
@@ -16,7 +16,7 @@ from sklearn.cluster import spectral_clustering
 from circle_fit import leastsq_circle
 from skimage.draw import circle_perimeter, set_color
 from skimage.exposure import rescale_intensity
-from skimage.filter.rank import enhance_contrast_percentile
+from skimage.filter.rank import enhance_contrast_percentile, enhance_contrast, otsu
 
 
 def select_area_for_detector(np_image):
@@ -24,18 +24,19 @@ def select_area_for_detector(np_image):
    
     pl.close('all')
     
-    # Find regions
-    # Contrast stretching
     image_filtered = denoise_tv_chambolle(np_image, weight=0.005)
-#     image_filtered = np_image
-    rescale = exposure.rescale_intensity(image_filtered, in_range='uint8')
-
-    equalize = enhance_contrast_percentile(rescale, disk(5), p0=.1, p1=.9)
-#     equalize = exposure.equalize_adapthist(image_filtered)
-#     equalize = exposure.equalize_hist(image_filtered)
+    binary = image_filtered.copy()
+    mask1 = 0.0019 < image_filtered 
+    mask2 = 0.000475 > image_filtered
     
-    thresh = threshold_otsu(equalize)
-    binary = equalize > thresh
+    binary[mask1] = 0
+    
+    binary[mask2] = 0
+    
+    binary[binary > 0] = 1
+
+        
+        
     
     distance = ndimage.distance_transform_edt(binary)
     local_maxi = peak_local_max(distance,
@@ -52,9 +53,9 @@ def select_area_for_detector(np_image):
 #     pl.subplot(2, 3, 1)
 #     pl.title("rescale")
 #     pl.imshow(rescale)
-    pl.subplot(2, 3, 4)
-    pl.title("equalize")
-    pl.imshow(equalize)
+#     pl.subplot(2, 3, 4)
+#     pl.title("edges")
+#     pl.imshow(edges)
     pl.subplot(2, 3, 5)
     pl.title("binary")
     pl.imshow(binary)
@@ -88,11 +89,15 @@ def select_area_for_detector(np_image):
         minr, minc, maxr, maxc = region.bbox
         margin = 3
         
-        crop = equalize[minr-margin:maxr+margin,minc-margin:maxc+margin].copy()
-        
+        crop = image_filtered[minr-margin:maxr+margin,minc-margin:maxc+margin].copy()
+
         thresh = threshold_otsu(crop)
         binary = crop >= thresh
+#         pl.imshow(binary)
+#         pl.show()
         crop = sobel(binary)
+        
+
         
         coords = np.column_stack(np.nonzero(crop))
         X = np.array(coords[:,0]) + minr - margin 
@@ -136,8 +141,8 @@ def detect_circles(np_image, folder, task_id):
 
     for i in range(0, len(areas)):
         # Jump too big or too small areas
-        if areas[i].shape[0] >= size*1.5 or areas[i].shape[1] >= size*1.5\
-        or areas[i].shape[0] <= size/8 or areas[i].shape[1] <= size/8:
+        if areas[i].shape[0] >= size*1.5 or areas[i].shape[1] >= size*1.5:
+        #or areas[i].shape[0] <= size/10 or areas[i].shape[1] <= size/10:
             index.append(i)
             continue
     
@@ -199,7 +204,7 @@ def detect_circles(np_image, folder, task_id):
         import matplotlib.pyplot as plt
         for per in circles:
             e1, e2= per
-            rescale[e1, e2] = 1
+            rescale[e1, e2] = 0
     
     pl.imshow(rescale)
     pl.gray()
@@ -222,6 +227,7 @@ def watershed_segmentation(image, smooth_size, folder, task_id):
 
     
 from skimage import io
-img = io.imread("/dls/tmp/tomas_aidukas/scans_july16/cropped/50867/image_02000.tif")
-                    
+# img = io.imread("/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_01200.tif")
+img = io.imread("/dls/tmp/tomas_aidukas/scans_july16/cropped/50873/image_00450.tif")
+
 watershed_segmentation(img, 3, 1, 1)

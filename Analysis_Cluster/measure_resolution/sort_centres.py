@@ -274,7 +274,6 @@ if __name__ == '__main__' :
             edge = edge_list[i]
             
             if np.allclose(median_centroid, centroid, 0, 2):
-                print centroid
                 temp_centroid.append(centroid)
                 temp_edge.append(edge)
             else:
@@ -310,14 +309,14 @@ if __name__ == '__main__' :
                 
                 X_coords.extend(perimeter[i][0])
                 Y_coords.extend(perimeter[i][1])
-                Z_coords = np.concatenate([np.repeat([slice_start], length), Z_coords])
+                Z_coords = np.hstack([np.repeat([slice_start], length), Z_coords])
                 slice_start += step
             else:
                 slice_start += step
         
         print median_centres[centre]
         # Once the coordinates are obtained fit the spheres
-        p1, resid1 = leastsq_sphere(X_coords, Y_coords, Z_coords, rad, median_centres[centre])
+        p1, rsq = leastsq_sphere(X_coords, Y_coords, Z_coords, rad, median_centres[centre])
         x1, y1, z1, r1 = p1
 
         
@@ -326,8 +325,7 @@ if __name__ == '__main__' :
         sphere_centres.append([x1, y1, z1, r1])
         print "DATA USING PERIMETERS FROM HOUGH CIRCLES"
         print "SPHERE CENTRE AND RADIUS", x1, y1, z1, r1
-        print "R SQUARED", resid1
-
+        print "R SQUARED", rsq
         fig = pl.figure()
         ax = fig.gca(projection='3d')
         for slice in range(N):

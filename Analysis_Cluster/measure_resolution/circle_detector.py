@@ -38,22 +38,30 @@ def circle_coordinates(cx, cy, r):
 
 
 
-def select_area_for_detector(np_image):
+def select_area_for_detector(np_image, min_t, max_t):
     
    
     pl.close('all')
     
-    # Find regions
-    # Contrast stretching
+#     try:
+#         image_filtered = denoise_tv_chambolle(np_image, weight=0.005)
+#         rescale = enhance_contrast_percentile(image_filtered, disk(5), p0=.1, p1=.9)
+#         binary = rescale > threshold_otsu(rescale)
+#     except:
+#         image_filtered = denoise_tv_chambolle(np_image, weight=0.005)
+#         rescale = exposure.rescale_intensity(image_filtered, in_range='uint8')
+#         enchance = enhance_contrast_percentile(rescale, disk(5), p0=.1, p1=.9)
+#         binary = enchance > threshold_otsu(enchance)
     image_filtered = denoise_tv_chambolle(np_image, weight=0.005)
-    rescale = exposure.rescale_intensity(image_filtered, in_range='uint8')
-
-    equalize = enhance_contrast_percentile(rescale, disk(5), p0=.1, p1=.9)
-#     equalize = exposure.equalize_adapthist(image_filtered)
-#     equalize = exposure.equalize_hist(image_filtered)
+    binary = image_filtered.copy()
+    mask1 = max_t < image_filtered 
+    mask2 = min_t > image_filtered
     
-    thresh = threshold_otsu(equalize)
-    binary = equalize > thresh
+    binary[mask1] = 0
+    
+    binary[mask2] = 0
+    
+    binary[binary > 0] = 1
     
     distance = ndimage.distance_transform_edt(binary)
     local_maxi = peak_local_max(distance,
@@ -106,7 +114,7 @@ def select_area_for_detector(np_image):
         minr, minc, maxr, maxc = region.bbox
         margin = 3
         
-        crop = equalize[minr-margin:maxr+margin,minc-margin:maxc+margin].copy()
+        crop = image_filtered[minr-margin:maxr+margin,minc-margin:maxc+margin].copy()
         
         thresh = threshold_otsu(crop)
         binary = crop >= thresh
@@ -130,7 +138,7 @@ def select_area_for_detector(np_image):
     return [centroids_fit, radius_fit, bords, areas, image_filtered]
 
 
-def detect_circles(np_image, folder, task_id):
+def detect_circles(np_image, folder, task_id, min_t, max_t):
     
     import numpy as np
     import pylab as pl
@@ -144,7 +152,7 @@ def detect_circles(np_image, folder, task_id):
     pl.close('all')
 
     centroids_fit, radius_fit, bord, areas, equalize\
-     = select_area_for_detector(np_image)
+     = select_area_for_detector(np_image, min_t, max_t)
         
     print 'Number of areas before selection:', len(areas)
     # Check the areas
@@ -153,8 +161,8 @@ def detect_circles(np_image, folder, task_id):
 
     for i in range(0, len(areas)):
         # Jump too big or too small areas
-        if areas[i].shape[0] >= size*1.5 or areas[i].shape[1] >= size*1.5\
-        or areas[i].shape[0] <= size/8 or areas[i].shape[1] <= size/8:
+        if areas[i].shape[0] >= size*1.5 or areas[i].shape[1] >= size*1.5:
+        #or areas[i].shape[0] <= size/8 or areas[i].shape[1] <= size/8:
             index.append(i)
             continue
     
@@ -210,7 +218,7 @@ def detect_circles(np_image, folder, task_id):
         import matplotlib.pyplot as plt
         for per in circles:
             e1, e2 = per
-            equalize[e1, e2] = 1
+            equalize[e1, e2] = 0
 #             plt.scatter(e4, e3, marker=".", color=u'r')
     
 #     pl.imshow(equalize)
@@ -223,9 +231,9 @@ def detect_circles(np_image, folder, task_id):
     return [C, R, circles, bord]
 
 
-def watershed_segmentation(image, smooth_size, folder, task_id):
+def watershed_segmentation(image, smooth_size, folder, task_id, min_t, max_t):
 
-    centroids, radius, edges, bords = detect_circles(image, folder, task_id)
+    centroids, radius, edges, bords = detect_circles(image, folder, task_id, min_t, max_t)
     
     print centroids
     print radius
