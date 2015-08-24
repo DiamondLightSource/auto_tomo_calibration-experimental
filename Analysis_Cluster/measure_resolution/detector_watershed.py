@@ -26,8 +26,8 @@ def select_area_for_detector(np_image):
     
     image_filtered = denoise_tv_chambolle(np_image, weight=0.005)
     binary = image_filtered.copy()
-    mask1 = 0.0019 < image_filtered 
-    mask2 = 0.000475 > image_filtered
+    mask1 = 4 > image_filtered 
+    mask2 = 7.5 < image_filtered
     
     binary[mask1] = 0
     
@@ -46,24 +46,23 @@ def select_area_for_detector(np_image):
      
     labeled = watershed(-distance, markers, mask=binary)
     
-    pl.subplot(2, 3, 2)
-    pl.title("image_filtered")
-    pl.imshow(image_filtered)
-    pl.gray()
-#     pl.subplot(2, 3, 1)
-#     pl.title("rescale")
-#     pl.imshow(rescale)
-#     pl.subplot(2, 3, 4)
-#     pl.title("edges")
-#     pl.imshow(edges)
-    pl.subplot(2, 3, 5)
-    pl.title("binary")
-    pl.imshow(binary)
-    pl.subplot(2, 3, 6)
-    pl.title("label")
-    pl.imshow(labeled)
-    pl.show()
-    pl.close('all')
+# #     pl.subplot(1, 3, 1)
+# #     pl.title("Filtered Image")
+#     pl.imshow(image_filtered)
+#     pl.gray()
+#     pl.axis('off')
+#     pl.show()
+# #     pl.subplot(1, 3, 2)
+# #     pl.title("Binary Image")
+#     pl.imshow(binary)
+#     pl.axis('off')
+#     pl.show()
+# #     pl.subplot(1, 3, 3)
+# #     pl.title("Watershed segmentation")
+#     pl.imshow(labeled)
+#     pl.axis('off')
+#     pl.show()
+# #     pl.close('all')
 
     areas = []
     centroids_fit = []
@@ -87,16 +86,24 @@ def select_area_for_detector(np_image):
         
         # Extract the coordinates of regions
         minr, minc, maxr, maxc = region.bbox
+        bx = [minc - 3, maxc + 3, maxc + 3, minc - 3, minc - 3]
+        by = [minr - 3, minr - 3, maxr + 3, maxr + 3, minr - 3]
+        pl.plot(bx, by, '-b', linewidth=2.5)
+        pl.axis('off')
         margin = 3
         
         crop = image_filtered[minr-margin:maxr+margin,minc-margin:maxc+margin].copy()
-
-        thresh = threshold_otsu(crop)
-        binary = crop >= thresh
-#         pl.imshow(binary)
-#         pl.show()
-        crop = sobel(binary)
+        mask1 = 4 > crop 
+        mask2 = 8 < crop
+        binary = crop.copy()
+        binary[mask1] = 0
         
+        binary[mask2] = 0
+        
+        binary[binary > 0] = 1
+        crop = sobel(binary)
+
+
 
         
         coords = np.column_stack(np.nonzero(crop))
@@ -114,7 +121,10 @@ def select_area_for_detector(np_image):
                 areas.append(crop)
         except:
             continue
-    
+        
+    pl.imshow(image_filtered)
+    pl.gray()
+    pl.show()
     return [centroids_fit, radius_fit, bords, areas, image_filtered]
 
 
@@ -204,7 +214,9 @@ def detect_circles(np_image, folder, task_id):
         import matplotlib.pyplot as plt
         for per in circles:
             e1, e2= per
-            rescale[e1, e2] = 0
+#             rescale[e1, e2] = 0
+            plt.scatter(e2, e1, s=1, facecolors='none', edgecolors='r')
+            pl.axis('off')
     
     pl.imshow(rescale)
     pl.gray()
@@ -228,6 +240,6 @@ def watershed_segmentation(image, smooth_size, folder, task_id):
     
 from skimage import io
 # img = io.imread("/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_01200.tif")
-img = io.imread("/dls/tmp/tomas_aidukas/scans_july16/cropped/50873/image_00450.tif")
+img = io.imread("/dls/tmp/tomas_aidukas/scans_july16/cropped/50873/image_00510.tif")
 
 watershed_segmentation(img, 3, 1, 1)

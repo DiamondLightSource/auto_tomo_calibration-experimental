@@ -45,7 +45,7 @@ tolerance=5
 
 # Detect circles ------------------------------------------------------------------------------------------------------
 holder="-hold_jid f50867 -N fold"
-qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 30 $homepath/detector.sh $datapath $resultspath/out%05i.dat $labelpath $min_thresh $max_thresh
+#qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 30 $homepath/detector.sh $datapath $resultspath/out%05i.dat $labelpath $min_thresh $max_thresh
 
 # Analyse areas ------------------------------------------------------------------------------------------------------
 #holder="-hold_jid detect -N analyse"
@@ -55,4 +55,4 @@ qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 30 $homepath/detector.sh $
 # Get resolution ------------------------------------------------------------------------------------------------------
 #holder="-hold_jid merge -N resolution"
 #qsub $holder -pe smp 2 -j y -t 1 -tc 10 $homepath/find_contacts.sh $plotspath $resultspath/ $datapath $tolerance
-#$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $tolerance $start $stop
+$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $tolerance $start $stop

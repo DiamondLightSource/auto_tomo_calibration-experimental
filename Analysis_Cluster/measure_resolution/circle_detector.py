@@ -116,8 +116,11 @@ def select_area_for_detector(np_image, min_t, max_t):
         
         crop = image_filtered[minr-margin:maxr+margin,minc-margin:maxc+margin].copy()
         
-        thresh = threshold_otsu(crop)
-        binary = crop >= thresh
+        binary = crop.copy()
+        binary[mask1] = 0
+        binary[mask2] = 0
+        binary[binary > 0] = 1
+        
         crop = sobel(binary)
         
         coords = np.column_stack(np.nonzero(crop))

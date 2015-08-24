@@ -45,7 +45,7 @@ if __name__ == '__main__' :
             print "centre pair", c1, c2, "are being processed"
             print "with radii", r1, r2
             # for every centre pair generate a new folder
-            plots = plots_path + "/{0},{1}/".format(round(c1[0],2), round(c1[1],2), round(c1[2],2),
-                                                    round(c2[0],2), round(c2[1],2), round(c2[2],2))
+            plots = plots_path + "/{0},{1}/".format((round(c1[0],2), round(c1[1],2), round(c1[2],2)),
+                                                    (round(c2[0],2), round(c2[1],2), round(c2[2],2)))
             resolution.touch_lines_3D(c1, c2, sample, plots, data_path, r1, r2)
 

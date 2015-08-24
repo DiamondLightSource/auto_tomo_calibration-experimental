@@ -6,10 +6,13 @@ from scipy.ndimage.filters import gaussian_filter, median_filter,\
     gaussian_filter1d
 from skimage import io
 import os
-from skimage.filter import denoise_tv_chambolle
+from skimage.filter import denoise_tv_chambolle, denoise_bilateral
+from skimage.restoration import denoise_tv_bregman
 import fit_data
 from scipy import misc
 from math import ceil
+from skimage.exposure import rescale_intensity
+
 #################################### Fitting fns ############################
 
 
@@ -222,18 +225,30 @@ def fit_and_visualize(image, folder_name, r1, r2):
     
     Do this for every Z value
     """
-    
-    misc.imsave(folder_name + "touch_img.png", image)
-    misc.imsave(folder_name + "touch_img.tif", image)
+#     denoised = median_filter(image, 3)
+#     distance_init = int(dist_between_spheres(r1, r2, 0, image.shape[0]/2.) / 2.)
+#     
+#     if distance_init % 2 == 0:
+#         denoised = sgolay2d(image, distance_init + 1, 3)
+#     else:
+#         denoised = sgolay2d(image, distance_init, 3)
+#       
+#     denoised = denoise_tv_chambolle(image)
+    denoised = denoise_tv_bregman(image, weight=0.5)
+    misc.imsave(folder_name + "touch_img.png", denoised)
+    misc.imsave(folder_name + "touch_img.tif", denoised)
 #     image = io.imread("/dls/tmp/jjl36382/resolution/plots1/7/plots_0/touch_img.tif")
-    denoised = image 
-    contrast_left = measure_contrast_left(denoised)
-    contrast_right = measure_contrast_right(denoised)
     
-    low_freq_left = (contrast_left - np.min(denoised[0,:])) /\
-                    (contrast_left + np.min(denoised[0,:]))
-    low_freq_right = (contrast_right - np.min(denoised[0,:])) /\
-                     (contrast_right + np.min(denoised[0,:]))
+    # Calculate the modulation at the side of the image
+    # where no blurring should occur
+    
+    intensity_left = measure_contrast_left(denoised)
+    intensity_right = measure_contrast_right(denoised)
+                                            
+    low_freq_left = (intensity_left - np.min(denoised[0,:])) /\
+                    (intensity_left + np.min(denoised[0,:]))
+    low_freq_right = (intensity_right - np.min(denoised[0,:])) /\
+                     (intensity_right + np.min(denoised[0,:]))
     
     gap = []
     mtf_cleft = []
@@ -305,15 +320,14 @@ def fit_and_visualize(image, folder_name, r1, r2):
 #                     mtf_cright.append(mtf)
 #                     mtf_fwhm_right.append(fwhm)
 
-        distance = dist_between_spheres(r1, r2, i, image.shape[0] / 2.)
         gap.append(distance)
                
-        mtf = 100 * modulation(np.min(signal), contrast_left, distance) / low_freq_left
+        mtf = 100 * modulation(np.min(signal), intensity_left, distance) / low_freq_left
         # bellow this limit the spheres are unresolved
         # and the width gets distorted - drop this data
         mtf_cleft.append(mtf)
         
-        mtf = 100 * modulation(np.min(signal), contrast_right, distance) / low_freq_right
+        mtf = 100 * modulation(np.min(signal), intensity_right, distance) / low_freq_right
         # bellow this limit the spheres are unresolved
         # and the width gets distorted - drop this data
         mtf_cright.append(mtf)
