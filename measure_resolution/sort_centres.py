@@ -1,7 +1,7 @@
-import cPickle 
+import cPickle
 import numpy as np
 import optparse
-import json
+
 
 def create_dir(directory):
     import os
@@ -22,8 +22,6 @@ def save_data(filename, data):
     f = open(filename, 'w')
     cPickle.dump(data, f)
     f.close()
-    
-
 
 
 if __name__ == '__main__' :
@@ -64,13 +62,8 @@ if __name__ == '__main__' :
             edges.append([])
 
     N = len(centres)
-#     # Calculate centres according to the whole image
-#     """
-#     An element of centres array is an array of tuples
-#     where each array stores slice information
-#     and tuples store the centres of the segmented circles
-#     of the slice
-#     """
+    
+
 #     import pylab as pl
 #     from mpl_toolkits.mplot3d import Axes3D
 #       
@@ -280,9 +273,7 @@ if __name__ == '__main__' :
     
     # Take circle perimeters and merge them into one array
     from sphere_fit import leastsq_sphere
-    import pylab as pl
-    from skimage.filter import sobel
-    
+
     for centre in dict.iterkeys():
         
         X_coords = []

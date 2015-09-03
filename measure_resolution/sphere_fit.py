@@ -20,7 +20,9 @@ def fitfunc(p, x, y, z):
 
 
 def leastsq_sphere(x, y, z, rad, centr):
-    # coordinates of the barycenter
+    """
+    Fits a spherical model using least squares
+    """
     x_m, y_m, = centr
     z_m = np.mean(z)
 

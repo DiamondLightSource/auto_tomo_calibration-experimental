@@ -169,11 +169,10 @@ def detect_circles(np_image, folder, task_id):
             equalize[e1, e2] = 0
     
     # Save objects for checking the detection
+    # Save only the tenth slice
     if task_id % 10 == 0:
         misc.imsave(folder + 'labels%05i.jpg' % task_id, equalize)
-    
-    pl.imshow(equalize)
-    pl.show()
+
     return [C, R, circles, bord]
 
 

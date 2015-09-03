@@ -1,3 +1,38 @@
+"""
+Taken from http://lmfit.github.io/lmfit-py/
+
+Acknowledgements for
+
+Matthew Newville wrote the original version and maintains the project.
+Till Stensitzki wrote the improved estimates of confidence intervals, and
+    contributed many tests, bug fixes, and documentation.
+Daniel B. Allan wrote much of the high level Model code, and many
+    improvements to the testing and documentation.
+Antonino Ingargiola wrote much of the high level Model code and provided
+    many bug fixes.
+J. J. Helmus wrote the MINUT bounds for leastsq, originally in
+    leastsqbounds.py, and ported to lmfit.
+E. O. Le Bigot wrote the uncertainties package, a version of which is used
+    by lmfit.
+Michal Rawlik added plotting capabilities for Models.
+A. R. J. Nelson added differential_evolution, and greatly improved the code
+    in the docstrings.
+
+Additional patches, bug fixes, and suggestions have come from Christoph
+    Deil, Francois Boulogne, Thomas Caswell, Colin Brosseau, nmearl,
+    Gustavo Pasquevich, Clemens Prescher, LiCode, and Ben Gamari.
+
+The lmfit code obviously depends on, and owes a very large debt to the code
+in scipy.optimize.  Several discussions on the scipy-user and lmfit mailing
+lists have also led to improvements in this code.
+"""
+"""
+Lmfit allows to choose various constraints on fitting parameters
+and gives nice outputs of the data. It is not used as before though,
+since Gaussian fitting is done only for visualization purposes and
+is not involved in calculations. Same was done without this library
+"""
+
 import numpy as np
 import pylab as pl
 from scipy.optimize import leastsq
@@ -18,6 +53,7 @@ def gaussian(x, amplitude, center, sigma, offset):
 def MTF(Y, X, obtain_mtf_at, path):
     """
     Fit a polynomial to the MTF curve
+    Fails for scattered data - useless
     """
     poly_mod = PolynomialModel(6)
      
@@ -51,7 +87,11 @@ def MTF(Y, X, obtain_mtf_at, path):
 
 
 def GaussConst(signal, guess):
-    
+    """
+    Fits a Gaussian function
+    Plots fwhm and 2*sigma gap widths for comparison
+    with the analytically calculated one
+    """
     amp, centre, stdev, offset = guess
     
     data = np.array([range(len(signal)), signal]).T
@@ -88,7 +128,9 @@ def GaussConst(signal, guess):
 
 
 def Box(signal, guess):
-    
+    """
+    Fits a box function
+    """
     amp, centre, stdev, offset = guess
     
     data = np.array([range(len(signal)), signal]).T
@@ -114,27 +156,3 @@ def Box(signal, guess):
     pl.legend()
     
     return X, result.best_fit, c2-c1
-
-
-def GaussManual(signal, guess):
-    """
-    Fits high contrast data very well
-    """
-    amp, centre, stdev, offset = guess
-    
-    data = np.array([range(len(signal)), signal]).T
-    X = data[:,0]
-    Y = data[:,1]
-
-    gauss_mod = Model(gaussian)
-    
-    pars = gauss_mod.make_params(center=centre, sigma=stdev, amplitude=amp, offset=offset)
-    pars['center'].vary = False
-    pars['sigma'].min = stdev
-    pars['sigma'].max = stdev + 5.
-    
-    mod = gauss_mod
-    result = mod.fit(Y, pars, x=X)
-    fwhm = result.best_values['sigma'] * 2.3548
-
-    return X, result.best_fit, result.best_values['sigma'] * 4

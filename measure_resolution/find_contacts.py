@@ -28,9 +28,10 @@ if __name__ == '__main__' :
     data_path = args[2]
     dim_bot = int(args[3]) - 1
     dim_top = int(args[4]) - 1
-    obtain_mtf_at = int(args[6])
+    tolerance = int(args[6])
     window_size = int(args[7])
     
+    # Load the centres and radii
     f = open(results_paths + "centres.npy", 'r')
     centroids = cPickle.load(f)
     f.close()
@@ -38,18 +39,11 @@ if __name__ == '__main__' :
     radius = cPickle.load(f)
     f.close()
     
-#     f = open(results_paths + "centres_corrected.npy", 'r')
-#     centroids = cPickle.load(f)
-#     f.close()
-#     f = open(results_paths + "radi_corrected.npy", 'r')
-#     radius = cPickle.load(f)
-#     f.close()
-    
-    print """Error tolerance for the distance and radius comparison is 20.
-             This can be changed inside find_contats.py"""
+    print ""
     touch_c, touch_pt, radii = resolution.find_contact_3D(centroids, radius, tol = 20.)
         
     print "Number of sphere pairs in contact", len(touch_c)
+    print ""
     
     # Loop through every pair and perform the calculations
     for i in range(len(touch_c)):
@@ -73,5 +67,5 @@ if __name__ == '__main__' :
                                                               (round(c2[0], 2), round(c2[1], 2), round(c2[2], 2)))
             
             # Send centre positions for processing and resolution calculations
-            resolution.touch_lines_3D(c1, c2, plots_path_temp, data_path, r1, r2, obtain_mtf_at, window_size)
+            resolution.touch_lines_3D(c1, c2, plots_path_temp, data_path, r1, r2, window_size)
 
