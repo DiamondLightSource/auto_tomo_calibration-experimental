@@ -1,21 +1,26 @@
 import os
 from skimage import io
-
+import optparse
 import circle_detector
 
+
 def save_data(filename, data):
-    import pickle
+    import cPickle
     print("Saving data")
     f = open(filename, 'w')
-    pickle.dump(data, f)
+    cPickle.dump(data, f)
     f.close()
 
+
 if __name__ == '__main__' :
-    import optparse
-    usage = "%prog [options] input_file_template, output_file_template \n" + \
-        "  input_file_template  = /location/of/file/filename%05i.tif \n" + \
-        "  output_file_template = /location/of/output/filename%05i.tif"
-    parser = optparse.OptionParser(usage=usage)
+    """
+    It gets the data from the shell script
+    and sends image files to be processed at
+    circle_detector.py
+    
+    Then it gets back the data and saves it.
+    """
+    parser = optparse.OptionParser()
 
     (options, args) = parser.parse_args()
 
@@ -25,15 +30,16 @@ if __name__ == '__main__' :
     # make the filename
     input_filename = args[0] % task_id
     output_filename = args[1] % task_id
-
+    label_filename = args[2]
+    
     # load image
     print("Loading image %s" % input_filename)
     image = io.imread(input_filename)
 
     # process image
     print("Processing data")
-    result = circle_detector.detect_circles(image)
-
+    result = circle_detector.watershed_segmentation(image, label_filename, task_id)
+    
     # save image
     print("Saving image %s" % output_filename)
     save_data(output_filename, result)

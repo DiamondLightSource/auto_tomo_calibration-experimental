@@ -15,5 +15,5 @@ do
 	Z=`awk "NR=="$i $resultspath/centresZ.txt`
 	R=`awk "NR=="$i $resultspath/radii_max.txt`
 	
-	qsub -pe smp 2 -j y -t $i -tc 10 $homepath/selector.sh $X $Y $Z $R $spherepath/sphere$i $datapath $start
+	qsub -pe smp 2 -j y -t $i -tc 10 $homepath/selector.sh $X $Y $Z $R $spherepath/sphere$i $datapath $start $homepath
 done

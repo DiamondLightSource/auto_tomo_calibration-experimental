@@ -20,11 +20,14 @@ from skimage.filter.rank import enhance_contrast_percentile, enhance_contrast, o
 
 
 def select_area_for_detector(np_image):
+    float_img = rescale_intensity(np_image.copy(), in_range=(np_image.min(), np_image.max()), out_range='float')
     
+    p2, p98 = np.percentile(float_img, (2, 99))
+    for_show = exposure.rescale_intensity(float_img, in_range=(p2, p98), out_range='float')
    
     pl.close('all')
-#     image_filtered = denoise_tv_chambolle(np_image, weight=0.005)
-    image_filtered = denoise_tv_bregman(np_image, weight=50)
+    image_filtered = denoise_tv_chambolle(np_image, weight=0.005)
+#     image_filtered = denoise_tv_bregman(np_image, weight=50)
 #     image_filtered = gaussian_filter(np_image, 3)
     float_img = rescale_intensity(image_filtered.copy(), in_range=(image_filtered.min(), image_filtered.max()), out_range='float')
     
@@ -246,6 +249,6 @@ def watershed_segmentation(image, smooth_size, folder, task_id):
     
 from skimage import io
 # img = io.imread("/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_01200.tif")
-img = io.imread("/dls/tmp/tomas_aidukas/new_recon_steel/50873/reconstruction/r_2015_0825_195404_images/image_02000.tif")
+img = io.imread("/dls/tmp/tomas_aidukas/new_recon_steel/50867/recon_noringsup/r_2015_0825_200207_images/image_00800.tif")
 
 watershed_segmentation(img, 3, 1, 1)

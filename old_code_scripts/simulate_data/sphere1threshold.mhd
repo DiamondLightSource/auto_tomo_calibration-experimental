@@ -1,0 +1,7 @@
+ObjectType = Image
+NDims = 3
+BinaryData = True
+BinaryDataByteOrderMSB = False
+DimSize = 675 675 675
+ElementType = MET_FLOAT
+ElementDataFile = sphere1threshold.raw

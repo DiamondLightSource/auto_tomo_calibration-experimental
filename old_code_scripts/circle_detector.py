@@ -1,167 +1,141 @@
-def draw_areas(np_image, areas, bord):
-    
-    import numpy as np
-    import pylab as pl
-    from skimage.morphology import rectangle
-    
-    # Convert the image in RGB
-    
-    if (np_image.dtype=='float_' or np_image.dtype=='float16' or np_image.dtype=='float32') and not(np.array_equal(np.absolute(np_image)>1, np.zeros(np_image.shape, dtype=bool))):
-        np_image_norm = np_image/np.linalg.norm(np_image)
-    else:
-        np_image_norm = np_image.copy()
-    
-    # Draw the areas on the whole image
-    
-    for i in range(len(areas)):
-        lineX = np.arange(areas[i].shape[0])
-        lineY = np.arange(areas[i].shape[1])
-        
-        np_image_norm[lineX + bord[i][0], bord[i][2]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0], lineY + bord[i][2]] = np.max(np_image_norm)
-        # To thicken the line
-        np_image_norm[lineX + bord[i][0]+1, bord[i][2]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0], lineY + bord[i][2]+1] = np.max(np_image_norm)
-        np_image_norm[lineX + bord[i][0]-1, bord[i][2]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0], lineY + bord[i][2]-1] = np.max(np_image_norm)
-        
-        np_image_norm[lineX + bord[i][0], bord[i][2] + areas[i].shape[1]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + areas[i].shape[0], lineY + bord[i][2]] = np.max(np_image_norm)
-        # To thicken the line
-        np_image_norm[lineX + bord[i][0]+1, bord[i][2] + areas[i].shape[1]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + areas[i].shape[0], lineY + bord[i][2]+1] = np.max(np_image_norm)
-        np_image_norm[lineX + bord[i][0]-1, bord[i][2] + areas[i].shape[1]] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + areas[i].shape[0], lineY + bord[i][2]-1] = np.max(np_image_norm)
-        
-        # Plot the centre
-        np_image_norm[bord[i][0] + int(areas[i].shape[0] / 2), bord[i][2] + int(areas[i].shape[1] / 2)] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + int(areas[i].shape[0] / 2) + 1, bord[i][2] + int(areas[i].shape[1] / 2)] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + int(areas[i].shape[0] / 2) - 1, bord[i][2] + int(areas[i].shape[1] / 2)] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + int(areas[i].shape[0] / 2), bord[i][2] + int(areas[i].shape[1] / 2) + 1] = np.max(np_image_norm)
-        np_image_norm[bord[i][0] + int(areas[i].shape[0] / 2), bord[i][2] + int(areas[i].shape[1] / 2) - 1] = np.max(np_image_norm)
-        
-        #print 'Area ' + repr(i+1) + ' : ' + repr(bord[i][2]-bord[i][0]) + ' x ' + repr(bord[i][3]-bord[i][1])
-    
-    pl.imshow(np_image_norm, cmap=pl.cm.YlOrRd)
-    pl.colorbar()
-    pl.show()
-    
-    return
+import numpy as np
+import pylab as pl
+from scipy import ndimage, misc
+
+from skimage import measure
+from skimage import exposure
+from skimage.morphology import watershed
+from skimage.filter import threshold_otsu, sobel, denoise_tv_chambolle
+from skimage.exposure import rescale_intensity
+from skimage.transform import hough_circle
+from skimage.feature import peak_local_max
+from skimage.draw import circle_perimeter
+
+from circle_fit import leastsq_circle
+
 
 def select_area_for_detector(np_image):
+    """
+    Takes image as an input and processes it:
+    1. TV DENOISING FILTER
+    2. RESCALE THE INTENSITY TO FLOAT (SOME FN'S NEED IT)
+    3. ENCHANCE CONTRAST USING PERCENTILES 2 TO 99
+    4. OTSU THRESHOLD
+    5. EUCLIDEAN DISTANCE MAP
+    6. GET MAXIMA FROM THE EDM - FOR MARKERS
+    7. APPLY WATERSHED ALGORITHM
     
-    import numpy as np
-    import pylab as pl
+    THEN EXTRACT INFORMATION FROM THE SEGMENTED OBJECTS.
+    FOR EVERY CROPPED OBJECT USE LEAST SQUARES, TO
+    FIND A RADIUS ESTIMATE FOR THE HOUGH (FASTER) AND USE
+    THE APPROXIMATE AREA FOR OUTLIER ELIMINATION.
     
-    from skimage.filter import threshold_otsu, sobel
-    from skimage.morphology import label
-    from skimage.measure import regionprops
-    from skimage.filter import denoise_tv_chambolle
     
+    """
     pl.close('all')
     
-    # Find regions
+    image_filtered = denoise_tv_chambolle(np_image, weight=0.005)
     
-    image_filtered = denoise_tv_chambolle(np_image, weight=0.002)
-    edges = sobel(image_filtered)
+    float_img = rescale_intensity(image_filtered,
+                                  in_range=(image_filtered.min(),
+                                            image_filtered.max()),
+                                  out_range='float')
     
-    nbins = 50
-    threshold = threshold_otsu(edges, nbins)
-    edges_bin = edges >= threshold
+    p2, p98 = np.percentile(float_img, (2, 99))
+    equalize = exposure.rescale_intensity(float_img,
+                                          in_range=(p2, p98),
+                                          out_range='float')
     
-    label_image = label(edges_bin)
+    binary = equalize > threshold_otsu(equalize)
+    
+    distance = ndimage.distance_transform_edt(binary)
+    local_maxi = peak_local_max(distance,
+                                indices=False, labels=binary)
+     
+    markers = ndimage.label(local_maxi)[0]
+     
+    labeled = watershed(-distance, markers, mask=binary)
     
     areas = []
-    areas_full = []
-    bord = []
+    radius_fit = []
+    bords = []
     
     # Extract information from the regions
-    
-    for region in regionprops(label_image, ['Area', 'BoundingBox', 'Label']):
-        
-        # Skip wrong regions
-        index = np.where(label_image==region['Label'])
-        if index[0].size==0 & index[1].size==0:
-            continue
-        
-        # Skip small regions
-        if region['Area'] < 100:
-            continue
+    for region in measure.regionprops(labeled, ['Area', 'BoundingBox']):
         
         # Extract the coordinates of regions
-        minr, minc, maxr, maxc = region['BoundingBox']
-        margin = len(np_image) / 100
-        bord.append((minr-margin, maxr+margin, minc-margin, maxc+margin))
-        areas.append(edges_bin[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())
-        areas_full.append(np_image[minr-margin:maxr+margin,minc-margin:maxc+margin].copy())
-    
-    return areas, areas_full, bord
+        # Margin used to go beyond the region if it
+        # might be too tight on the object
+        minr, minc, maxr, maxc = region.bbox
+        margin = 10
+        
+        # Crop out the Watershed segments and obtain circle edges
+        crop = equalize[minr-margin:maxr+margin,minc-margin:maxc+margin].copy()
+        binary = crop > threshold_otsu(crop)
+        crop = sobel(binary)
+        
+        # Get the coordinates of the circle edges
+        coords = np.column_stack(np.nonzero(crop))
+        X = np.array(coords[:, 0]) + minr - margin 
+        Y = np.array(coords[:, 1]) + minc - margin
 
-def detect_circles(np_image):
+        # Fit a circle and compare measured circle area with
+        # area from the amount of pixels to remove trash
+        try:
+            XC, YC, RAD, RESID = leastsq_circle(X, Y)
+            if region.area * 1.3 > np.pi * RAD**2:
+
+                radius_fit.append(round(RAD, 2))
+                bords.append((minr - margin, minc - margin,
+                              maxr + margin, maxc + margin))
+                areas.append(crop)
+        except:
+            continue
     
-    import numpy as np
-    import pylab as pl
-    
-    from skimage.transform import hough_circle
-    from skimage.feature import peak_local_max
-    from skimage.draw import circle_perimeter
-    from skimage.util import img_as_ubyte
-    
+    return [radius_fit, bords, areas, equalize]
+
+
+def detect_circles(np_image, folder, task_id):
+
     pl.close('all')
-    
-    # Select areas
-    
-    areas, areas_full, bord = select_area_for_detector(np_image)
-    
-    # Check the areas
+
+    radius_fit, bord, areas, equalize\
+     = select_area_for_detector(np_image)
+     
+     
+    # Check if the areas are too big
     index = []
     size = max(np_image.shape[0] / 2, np_image.shape[1] / 2)
 
     for i in range(0, len(areas)):
-        # Jump too big or too small areas
-        if areas[i].shape[0] >= size or areas[i].shape[1] >= size\
-        or areas[i].shape[0] <= size/5 or areas[i].shape[1] <= size/5:
+        # Jump too big
+        if areas[i].shape[0] >= size * 1.5 or areas[i].shape[1] >= size * 1.5:
             index.append(i)
-            continue
     
     if index != []:
-        areas[:] = [item for i,item in enumerate(areas) if i not in index]
-        bord[:] = [item for i,item in enumerate(bord) if i not in index]
-    
-    index = []
-    for i in range(1, len(areas)):
-        # Jump almost same areas (= same circle)
-        if (abs(bord[i][0] - bord[i-1][0]) <= 100 and abs(bord[i][2] - bord[i-1][2]) <= 100):
-            index.append(i)
-            continue
-    
-    if index != []:
-        areas[:] = [item for i,item in enumerate(areas) if i not in index]
-        bord[:] = [item for i,item in enumerate(bord) if i not in index]
-    
-    print 'Borders after selection:', bord
+        areas[:] = [item for i, item in enumerate(areas) if i not in index]
+        bord[:] = [item for i, item in enumerate(bord) if i not in index]
+        radius_fit[:] = [item for i, item in enumerate(radius_fit) if i not in index]
+
     print 'Number of areas:', len(areas)
-    
-    # Detect circles into each area
-    
-    circles = [] # to get the outlines of the circles
-    C = [] # to get the centres of the circles, in relation to the different areas
-    R = [] # to get radii
-    
+
+    circles = []  # to get the outlines of the circles
+    C = []  # to get the centres of the circles, in relation to the different areas
+    R = []  # to get radii
+     
     for i in range(0, len(areas)):
         
-        # Detect circles
+        # Hough radius estimate
+        hough_radii = np.arange(radius_fit[i] - radius_fit[i]/2.,
+                                radius_fit[i] + radius_fit[i]/2.)
         
-        min_rad = int(max(areas[i].shape[0], areas[i].shape[1])/4)
-        max_rad = int(max(areas[i].shape[0], areas[i].shape[1])/2)
-        step = 1
-        
-        hough_radii = np.arange(min_rad, max_rad, step, np.int64)
+        # Apply Hough transform
         hough_res = hough_circle(areas[i], hough_radii)
-        
+             
         centers = []
         accums = []
         radii = []
+        minr, minc, maxr, maxc = bord[i]
         
         # For each radius, extract one circle
         for radius, h in zip(hough_radii, hough_res):
@@ -169,40 +143,42 @@ def detect_circles(np_image):
             centers.extend(peaks)
             accums.extend(h[peaks[:, 0], peaks[:, 1]])
             radii.extend([radius, radius])
-        
-        # Find the most prominent N circles (depends on how many circles we want to detect) => here only 1 thanks to select_area
+             
         for idx in np.argsort(accums)[::-1][:1]:
             center_x, center_y = centers[idx]
-            C.append((center_x, center_y))
+            C.append((center_x + minr, center_y + minc))
             radius = radii[idx]
             R.append(radius)
-            cx, cy = circle_perimeter(center_y, center_x, radius)
-            circles.append((cy, cx))
-        
-    """
-    If the circle is an odd number of pixels wide, then that will displace the center by one pixel and give
-    an uncertainty in the radius, producing the sine wave shape.
+            cx, cy = circle_perimeter(int(round(center_x + minr, 0)),
+                                      int(round(center_y + minc, 0)),
+                                      int(round(radius, 0)))
+            circles.append((cx, cy))
+            
     
-    THERE IS NO CLEAR WAY WHETHER TO SUBTRACT OR TO ADD THE HALF RADIUS
+    # Draw a dot on the centre  
+    if C:
+        for cent in C:
+            xc, yc = cent
+            equalize[int(xc), int(yc)] = 0
+            equalize[int(xc)-5:int(xc)+5, int(yc)-5:int(yc)+5] = 0
+            
+    # Draw circle outlines
+    if circles:
+        for per in circles:
+            e1, e2 = per
+            equalize[e1, e2] = 0
     
-    C_cp = C
-    C = []
+    # Save objects for checking the detection
+    if task_id % 10 == 0:
+        misc.imsave(folder + 'labels%05i.jpg' % task_id, equalize)
     
-    for i in range(len(areas)):
-        try:
-            circle_widthY = bord[i][2] - bord[i][0]
-            circle_widthX = bord[i][3] - bord[i][1]
+    pl.imshow(equalize)
+    pl.show()
+    return [C, R, circles, bord]
 
-        except IndexError:
-            return 0
-        
-        if circle_widthX % 2 != 0 and circle_widthY % 2 != 0:
-            C.append((C_cp[i][0] + 0.5, C_cp[i][1] + 0.5))
-        elif circle_widthX % 2 != 0:
-            C.append((C_cp[i][0] + 0.5, C_cp[i][1]))
-        elif circle_widthY % 2 != 0:
-            C.append((C_cp[i][0], C_cp[i][1] + 0.5))
-        else:
-            C.append((C_cp[i][0], C_cp[i][1]))
-    """
-    return [bord, C, R, circles]
+
+def watershed_segmentation(image, folder, task_id):
+
+    centroids, radius, edges, bords = detect_circles(image, folder, task_id)
+    
+    return [centroids, radius, edges, bords]

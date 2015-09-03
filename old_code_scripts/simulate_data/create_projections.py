@@ -1,6 +1,5 @@
 import numpy as np
 import pylab as pl
-from scipy.fftpack import fftshift, fft, ifftshift, ifft2
 from scipy.ndimage.interpolation import rotate
 from PIL import Image # Import the library
 
@@ -208,51 +207,3 @@ def reconstruct(sinogram, angles):
     reconstruction_fbp = iradon(sinogram,theta=angles, circle=True)
     return reconstruction_fbp
 
-
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-
-from skimage import measure
-from skimage.draw import ellipsoid
-
-R1 = 0.3
-R2 = 0.3
-C1 = (0.3, 0.3, 0.)
-#X = 0.3
-#Y = round(np.sqrt(((R1 + R2) * np.cos(np.radians(45))) ** 2 - X ** 2), 2)
-#C2 = ( X, Y,round((R1 + R2) * np.sin(np.radians(45)), 2)) # 45 degree angle contact
-C2 = (-0.3, 0.3, 0.)
-x,y,z = C2
-size = 400 #total image dimensions
-sampling = 360
-median = 3
-
-img3d = sphere(R1, R2, C1, C2, 0.5, 0.5, size)
-
-ellip_base = ellipsoid(6, 10, 16, levelset=True)
-print img3d
-print ellip_base
-ellip_double = np.concatenate((ellip_base[:-1, ...],
-                               ellip_base[2:, ...]), axis=0)
-print ellip_double.shape
-
-verts, faces = measure.marching_cubes(img3d, 0)
-
-# Display resulting triangular mesh using Matplotlib. This can also be done
-# with mayavi (see skimage.measure.marching_cubes docstring).
-fig = plt.figure(figsize=(10, 12))
-ax = fig.add_subplot(111, projection='3d')
-
-
-# Fancy indexing: `verts[faces]` to generate a collection of triangles
-mesh = Poly3DCollection(verts[faces])
-ax.add_collection3d(mesh)
-ax.set_xlabel("x-axis: a = 6 per ellipsoid")
-ax.set_ylabel("y-axis: b = 10")
-ax.set_zlabel("z-axis: c = 16")
-
-ax.set_xlim(0, 200)  # a = 6 (times two for 2nd ellipsoid)
-ax.set_ylim(0, 200)  # b = 10
-ax.set_zlim(0, 200)  # c = 16
-plt.show()

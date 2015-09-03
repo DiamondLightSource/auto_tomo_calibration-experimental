@@ -1,5 +1,4 @@
 module load global/cluster
-cd /dls/tmp/jjl36382/logs
 
 resultspath=$1
 homepath=$2

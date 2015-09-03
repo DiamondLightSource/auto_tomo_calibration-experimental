@@ -12,7 +12,7 @@ sigma=$4
 nb_spheres=`cat $resultspath/nb_spheres.txt`
 for i in `seq $nb_spheres`;
 do
-	R=`awk "NR=="$i $resultspath/radii_max.txt`
+	R=`awk "NR=="$i $resultspath/radii.txt`
 	mkdir $spherepath/radii$i
 	
 	prev=$(($i-1))
