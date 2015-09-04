@@ -249,6 +249,6 @@ def watershed_segmentation(image, smooth_size, folder, task_id):
     
 from skimage import io
 # img = io.imread("/dls/science/groups/das/ExampleData/SphereTestData/38644/recon_01200.tif")
-img = io.imread("/dls/tmp/tomas_aidukas/new_recon_steel/50867/recon_noringsup/r_2015_0825_200207_images/image_00800.tif")
-
+# img = io.imread("/dls/tmp/tomas_aidukas/new_recon_steel/50867/recon_noringsup/r_2015_0825_200207_images/image_00800.tif")
+# img = io.imread("/dls/tmp/jjl36382/suppresed_50867/plots/(793.0, 1143.09, 802.0),(682.63, 1141.0, 1409.66)/perp_slice.tif")
 watershed_segmentation(img, 3, 1, 1)

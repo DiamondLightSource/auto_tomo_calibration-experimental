@@ -298,6 +298,7 @@ def vector_perpendicular_3D(pt1, pt2, which, Z, Sx):
     return [Sx, Sy, Sz + Z]
 
 
+
 def vector_perpendicular_ct_pt(pt1, pt2, r1, Sx):
     """
     Returns a vector S perpendicular to a line
@@ -313,13 +314,38 @@ def vector_perpendicular_ct_pt(pt1, pt2, r1, Sx):
     
     ct_pt = vector_3D(pt1, pt2, r1)
     
-    Sx, Sz = (ct_pt[0] - v[2] / np.sqrt(v[0]**2 + v[2]**2) * Sx,
-              ct_pt[2] + v[0] / np.sqrt(v[0]**2 + v[2]**2) * Sx)
-    Sy = pt1[1]
-        
-    return [Sx, Sy, Sz]
+    # Find perpendicular vector components
+    if np.isinf(1. / np.sqrt(v[0]**2 + v[2]**2)):
+        v1 = np.array([ct_pt[0],
+                        ct_pt[1] - v[2] / np.sqrt(v[1]**2 + v[2]**2) * Sx,
+                        ct_pt[2] + v[1] / np.sqrt(v[1]**2 + v[2]**2) * Sx])
+    
+    elif np.isinf(1. / np.sqrt(v[1]**2 + v[2]**2)):
+        v1 = np.array([ct_pt[0] - v[2] / np.sqrt(v[0]**2 + v[2]**2) * Sx,
+                        ct_pt[1],
+                        ct_pt[2] + v[0] / np.sqrt(v[0]**2 + v[2]**2) * Sx])
+    else:
+        v1 = np.array([ct_pt[0] - v[2] / np.sqrt(v[0]**2 + v[2]**2) * Sx,
+                        ct_pt[1] - v[2] / np.sqrt(v[1]**2 + v[2]**2) * Sx,
+                        ct_pt[2] + v[0] / np.sqrt(v[0]**2 + v[2]**2) * Sx])
+    
+    # Add them to get the final vector
+    vector_sum = v1 + v2
+
+    return v1
 
 
+v1 = (0, 0, 0)
+v2 = (5, 5, 5 )
+
+vector1 = [vector_3D(v1, v2, i) for i in range(5)]
+
+vector2 = [vector_perpendicular_ct_pt(v1, v2, 2.5*np.sqrt(2), i) for i in range(5)]
+
+print vector1
+print vector2
+
+    
 def project_onto_plane(vect):
     """
     Return vector projection onto the xy plane
@@ -404,16 +430,16 @@ def get_slice(P1, P2, name):
 
     for time in Trange:
         # Go up along the line
-        new_pt = vector_3D(P1, P2, time + sampling)
-        input_file = name % int(round(new_pt[2], 0))
-        img = io.imread(input_file)
+        pt = vector_3D(P1, P2, time + sampling)
+        interpolated = trilinear(name, pt)
 
         for X in Xrange:
     
             # Get along the X direction for every height
-            x, y, z = vector_perpendicular_3D(new_pt, P2, 1, 0, X)
+            x, y, z = vector_perpendicular_3D(pt, P2, 1, 0, X)
 
-            pixel_value = interpolation(x, y, img)
+#             pixel_value = interpolation(x, y, img)
+            pixel_value = interpolated([x, y, z])
             
             plot_img[X + centre_dist / 4., time] = pixel_value
                 
@@ -429,6 +455,7 @@ def get_slice_perpendicular(P1, P2, r1, name):
     
     The slice is then reconstructed from several images
     """
+    
     # time goes along the vector between P1 and P2
     # since it might be at an angle, I can't loop in 1
     # pixel increments - this will miss certain slices. Therefore,
@@ -449,16 +476,16 @@ def get_slice_perpendicular(P1, P2, r1, name):
 
     for time in Trange:
         # Go up along the line
-        new_pt = vector_perpendicular_ct_pt(P1, P2, r1, time + sampling)
-        input_file = name % int(round(new_pt[2], 0))
-        img = io.imread(input_file)
-
+        pt = vector_perpendicular_ct_pt(P1, P2, r1, time + sampling)
+        interpolated = trilinear(name, pt)
+        
         for X in Xrange:
     
             # Get along the X direction for every height
-            x, y, z = vector_perpendicular_3D(new_pt, P2, 1, 0, X)
+            x, y, z = vector_perpendicular_3D(pt, P2, 1, 0, X)
 
-            pixel_value = interpolation(x, y, img)
+#             pixel_value = interpolation(x, y, img)
+            pixel_value = interpolated([x, y, z])
             
             plot_img[X + centre_dist / 4., time + centre_dist / 4.] = pixel_value
     
@@ -527,6 +554,62 @@ def interpolation(x, y, img):
     return pixel_value
 
 
+def trilinear(name, pt):
+    """
+    Trilinear interpolation
+    http://docs.scipy.org/doc/scipy-dev/reference/generated/
+    scipy.interpolate.RegularGridInterpolator.html
+    """
+    from scipy.interpolate import RegularGridInterpolator
+
+    input_file = name % int(np.floor(pt[2]))
+    data0 = io.imread(input_file)
+    
+    input_file = name % int(np.ceil(pt[2]))
+    data1 = io.imread(input_file)
+    
+    xdim = data0.shape[0]
+    ydim = data0.shape[1]
+    zdim = 2
+    
+    empty_arr = np.empty((xdim, ydim, zdim))
+    
+    empty_arr[:, :, 0] = data0
+    empty_arr[:, :, 1] = data1
+    
+    x = np.linspace(0, xdim - 1, xdim)
+    y = np.linspace(0, ydim - 1, ydim)
+    z = np.linspace(int(np.floor(pt[2])), int(np.ceil(pt[2])), zdim)
+    
+    
+    interp = RegularGridInterpolator((x, y, z), empty_arr)
+    
+    return interp
+
+
+# def load_up_images(pt1, pt2, name):
+#     """
+#     Stack up the region of interest from image slices
+#     """
+#     zstart = int(np.min(pt1[2], pt2[2]))
+#     zend = int(np.max(pt1[2], pt2[2]))
+#     
+#     xdim = 
+#     ydim
+#     
+#     input_file = name % zstart
+#     data = io.imread(input_file)
+#     
+#     zrange = np.linspace(zstart, zend, zend-zstart)
+#     store_ROI = np.empty((data.shape[0]))
+#     
+#     for i in zrange:
+#         input_file = name % i
+#         data = io.imread(input_file)
+#     
+#     return
+
+
 def touch_lines_3D(pt1, pt2, folder_name, name, r1, r2, window_size):
     """
     Goes along lines in the region between
@@ -558,37 +641,37 @@ def touch_lines_3D(pt1, pt2, folder_name, name, r1, r2, window_size):
 
 # import cPickle
 # import pylab as pl
-#            
-# f = open("/dls/tmp/jjl36382/50867/plots/(793.0, 1143.07, 801.86),(682.61, 1141.0, 1410.12)/plots_0.0,0.0/gap.npy", 'r')
+#               
+# f = open("/dls/tmp/jjl36382/50867/plots/(793.0, 1143.07, 801.86),(682.61, 1141.0, 1410.12)/plots/gap_width.npy", 'r')
 # x1 = cPickle.load(f)
 # f.close()
-# f = open("/dls/tmp/jjl36382/50873/plots/(796.04, 1146.95, 806.3),(685.0, 1143.98, 1414.78)/plots_0.0,0.0/gap.npy", 'r')
+# f = open("/dls/tmp/jjl36382/50873/plots/(796.04, 1146.95, 806.3),(685.0, 1143.98, 1414.78)/plots/gap_width.npy", 'r')
 # x2 = cPickle.load(f)
 # f.close()
-# f = open("/dls/tmp/jjl36382/50880/plots/(798.04, 1147.99, 811.83),(685.0, 1143.0, 1418.03)/plots_0.0,0.0/gap.npy", 'r')
+# f = open("/dls/tmp/jjl36382/50880/plots/(798.04, 1147.99, 811.83),(685.0, 1143.0, 1418.03)/plots/gap_width.npy", 'r')
 # x3 = cPickle.load(f)
 # f.close()
-# f = open("/dls/tmp/jjl36382/50867/plots/(793.0, 1143.07, 801.86),(682.61, 1141.0, 1410.12)/plots_0.0,0.0/mtf_cleft.npy", 'r')
+# f = open("/dls/tmp/jjl36382/50867/plots/(793.0, 1143.07, 801.86),(682.61, 1141.0, 1410.12)/plots/mtf_cleft.npy", 'r')
 # y1 = cPickle.load(f)
 # f.close()
-# f = open("/dls/tmp/jjl36382/50873/plots/(796.04, 1146.95, 806.3),(685.0, 1143.98, 1414.78)/plots_0.0,0.0/mtf_cleft.npy", 'r')
+# f = open("/dls/tmp/jjl36382/50873/plots/(796.04, 1146.95, 806.3),(685.0, 1143.98, 1414.78)/plots/mtf_cleft.npy", 'r')
 # y2 = cPickle.load(f)
 # f.close()
-# f = open("/dls/tmp/jjl36382/50880/plots/(798.04, 1147.99, 811.83),(685.0, 1143.0, 1418.03)/plots_0.0,0.0/mtf_cleft.npy", 'r')
+# f = open("/dls/tmp/jjl36382/50880/plots/(798.04, 1147.99, 811.83),(685.0, 1143.0, 1418.03)/plots/mtf_cleft.npy", 'r')
 # y3 = cPickle.load(f)
 # f.close()
-#                 
-# pl.plot(x1, y1, 'ro', label = "53keV")
-# pl.plot(x3, y3, 'go', label = "75keV")
-# pl.plot(x2, y2, 'bo', label = "130keV")
-#          
-#            
+#                    
+# pl.plot(x1, y1, 'r', label = "53keV")
+# pl.plot(x3, y3, 'g', label = "75keV")
+# pl.plot(x2, y2, 'b', label = "130keV")
+#             
+#               
 # pl.xlabel("Distance between spheres (pixels)")
 # pl.ylabel("MTF %")
 # pl.legend()
 # pl.gca().invert_xaxis()
-# pl.savefig("./median_7.png")
+# pl.savefig("./median_0.tif")
 # pl.show()
-#  
+# #  
 
 

@@ -2,8 +2,8 @@ module load global/cluster
 
 ####################### USER INPUT ###########################
 # SPECIFY DATA PATH AND OUTPUT PATH 
-datapath="/dls/tmp/tomas_aidukas/new_recon_steel/50880/recon_noringsup/r_2015_0825_200209_images/image_%05i.tif"
-outputpath="/dls/tmp/jjl36382/50880"
+datapath="/dls/tmp/tomas_aidukas/new_recon_steel/50867/reconstruction/r_2015_0825_195403_images/image_%05i.tif"
+outputpath="/dls/tmp/jjl36382/suppresed_50867"
 
 # ENTER STARTING FILE NAME NUMBER +1 AND END NUMBER +1
 # THE IMAGE NAME FORMAT IS IMAGE_#####.TIF
@@ -62,7 +62,7 @@ spherepath=$outputpath"/spheres"
 
 
 
-############## DETECT CIRCLES ###############################
+### DETECT CIRCLES
 holder="-N job1"
 #qsub $holder -pe smp 2 -j y -t $start-$stop:$step -tc 30 $homepath/detector.sh $datapath $resultspath/out%05i.dat $labelpath/ $homepath
 
@@ -79,6 +79,13 @@ holder="-hold_jid job2 -N job3"
 #qsub $holder -pe smp 2 -j y -t 1 -tc 10 $homepath/selector_loop.sh $spherepath $datapath $resultspath $homepath 
 
 
+# FIND CONTACT POINTS AND MEASURE RESOLUTION AROUND THEM 
+$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
+
+
+
+
+# QSUB WAS NOT USED SINCE IT DOES NOT HAVE A DISPLAY - CAN'T PLOT
 datapath="/dls/tmp/tomas_aidukas/new_recon_steel/50873/recon_noringsup/r_2015_0825_200208_images/image_%05i.tif"
 outputpath="/dls/tmp/jjl36382/50873"
 # RESULTS STORE THE DATA OF THE CIRCLE PERIMETERS AND THEIR CENTRES
@@ -87,7 +94,7 @@ resultspath=$outputpath"/results"
 plotspath=$outputpath"/plots"
 
 # FIND CONTACT POINTS AND MEASURE RESOLUTION AROUND THEM
-$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
+#$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
 
 
 datapath="/dls/tmp/tomas_aidukas/new_recon_steel/50880/recon_noringsup/r_2015_0825_200209_images/image_%05i.tif"
@@ -98,7 +105,7 @@ resultspath=$outputpath"/results"
 plotspath=$outputpath"/plots"
 
 # FIND CONTACT POINTS AND MEASURE RESOLUTION AROUND THEM 
-$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
+#$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
 
 
 
@@ -110,7 +117,7 @@ resultspath=$outputpath"/results"
 plotspath=$outputpath"/plots"
 
 # FIND CONTACT POINTS AND MEASURE RESOLUTION AROUND THEM
-$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
+#$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
 
 
 
