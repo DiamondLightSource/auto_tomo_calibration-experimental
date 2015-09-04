@@ -33,7 +33,8 @@ Plots - contains the MTF plots for every sphere pair. Also contains .txt and .np
 
 If any issues arise, even trivial ones, I might know what is causing them, therefore, I would be much quicker in locating and fixing them, than solving the problem on your own. I spent ages on the code and know every detail of it. Also, if other information is required or changes are needed to be made to the code please do not hesitate to contact - it would be a pleasure to help.
 
-Thank You
+Thank You.
+
 Tomas
 
 
