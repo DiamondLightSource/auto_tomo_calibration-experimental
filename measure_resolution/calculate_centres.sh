@@ -80,7 +80,7 @@ holder="-hold_jid job2 -N job3"
 
 
 # FIND CONTACT POINTS AND MEASURE RESOLUTION AROUND THEM 
-$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
+#$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
 
 
 
@@ -94,7 +94,7 @@ resultspath=$outputpath"/results"
 plotspath=$outputpath"/plots"
 
 # FIND CONTACT POINTS AND MEASURE RESOLUTION AROUND THEM
-#$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
+$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
 
 
 datapath="/dls/tmp/tomas_aidukas/new_recon_steel/50880/recon_noringsup/r_2015_0825_200209_images/image_%05i.tif"
@@ -105,7 +105,7 @@ resultspath=$outputpath"/results"
 plotspath=$outputpath"/plots"
 
 # FIND CONTACT POINTS AND MEASURE RESOLUTION AROUND THEM 
-#$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
+$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
 
 
 
@@ -117,7 +117,7 @@ resultspath=$outputpath"/results"
 plotspath=$outputpath"/plots"
 
 # FIND CONTACT POINTS AND MEASURE RESOLUTION AROUND THEM
-#$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
+$homepath/find_contacts.sh $plotspath $resultspath/ $datapath $start $stop $homepath $tolerance $window_size
 
 
 

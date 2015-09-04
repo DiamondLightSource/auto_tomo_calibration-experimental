@@ -301,49 +301,55 @@ def vector_perpendicular_3D(pt1, pt2, which, Z, Sx):
 
 def vector_perpendicular_ct_pt(pt1, pt2, r1, Sx):
     """
-    Returns a vector S perpendicular to a line
-    between pt1 and pt2 AND such that lies in x-y plane
-    at height Z
-    
-    'which' describes through which point to draw it (pt1 or pt2)
-    
-    Sx describes the position along the perpendicular vector.
+    Vector must be perpendicular to the one
+    connecting the centres of the spheres, v1, and
+    to the vector perpendicular to v1, that goes
+    throught he point of contact
     """
 
     v = ((pt2[0] - pt1[0]), (pt2[1] - pt1[1]), (pt2[2] - pt1[2]))
-    
     ct_pt = vector_3D(pt1, pt2, r1)
+    perp_v_in_xy = np.array(vector_perpendicular_3D(ct_pt, pt2, 1, 0, -1)) -\
+                    np.array(vector_perpendicular_3D(ct_pt, pt2, 1, 0, 1))
     
+    vect = np.cross(v, perp_v_in_xy)
+    mod_vect = modulus(vect)
+    
+    x = ct_pt[0] + vect[0] / mod_vect * Sx
+    y = ct_pt[1] + vect[1] / mod_vect * Sx
+    z = ct_pt[2] + vect[2] / mod_vect * Sx
+    
+    return [x, y, z]
     # Find perpendicular vector components
-    if np.isinf(1. / np.sqrt(v[0]**2 + v[2]**2)):
-        v1 = np.array([ct_pt[0],
-                        ct_pt[1] - v[2] / np.sqrt(v[1]**2 + v[2]**2) * Sx,
-                        ct_pt[2] + v[1] / np.sqrt(v[1]**2 + v[2]**2) * Sx])
-    
-    elif np.isinf(1. / np.sqrt(v[1]**2 + v[2]**2)):
-        v1 = np.array([ct_pt[0] - v[2] / np.sqrt(v[0]**2 + v[2]**2) * Sx,
-                        ct_pt[1],
-                        ct_pt[2] + v[0] / np.sqrt(v[0]**2 + v[2]**2) * Sx])
-    else:
-        v1 = np.array([ct_pt[0] - v[2] / np.sqrt(v[0]**2 + v[2]**2) * Sx,
-                        ct_pt[1] - v[2] / np.sqrt(v[1]**2 + v[2]**2) * Sx,
-                        ct_pt[2] + v[0] / np.sqrt(v[0]**2 + v[2]**2) * Sx])
-    
-    # Add them to get the final vector
-    vector_sum = v1 + v2
+#     if np.isinf(1. / np.sqrt(v[0]**2 + v[2]**2)):
+#         v1 = np.array([ct_pt[0],
+#                         ct_pt[1] - v[2] / np.sqrt(v[1]**2 + v[2]**2) * Sx,
+#                         ct_pt[2] + v[1] / np.sqrt(v[1]**2 + v[2]**2) * Sx])
+#     
+#     elif np.isinf(1. / np.sqrt(v[1]**2 + v[2]**2)):
+#         v1 = np.array([ct_pt[0] - v[2] / np.sqrt(v[0]**2 + v[2]**2) * Sx,
+#                         ct_pt[1],
+#                         ct_pt[2] + v[0] / np.sqrt(v[0]**2 + v[2]**2) * Sx])
+#     else:
+#         v1 = np.array([ct_pt[0] - v[2] / np.sqrt(v[0]**2 + v[2]**2) * Sx,
+#                         ct_pt[1] - v[2] / np.sqrt(v[1]**2 + v[2]**2) * Sx,
+#                         ct_pt[2] + v[0] / np.sqrt(v[0]**2 + v[2]**2) * Sx])
+#     
+#     # Add them to get the final vector
+#     vector_sum = v1 + v2
+#
+#     return v1
 
-    return v1
 
-
-v1 = (0, 0, 0)
-v2 = (5, 5, 5 )
-
-vector1 = [vector_3D(v1, v2, i) for i in range(5)]
-
-vector2 = [vector_perpendicular_ct_pt(v1, v2, 2.5*np.sqrt(2), i) for i in range(5)]
-
-print vector1
-print vector2
+# v1 = (0, 0, 0)
+# v2 = (5, 0, 5)
+# 
+# vector1 = [vector_3D(v1, v2, i) for i in range(5)]
+# 
+# vector2 = [vector_perpendicular_ct_pt(v1, v2, 1, i) for i in np.arange(5)]
+# 
+# print vector1
+# print vector2
 
     
 def project_onto_plane(vect):
