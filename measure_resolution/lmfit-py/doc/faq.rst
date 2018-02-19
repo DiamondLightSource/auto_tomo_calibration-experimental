@@ -69,5 +69,5 @@ the value to be minimized.
 How should I cite LMFIT?
 ==================================
 
-See http://dx.doi.org/10.5281/zenodo.11813 
+See https://doi.org/10.5281/zenodo.11813 
 
