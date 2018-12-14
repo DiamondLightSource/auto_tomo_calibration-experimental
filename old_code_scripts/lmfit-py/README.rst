@@ -5,7 +5,7 @@ LMfit-py
    :target: https://travis-ci.org/lmfit/lmfit-py
 
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.11813.png
-   :target: http://dx.doi.org/10.5281/zenodo.11813
+   :target: https://doi.org/10.5281/zenodo.11813
 
 
 Overview
